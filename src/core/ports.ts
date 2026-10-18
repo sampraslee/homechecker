@@ -1,4 +1,4 @@
-import type { Area, Defect, Evidence, Inspection, Item, PhotoVersion, Settings } from "./model";
+import type { Area, Defect, Evidence, Inspection, Item, MediaEvidence, MediaVersion, Settings } from "./model";
 
 /** Persists Home Check records. Production: Dexie. */
 export interface Storage {
@@ -16,12 +16,12 @@ export interface Storage {
   listItems(areaId: string): Promise<Item[]>;
   deleteItem(id: string): Promise<void>;
   /** Saves Evidence metadata together with the given media, atomically. */
-  putEvidence(evidence: Evidence, media: Partial<Record<PhotoVersion, Blob>>): Promise<void>;
+  putEvidence(evidence: Evidence, media: Partial<Record<MediaVersion, Blob>>): Promise<void>;
   getEvidence(id: string): Promise<Evidence | undefined>;
   listEvidence(itemId: string): Promise<Evidence[]>;
-  /** Photos across all Inspections still missing their Evidence copy and thumbnail. */
-  listUnprocessedEvidence(): Promise<Evidence[]>;
-  getMedia(evidenceId: string, version: PhotoVersion): Promise<Blob | undefined>;
+  /** Photos and videos across all Inspections still missing their smaller versions. */
+  listUnprocessedEvidence(): Promise<MediaEvidence[]>;
+  getMedia(evidenceId: string, version: MediaVersion): Promise<Blob | undefined>;
   /** Removes Evidence metadata and all its media. */
   deleteEvidence(id: string): Promise<void>;
   putDefect(defect: Defect): Promise<void>;
@@ -30,9 +30,10 @@ export interface Storage {
   deleteDefect(id: string): Promise<void>;
 }
 
-/** Makes the smaller versions of a photo. Production: canvas. */
+/** Makes the smaller versions of a photo, and a video's thumbnail. Production: canvas and a video element. */
 export interface ImageProcessor {
   processPhoto(original: Blob): Promise<{ evidenceCopy: Blob; thumbnail: Blob }>;
+  processVideo(original: Blob): Promise<{ thumbnail: Blob }>;
 }
 
 /** The outside world's clock and connectivity. */

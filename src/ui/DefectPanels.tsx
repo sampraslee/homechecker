@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { DefectCategory, DefectChoices, DefectType, DefectView, Evidence } from "../core";
+import { isMedia, isNote, type DefectCategory, type DefectChoices, type DefectType, type DefectView, type Evidence } from "../core";
 import { refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
-import { PhotoImage } from "./PhotoImage";
+import { MediaThumbnail } from "./MediaImage";
 
 export type PickedDefectType = DefectType & { noteRequired: boolean };
 
@@ -85,10 +85,10 @@ export function DefectTypePicker({
   );
 }
 
-/** Note and linked photos for a new Defect (`defectType`) or an existing one (`defect`). */
+/** Note and linked Evidence for a new Defect (`defectType`) or an existing one (`defect`). */
 export function DefectEditor({
   itemId,
-  photos,
+  evidence,
   defectType,
   defect,
   notice,
@@ -97,7 +97,8 @@ export function DefectEditor({
   onCancel,
 }: {
   itemId: string;
-  photos: Evidence[];
+  /** All of the Item's Evidence, any of which can be linked. */
+  evidence: Evidence[];
   defectType?: PickedDefectType;
   defect?: DefectView;
   notice?: string;
@@ -173,25 +174,42 @@ export function DefectEditor({
         </label>
 
         <div>
-          <h3>Linked photos</h3>
-          {photos.length === 0 ? (
-            <p className="muted">No photos of this Item yet.</p>
+          <h3>Linked Evidence</h3>
+          {evidence.length === 0 ? (
+            <p className="muted">No Evidence of this Item yet.</p>
           ) : (
-            <ul className="thumbnails">
-              {photos.map((photo) => (
-                <li key={photo.id}>
-                  <button
-                    type="button"
-                    className="thumbnail selectable"
-                    aria-pressed={linked.includes(photo.id)}
-                    aria-label={linked.includes(photo.id) ? "Unlink photo" : "Link photo"}
-                    onClick={() => toggle(photo.id)}
-                  >
-                    <PhotoImage evidenceId={photo.id} version="thumbnail" alt="" />
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="thumbnails">
+                {evidence.filter(isMedia).map((media) => (
+                  <li key={media.id}>
+                    <button
+                      type="button"
+                      className={`thumbnail selectable ${media.kind}`}
+                      aria-pressed={linked.includes(media.id)}
+                      aria-label={`${linked.includes(media.id) ? "Unlink" : "Link"} ${media.kind}`}
+                      onClick={() => toggle(media.id)}
+                    >
+                      <MediaThumbnail evidence={media} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <ul className="cards">
+                {evidence.filter(isNote).map((note) => (
+                  <li key={note.id}>
+                    <button
+                      type="button"
+                      className="card note-card selectable"
+                      aria-pressed={linked.includes(note.id)}
+                      aria-label={`${linked.includes(note.id) ? "Unlink" : "Link"} note: ${note.text}`}
+                      onClick={() => toggle(note.id)}
+                    >
+                      {note.text}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
 

@@ -37,17 +37,24 @@ export type StubImageProcessor = ImageProcessor & { failNext(): void };
 /** Labels each version with the original's text, e.g. "evidence copy of <original>". */
 export function createStubImageProcessor(): StubImageProcessor {
   let failNext = false;
+  function failIfAsked() {
+    if (failNext) {
+      failNext = false;
+      throw new Error("could not decode media");
+    }
+  }
   return {
     async processPhoto(original) {
-      if (failNext) {
-        failNext = false;
-        throw new Error("could not decode image");
-      }
+      failIfAsked();
       const text = await original.text();
       return {
         evidenceCopy: new Blob([`evidence copy of ${text}`], { type: "image/jpeg" }),
         thumbnail: new Blob([`thumbnail of ${text}`], { type: "image/jpeg" }),
       };
+    },
+    async processVideo(original) {
+      failIfAsked();
+      return { thumbnail: new Blob([`thumbnail of ${await original.text()}`], { type: "image/jpeg" }) };
     },
     failNext() {
       failNext = true;
@@ -76,6 +83,16 @@ export async function createTestHomeCheckWithInspection(referenceData: Reference
   const test = createTestHomeCheck(referenceData);
   const inspectionId = await startDraftInspection(test.homeCheck);
   return { ...test, inspectionId };
+}
+
+/** A Home Check core with a Wardrobe in a Bedroom of a Draft Move-in Inspection. */
+export async function createTestHomeCheckWithItem(referenceData: ReferenceData = testReferenceData) {
+  const setup = await createTestHomeCheckWithInspection(referenceData);
+  const area = await setup.homeCheck.addArea(setup.inspectionId, { standardAreaId: "bedroom" });
+  if (!area.ok) throw new Error(`could not add Area: ${area.reason}`);
+  const item = await setup.homeCheck.addItem(area.area.id, { catalogItemId: "wardrobe" });
+  if (!item.ok) throw new Error(`could not add Item: ${item.reason}`);
+  return { ...setup, areaId: area.area.id, itemId: item.item.id };
 }
 
 async function startDraftInspection(homeCheck: HomeCheck): Promise<string> {

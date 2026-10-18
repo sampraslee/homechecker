@@ -9,16 +9,20 @@ import type {
   DefectChoices,
   DefectInput,
   DefectView,
-  Evidence,
   Inspection,
   InspectionSummary,
   Item,
   ItemChoices,
   ItemSource,
   ItemView,
-  PhotoVersion,
+  MediaEvidence,
+  NoteEvidence,
+  MediaVersion,
+  PhotoEvidence,
   UnitAddressInput,
+  VideoEvidence,
 } from "./model";
+import { VIDEO_TIME_LIMIT_SECONDS } from "./model";
 import type { Environment, ImageProcessor, Storage } from "./ports";
 import { checkReferenceData, findCatalogItem, findDefectType, findStandardArea, type ReferenceData } from "./referenceData";
 
@@ -36,15 +40,23 @@ const itemNameRequired = { ok: false, reason: "item-name-required" } as const;
 const noteRequired = { ok: false, reason: "note-required" } as const;
 const evidenceNotOnItem = { ok: false, reason: "evidence-not-on-item" } as const;
 const defectNotFound = { ok: false, reason: "defect-not-found" } as const;
+const videoTooLong = { ok: false, reason: "video-too-long" } as const;
+/** An empty Evidence note; not to be confused with `note-required`, a Defect that needs a note. */
+const blankNote = { ok: false, reason: "blank-note" } as const;
+const evidenceNotFound = { ok: false, reason: "evidence-not-found" } as const;
+
+/** Recording stops itself at the limit, but the stop lands a moment late; up to this much over still counts as the limit. */
+const VIDEO_STOP_ALLOWANCE_SECONDS = 1;
 
 export function createHomeCheck({ storage, environment, referenceData, imageProcessor }: HomeCheckDeps) {
   checkReferenceData(referenceData);
 
-  /** Adds the Evidence copy and thumbnail; on failure leaves the photo unprocessed with its original intact. */
-  async function makeSmallerVersions(evidence: Evidence, original: Blob): Promise<Evidence> {
+  /** Adds a photo's Evidence copy and thumbnail, or a video's thumbnail; on failure leaves it unprocessed with its original intact. */
+  async function makeSmallerVersions<E extends MediaEvidence>(evidence: E, original: Blob): Promise<E> {
     let versions;
     try {
-      versions = await imageProcessor.processPhoto(original);
+      versions =
+        evidence.kind === "photo" ? await imageProcessor.processPhoto(original) : await imageProcessor.processVideo(original);
     } catch {
       return evidence;
     }
@@ -71,6 +83,17 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
   /** Other / Unknown and any other Category marked `noteRequired` can't be recorded without a note. */
   function needsNote(defectTypeCode: string): boolean {
     return !!findDefectType(referenceData, defectTypeCode)?.category.noteRequired;
+  }
+
+  /** The fields every new piece of Evidence of `item` starts with. */
+  async function newEvidence(item: Item) {
+    return {
+      id: newId(),
+      inspectionId: item.inspectionId,
+      itemId: item.id,
+      capturedAt: environment.now().toISOString(),
+      position: nextPosition(await storage.listEvidence(item.id)),
+    };
   }
 
   /** The Evidence ids without repeats, or null if any isn't Evidence of this Item. */
@@ -268,21 +291,50 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async addPhoto(itemId: string, original: Blob) {
       const item = await storage.getItem(itemId);
       if (!item) return itemNotFound;
-      const evidence: Evidence = {
-        id: newId(),
-        inspectionId: item.inspectionId,
-        itemId,
-        kind: "photo",
-        capturedAt: environment.now().toISOString(),
+      const evidence: PhotoEvidence = { ...(await newEvidence(item)), kind: "photo", processed: false };
+      await storage.putEvidence(evidence, { original });
+      return { ok: true as const, evidence: await makeSmallerVersions(evidence, original) };
+    },
+
+    /** Keeps the original exactly as recorded (never compressed), saved before its thumbnail is made. */
+    async addVideo(itemId: string, original: Blob, durationSeconds: number) {
+      const item = await storage.getItem(itemId);
+      if (!item) return itemNotFound;
+      // Written so that a missing or NaN length is refused too.
+      if (!(durationSeconds <= VIDEO_TIME_LIMIT_SECONDS + VIDEO_STOP_ALLOWANCE_SECONDS)) return videoTooLong;
+      const evidence: VideoEvidence = {
+        ...(await newEvidence(item)),
+        kind: "video",
+        durationSeconds: Math.min(VIDEO_TIME_LIMIT_SECONDS, Math.round(durationSeconds * 10) / 10),
         processed: false,
-        position: nextPosition(await storage.listEvidence(itemId)),
       };
       await storage.putEvidence(evidence, { original });
       return { ok: true as const, evidence: await makeSmallerVersions(evidence, original) };
     },
 
-    /** Retries photos whose Evidence copy and thumbnail couldn't be made at capture. Returns how many now have them. */
-    async finishPhotoProcessing() {
+    async addNote(itemId: string, text: string) {
+      const item = await storage.getItem(itemId);
+      if (!item) return itemNotFound;
+      const trimmed = text.trim();
+      if (!trimmed) return blankNote;
+      const evidence: NoteEvidence = { ...(await newEvidence(item)), kind: "note", text: trimmed };
+      await storage.putEvidence(evidence, {});
+      return { ok: true as const, evidence };
+    },
+
+    async editNote(evidenceId: string, text: string) {
+      const evidence = await storage.getEvidence(evidenceId);
+      if (!evidence) return evidenceNotFound;
+      if (evidence.kind !== "note") return { ok: false as const, reason: "evidence-not-a-note" as const };
+      const trimmed = text.trim();
+      if (!trimmed) return blankNote;
+      const edited: NoteEvidence = { ...evidence, text: trimmed };
+      await storage.putEvidence(edited, {});
+      return { ok: true as const, evidence: edited };
+    },
+
+    /** Retries photos and videos whose smaller versions couldn't be made at capture. Returns how many now have them. */
+    async finishMediaProcessing() {
       let finished = 0;
       for (const evidence of await storage.listUnprocessedEvidence()) {
         const original = await storage.getMedia(evidence.id, "original");
@@ -295,10 +347,10 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       return storage.listEvidence(itemId);
     },
 
-    /** Unlinks the Evidence from its Item's Defects first, so no Defect is left pointing at a deleted photo. */
+    /** Unlinks the Evidence from its Item's Defects first, so no Defect is left pointing at deleted Evidence. */
     async deleteEvidence(evidenceId: string) {
       const evidence = await storage.getEvidence(evidenceId);
-      if (!evidence) return { ok: false as const, reason: "evidence-not-found" as const };
+      if (!evidence) return evidenceNotFound;
       for (const defect of await storage.listDefects(evidence.itemId)) {
         if (defect.evidenceIds.includes(evidenceId)) {
           await storage.putDefect({ ...defect, evidenceIds: defect.evidenceIds.filter((id) => id !== evidenceId) });
@@ -308,10 +360,11 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       return { ok: true as const };
     },
 
-    /** An unprocessed photo has no Evidence copy, and shows its original as its thumbnail. */
-    async getPhoto(evidenceId: string, version: PhotoVersion) {
+    /** An unprocessed photo has no Evidence copy, and shows its original as its thumbnail. A video never has an Evidence copy. */
+    async getMedia(evidenceId: string, version: MediaVersion) {
       const blob = await storage.getMedia(evidenceId, version);
       if (blob || version !== "thumbnail") return blob;
+      if ((await storage.getEvidence(evidenceId))?.kind !== "photo") return undefined;
       return storage.getMedia(evidenceId, "original");
     },
 

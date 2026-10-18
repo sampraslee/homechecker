@@ -19,8 +19,8 @@ const homeCheck = createHomeCheck({
   imageProcessor: canvasImageProcessor,
 });
 
-// Finish any photo whose smaller versions couldn't be made at capture.
-homeCheck.finishPhotoProcessing();
+// Finish any photo or video whose smaller versions couldn't be made at capture.
+homeCheck.finishMediaProcessing();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -1,10 +1,10 @@
 import Dexie, { type DexieOptions, type EntityTable } from "dexie";
-import type { Area, Defect, Evidence, Inspection, Item, PhotoVersion, Settings } from "../core/model";
+import { isMedia, type Area, type Defect, type Evidence, type Inspection, type Item, type MediaVersion, type Settings } from "../core/model";
 import type { Storage } from "../core/ports";
 
 type SettingsRow = Settings & { key: "settings" };
 
-type MediaRow = { evidenceId: string; version: PhotoVersion; blob: Blob };
+type MediaRow = { evidenceId: string; version: MediaVersion; blob: Blob };
 
 class HomeCheckDb extends Dexie {
   settings!: EntityTable<SettingsRow, "key">;
@@ -12,7 +12,7 @@ class HomeCheckDb extends Dexie {
   areas!: EntityTable<Area, "id">;
   items!: EntityTable<Item, "id">;
   evidence!: EntityTable<Evidence, "id">;
-  media!: Dexie.Table<MediaRow, [string, PhotoVersion]>;
+  media!: Dexie.Table<MediaRow, [string, MediaVersion]>;
   defects!: EntityTable<Defect, "id">;
 
   constructor(name: string, options?: DexieOptions) {
@@ -83,7 +83,7 @@ export function createDexieStorage(name = "home-check", options?: DexieOptions):
     async putEvidence(evidence, media) {
       await db.transaction("rw", db.evidence, db.media, async () => {
         await db.evidence.put(evidence);
-        for (const [version, blob] of Object.entries(media) as [PhotoVersion, Blob][]) {
+        for (const [version, blob] of Object.entries(media) as [MediaVersion, Blob][]) {
           await db.media.put({ evidenceId: evidence.id, version, blob });
         }
       });
@@ -95,7 +95,8 @@ export function createDexieStorage(name = "home-check", options?: DexieOptions):
       return db.evidence.where({ itemId }).sortBy("position");
     },
     async listUnprocessedEvidence() {
-      return db.evidence.filter((evidence) => !evidence.processed).toArray();
+      const evidence = await db.evidence.toArray();
+      return evidence.filter(isMedia).filter((media) => !media.processed);
     },
     async getMedia(evidenceId, version) {
       return (await db.media.get([evidenceId, version]))?.blob;

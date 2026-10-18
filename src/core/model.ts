@@ -97,20 +97,53 @@ export type ItemSource = { catalogItemId: string; shortName?: string } | { other
 /** Catalog Items for an Area: the Area's relevant ones first, then the rest. */
 export type ItemChoices = { shownFirst: CatalogItem[]; others: CatalogItem[] };
 
-export type PhotoVersion = "original" | "evidenceCopy" | "thumbnail";
+/** The stored files of a photo or video. A video has only its original and thumbnail. */
+export type MediaVersion = "original" | "evidenceCopy" | "thumbnail";
 
-export type Evidence = {
+/** Recording stops by itself at this length. */
+export const VIDEO_TIME_LIMIT_SECONDS = 30;
+
+type EvidenceBase = {
   id: string;
   inspectionId: string;
   /** Evidence belongs to exactly one Item. */
   itemId: string;
-  kind: "photo";
   capturedAt: string;
-  /** False until the Evidence copy and thumbnail exist; the original is always kept. */
-  processed: boolean;
-  /** Order within the Item. */
+  /** Order within the Item, across every kind. */
   position: number;
 };
+
+export type PhotoEvidence = EvidenceBase & {
+  kind: "photo";
+  /** False until the Evidence copy and thumbnail exist; the original is always kept. */
+  processed: boolean;
+};
+
+export type VideoEvidence = EvidenceBase & {
+  kind: "video";
+  /** Seconds, to one decimal place; never more than VIDEO_TIME_LIMIT_SECONDS. */
+  durationSeconds: number;
+  /** False until the thumbnail exists; the original is always kept and never compressed. */
+  processed: boolean;
+};
+
+export type NoteEvidence = EvidenceBase & {
+  kind: "note";
+  text: string;
+};
+
+/** A photo or video: Evidence with stored media. */
+export type MediaEvidence = PhotoEvidence | VideoEvidence;
+
+export type Evidence = MediaEvidence | NoteEvidence;
+
+export function isMedia(evidence: Evidence): evidence is MediaEvidence {
+  return evidence.kind !== "note";
+}
+
+export function isNote(evidence: Evidence): evidence is NoteEvidence {
+  return evidence.kind === "note";
+}
 
 /** Where a Defect came from. Defects confirmed from AI Suggestions will add "ai-suggested". */
 export type DefectSource = "manual";

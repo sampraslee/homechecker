@@ -21,3 +21,4 @@
 ## Comments
 
 - From 03: a photo can be unprocessed (`processed: false`, no Evidence copy) if resizing failed at capture. `finishPhotoProcessing()` retries these at app start. The AI queue should wait for, or trigger, that retry rather than sending the original.
+- From 05: `finishPhotoProcessing()` is now `finishMediaProcessing()`. Evidence is a union by `kind`, and videos also carry `processed` (meaning their thumbnail exists), so "unprocessed" alone doesn't mean photo. Enqueue only in `addPhoto`, and filter on `kind === "photo"` anywhere the queue reads Evidence. Videos and notes must never be queued.

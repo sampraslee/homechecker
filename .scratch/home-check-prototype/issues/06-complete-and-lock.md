@@ -18,3 +18,4 @@
 - 02 shipped addArea, renameArea, removeArea, addItem, renameItem and removeItem with no Draft check. The lock and its tests here need to cover all six.
 - 03 added addPhoto and deleteEvidence with no Draft check. Include both in the lock and its tests.
 - 04 added addDefect, editDefect and removeDefect with no Draft check. Include all three in the lock and its tests. deleteEvidence now also unlinks the photo from Defects, so it must stay locked as a whole.
+- 05 added addVideo, addNote and editNote with no Draft check, and notes and videos are deleted through deleteEvidence. Include all four in the lock and its tests (the ticket asks for Draft-only deletion of a video to be tested here).
