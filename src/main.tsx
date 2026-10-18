@@ -6,8 +6,11 @@ import { createDexieStorage } from "./adapters/dexieStorage";
 import { createHomeCheck } from "./core";
 import { bundledReferenceData } from "./referenceData";
 import { App } from "./ui/App";
+import { ErrorNotice, listenForUnexpectedErrors } from "./ui/ErrorNotice";
 import { HomeCheckProvider } from "./ui/homeCheckContext";
 import "./ui/styles.css";
+
+listenForUnexpectedErrors();
 
 const homeCheck = createHomeCheck({
   storage: createDexieStorage(),
@@ -23,6 +26,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <HomeCheckProvider value={homeCheck}>
       <App />
+      <ErrorNotice />
     </HomeCheckProvider>
   </StrictMode>,
 );

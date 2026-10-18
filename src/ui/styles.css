@@ -410,3 +410,29 @@ button:disabled {
   color: inherit;
   text-align: left;
 }
+
+.error-notice {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1rem 1rem calc(env(safe-area-inset-bottom) + 1rem);
+  border-top: 3px solid var(--error);
+  background: var(--surface);
+  box-shadow: 0 -2px 12px rgb(0 0 0 / 0.15);
+}
+
+.error-notice p {
+  margin-top: 0;
+  color: var(--error);
+  font-weight: 600;
+}
+
+.error-notice details {
+  margin-bottom: 0.75rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}

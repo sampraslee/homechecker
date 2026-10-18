@@ -46,14 +46,18 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     setSaving(true);
     setError(null);
     let saved = 0;
-    for (const file of files) {
-      const result = await homeCheck.addPhoto(id, file);
-      if (result.ok) saved++;
-      else setError(refusalMessage[result.reason]);
+    try {
+      for (const file of files) {
+        const result = await homeCheck.addPhoto(id, file);
+        if (result.ok) saved++;
+        else setError(refusalMessage[result.reason]);
+      }
+    } finally {
+      // Free the button even if a save throws, so the Inspector can try again.
+      setSaving(false);
+      setSavedCount(saved);
+      load();
     }
-    setSaving(false);
-    setSavedCount(saved);
-    load();
   }
 
   function closeDefectPanel() {
