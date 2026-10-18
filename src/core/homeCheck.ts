@@ -1,4 +1,5 @@
 import { formatAddress, validateAddress } from "./address";
+import { newId } from "./ids";
 import type {
   Area,
   AreaSource,
@@ -98,7 +99,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       const validation = validateAddress(input);
       if (!validation.ok) return { ok: false as const, reason: "invalid-address" as const, errors: validation.errors };
       const inspection: Inspection = {
-        id: crypto.randomUUID(),
+        id: newId(),
         type: "move-in",
         status: "draft",
         address: validation.address,
@@ -149,7 +150,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       }
 
       const area: Area = {
-        id: crypto.randomUUID(),
+        id: newId(),
         inspectionId,
         name,
         standardAreaId,
@@ -206,7 +207,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
 
       const existing = await storage.listItems(areaId);
       const item: Item = {
-        id: crypto.randomUUID(),
+        id: newId(),
         inspectionId: area.inspectionId,
         areaId,
         ...itemIdentity,
@@ -268,7 +269,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       const item = await storage.getItem(itemId);
       if (!item) return itemNotFound;
       const evidence: Evidence = {
-        id: crypto.randomUUID(),
+        id: newId(),
         inspectionId: item.inspectionId,
         itemId,
         kind: "photo",
@@ -341,7 +342,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       const note = input.note?.trim();
       if (needsNote(input.defectTypeCode) && !note) return noteRequired;
       const defect: Defect = {
-        id: crypto.randomUUID(),
+        id: newId(),
         inspectionId: item.inspectionId,
         itemId,
         defectTypeCode: input.defectTypeCode,
