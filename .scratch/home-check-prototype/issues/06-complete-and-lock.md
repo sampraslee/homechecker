@@ -12,3 +12,7 @@
 - [ ] UI hides or disables editing on Completed Inspections
 - [ ] Inspection list shows Completed status
 - [ ] Core tests cover the transition, timestamps and every refused mutation
+
+## Comments
+
+- 02 shipped addArea, renameArea, removeArea, addItem, renameItem and removeItem with no Draft check. The lock and its tests here need to cover all six.

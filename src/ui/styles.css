@@ -175,3 +175,100 @@ button {
 .details dd {
   margin: 0;
 }
+
+h2 {
+  font-size: 1.1rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+h3 {
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin: 1rem 0 0.5rem;
+}
+
+.card-row h1,
+.card-row h2 {
+  margin: 0;
+}
+
+.spaced {
+  margin-top: 1rem;
+}
+
+.secondary {
+  width: 100%;
+  min-height: 3rem;
+  border: 1px solid var(--brand);
+  border-radius: 0.6rem;
+  background: var(--surface);
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.danger {
+  color: var(--error);
+}
+
+.button-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.inline-form .button-row > * {
+  flex: 1;
+}
+
+.panel {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--surface);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip {
+  min-height: 2.5rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: inherit;
+}
+
+.rows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--surface);
+}
+
+.rows > li {
+  padding: 0.5rem 1rem;
+}
+
+.rows > li + li {
+  border-top: 1px solid var(--border);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.rows:empty,
+.cards:empty {
+  display: none;
+}

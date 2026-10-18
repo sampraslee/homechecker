@@ -1,5 +1,5 @@
 import Dexie, { type DexieOptions, type EntityTable } from "dexie";
-import type { Inspection, Settings } from "../core/model";
+import type { Area, Inspection, Item, Settings } from "../core/model";
 import type { Storage } from "../core/ports";
 
 type SettingsRow = Settings & { key: "settings" };
@@ -7,12 +7,18 @@ type SettingsRow = Settings & { key: "settings" };
 class HomeCheckDb extends Dexie {
   settings!: EntityTable<SettingsRow, "key">;
   inspections!: EntityTable<Inspection, "id">;
+  areas!: EntityTable<Area, "id">;
+  items!: EntityTable<Item, "id">;
 
   constructor(name: string, options?: DexieOptions) {
     super(name, options);
     this.version(1).stores({
       settings: "key",
       inspections: "id",
+    });
+    this.version(2).stores({
+      areas: "id, inspectionId",
+      items: "id, areaId",
     });
   }
 }
@@ -37,6 +43,30 @@ export function createDexieStorage(name = "home-check", options?: DexieOptions):
     },
     async listInspections() {
       return db.inspections.toArray();
+    },
+    async putArea(area) {
+      await db.areas.put(area);
+    },
+    async getArea(id) {
+      return db.areas.get(id);
+    },
+    async listAreas(inspectionId) {
+      return db.areas.where({ inspectionId }).sortBy("position");
+    },
+    async deleteArea(id) {
+      await db.areas.delete(id);
+    },
+    async putItem(item) {
+      await db.items.put(item);
+    },
+    async getItem(id) {
+      return db.items.get(id);
+    },
+    async listItems(areaId) {
+      return db.items.where({ areaId }).sortBy("position");
+    },
+    async deleteItem(id) {
+      await db.items.delete(id);
     },
   };
 }

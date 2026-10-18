@@ -1,0 +1,623 @@
+{
+  "version": "appendix-b-draft-1",
+  "items": [
+    {
+      "id": "wall",
+      "name": "Wall",
+      "relevantCategories": [
+        "SF",
+        "CD",
+        "WM",
+        "MB",
+        "CL",
+        "PD",
+        "IW"
+      ]
+    },
+    {
+      "id": "exterior-wall",
+      "name": "Exterior Wall",
+      "relevantCategories": [
+        "SF",
+        "CD",
+        "WM",
+        "MB",
+        "CL",
+        "PD"
+      ]
+    },
+    {
+      "id": "ceiling",
+      "name": "Ceiling",
+      "relevantCategories": [
+        "SF",
+        "CD",
+        "WM",
+        "MB",
+        "PD",
+        "CL"
+      ]
+    },
+    {
+      "id": "floor",
+      "name": "Floor",
+      "relevantCategories": [
+        "FL",
+        "SF",
+        "PD",
+        "CD",
+        "WM",
+        "CL"
+      ]
+    },
+    {
+      "id": "skirting",
+      "name": "Skirting",
+      "relevantCategories": [
+        "SF",
+        "PD",
+        "CD",
+        "AF",
+        "WM",
+        "CL"
+      ]
+    },
+    {
+      "id": "main-door",
+      "name": "Main Door",
+      "relevantCategories": [
+        "DW",
+        "AF",
+        "HF",
+        "SF",
+        "PD",
+        "GM"
+      ]
+    },
+    {
+      "id": "internal-door",
+      "name": "Internal Door",
+      "relevantCategories": [
+        "DW",
+        "AF",
+        "HF",
+        "SF",
+        "PD",
+        "WM"
+      ]
+    },
+    {
+      "id": "sliding-door",
+      "name": "Sliding Door",
+      "relevantCategories": [
+        "DW",
+        "AF",
+        "HF",
+        "GM",
+        "SF",
+        "CL"
+      ]
+    },
+    {
+      "id": "window",
+      "name": "Window",
+      "relevantCategories": [
+        "DW",
+        "GM",
+        "AF",
+        "HF",
+        "WM",
+        "CL"
+      ]
+    },
+    {
+      "id": "door-grille-gate",
+      "name": "Door Grille / Gate",
+      "relevantCategories": [
+        "HF",
+        "AF",
+        "SF",
+        "PD",
+        "FO"
+      ]
+    },
+    {
+      "id": "auto-gate",
+      "name": "Auto Gate",
+      "relevantCategories": [
+        "FO",
+        "AF",
+        "HF",
+        "EL",
+        "NV",
+        "SF"
+      ]
+    },
+    {
+      "id": "gate",
+      "name": "Gate",
+      "relevantCategories": [
+        "HF",
+        "AF",
+        "SF",
+        "PD"
+      ]
+    },
+    {
+      "id": "fence",
+      "name": "Fence",
+      "relevantCategories": [
+        "PD",
+        "SF",
+        "CD",
+        "MI"
+      ]
+    },
+    {
+      "id": "balcony-railing",
+      "name": "Balcony Railing",
+      "relevantCategories": [
+        "PD",
+        "AF",
+        "SF",
+        "HF",
+        "GM"
+      ]
+    },
+    {
+      "id": "staircase-handrail",
+      "name": "Staircase / Handrail",
+      "relevantCategories": [
+        "PD",
+        "AF",
+        "SF",
+        "FL",
+        "HF"
+      ]
+    },
+    {
+      "id": "roof-gutter",
+      "name": "Roof / Gutter",
+      "relevantCategories": [
+        "WM",
+        "PD",
+        "CD",
+        "CL",
+        "MB"
+      ]
+    },
+    {
+      "id": "curtain-blind",
+      "name": "Curtain / Blind",
+      "relevantCategories": [
+        "CB",
+        "CL",
+        "PD",
+        "HF",
+        "FO"
+      ]
+    },
+    {
+      "id": "light-fitting",
+      "name": "Light Fitting",
+      "relevantCategories": [
+        "LT",
+        "FO",
+        "EL",
+        "MI",
+        "CL"
+      ]
+    },
+    {
+      "id": "ceiling-fan",
+      "name": "Ceiling Fan",
+      "relevantCategories": [
+        "FO",
+        "NV",
+        "EL",
+        "AF",
+        "CL",
+        "MI"
+      ]
+    },
+    {
+      "id": "air-conditioner",
+      "name": "Air Conditioner",
+      "relevantCategories": [
+        "AC",
+        "FO",
+        "WM",
+        "NV",
+        "EL",
+        "CL"
+      ]
+    },
+    {
+      "id": "exhaust-fan",
+      "name": "Exhaust Fan",
+      "relevantCategories": [
+        "AC",
+        "FO",
+        "NV",
+        "CL",
+        "EL"
+      ]
+    },
+    {
+      "id": "switch",
+      "name": "Switch",
+      "relevantCategories": [
+        "EL",
+        "FO",
+        "PD",
+        "SF"
+      ]
+    },
+    {
+      "id": "power-socket",
+      "name": "Power Socket",
+      "relevantCategories": [
+        "EL",
+        "PD",
+        "SF",
+        "MI"
+      ]
+    },
+    {
+      "id": "distribution-board",
+      "name": "Distribution Board",
+      "relevantCategories": [
+        "EL",
+        "FO",
+        "MI",
+        "PD"
+      ]
+    },
+    {
+      "id": "water-heater",
+      "name": "Water Heater",
+      "relevantCategories": [
+        "AP",
+        "FO",
+        "WM",
+        "PL",
+        "EL"
+      ]
+    },
+    {
+      "id": "intercom-doorbell",
+      "name": "Intercom / Doorbell",
+      "relevantCategories": [
+        "FO",
+        "EL",
+        "PD",
+        "MI"
+      ]
+    },
+    {
+      "id": "kitchen-cabinet",
+      "name": "Kitchen Cabinet",
+      "relevantCategories": [
+        "CF",
+        "HF",
+        "AF",
+        "SF",
+        "PD",
+        "WM",
+        "CL"
+      ]
+    },
+    {
+      "id": "shoe-cabinet",
+      "name": "Shoe Cabinet",
+      "relevantCategories": [
+        "CF",
+        "HF",
+        "AF",
+        "SF",
+        "PD"
+      ]
+    },
+    {
+      "id": "vanity-cabinet",
+      "name": "Vanity Cabinet",
+      "relevantCategories": [
+        "CF",
+        "HF",
+        "WM",
+        "SF",
+        "PD",
+        "MB"
+      ]
+    },
+    {
+      "id": "wardrobe",
+      "name": "Wardrobe",
+      "relevantCategories": [
+        "CF",
+        "HF",
+        "AF",
+        "SF",
+        "PD",
+        "MI"
+      ]
+    },
+    {
+      "id": "tv-cabinet",
+      "name": "TV Cabinet",
+      "relevantCategories": [
+        "CF",
+        "HF",
+        "SF",
+        "PD"
+      ]
+    },
+    {
+      "id": "shelf",
+      "name": "Shelf",
+      "relevantCategories": [
+        "CF",
+        "PD",
+        "SF",
+        "AF"
+      ]
+    },
+    {
+      "id": "countertop",
+      "name": "Countertop",
+      "relevantCategories": [
+        "SF",
+        "PD",
+        "CD",
+        "WM",
+        "CL",
+        "IW"
+      ]
+    },
+    {
+      "id": "sink",
+      "name": "Sink",
+      "relevantCategories": [
+        "PL",
+        "WM",
+        "PD",
+        "CL",
+        "SN"
+      ]
+    },
+    {
+      "id": "tap",
+      "name": "Tap",
+      "relevantCategories": [
+        "PL",
+        "WM",
+        "AF",
+        "SF",
+        "SN"
+      ]
+    },
+    {
+      "id": "floor-trap",
+      "name": "Floor Trap",
+      "relevantCategories": [
+        "PL",
+        "CL",
+        "OD",
+        "MI"
+      ]
+    },
+    {
+      "id": "toilet",
+      "name": "Toilet",
+      "relevantCategories": [
+        "SN",
+        "PL",
+        "WM",
+        "CL",
+        "PD"
+      ]
+    },
+    {
+      "id": "basin",
+      "name": "Basin",
+      "relevantCategories": [
+        "SN",
+        "PL",
+        "WM",
+        "CL",
+        "PD"
+      ]
+    },
+    {
+      "id": "shower-set",
+      "name": "Shower Set",
+      "relevantCategories": [
+        "SN",
+        "PL",
+        "FO",
+        "WM",
+        "CL"
+      ]
+    },
+    {
+      "id": "bathtub",
+      "name": "Bathtub",
+      "relevantCategories": [
+        "SN",
+        "PL",
+        "WM",
+        "PD",
+        "CL"
+      ]
+    },
+    {
+      "id": "shower-screen",
+      "name": "Shower Screen",
+      "relevantCategories": [
+        "GM",
+        "AF",
+        "HF",
+        "WM",
+        "CL"
+      ]
+    },
+    {
+      "id": "mirror",
+      "name": "Mirror",
+      "relevantCategories": [
+        "GM",
+        "AF",
+        "CL"
+      ]
+    },
+    {
+      "id": "bathroom-accessories",
+      "name": "Bathroom Accessories",
+      "relevantCategories": [
+        "SN",
+        "HF",
+        "MI",
+        "SF"
+      ]
+    },
+    {
+      "id": "hob",
+      "name": "Hob",
+      "relevantCategories": [
+        "AP",
+        "FO",
+        "CL",
+        "EL"
+      ]
+    },
+    {
+      "id": "cooker-hood",
+      "name": "Cooker Hood",
+      "relevantCategories": [
+        "AP",
+        "FO",
+        "NV",
+        "CL"
+      ]
+    },
+    {
+      "id": "oven",
+      "name": "Oven",
+      "relevantCategories": [
+        "AP",
+        "FO",
+        "CL",
+        "EL"
+      ]
+    },
+    {
+      "id": "refrigerator",
+      "name": "Refrigerator",
+      "relevantCategories": [
+        "AP",
+        "FO",
+        "WM",
+        "NV",
+        "CL"
+      ]
+    },
+    {
+      "id": "washing-machine",
+      "name": "Washing Machine",
+      "relevantCategories": [
+        "AP",
+        "FO",
+        "WM",
+        "NV",
+        "PL"
+      ]
+    },
+    {
+      "id": "clothes-drying-rack",
+      "name": "Clothes Drying Rack",
+      "relevantCategories": [
+        "PD",
+        "HF",
+        "AF",
+        "SF"
+      ]
+    },
+    {
+      "id": "bed-frame",
+      "name": "Bed Frame",
+      "relevantCategories": [
+        "PD",
+        "HF",
+        "AF",
+        "SF",
+        "PE"
+      ]
+    },
+    {
+      "id": "mattress",
+      "name": "Mattress",
+      "relevantCategories": [
+        "CL",
+        "PD",
+        "PE",
+        "OD"
+      ]
+    },
+    {
+      "id": "sofa",
+      "name": "Sofa",
+      "relevantCategories": [
+        "PD",
+        "CL",
+        "SF",
+        "PE",
+        "WD"
+      ]
+    },
+    {
+      "id": "dining-table",
+      "name": "Dining Table",
+      "relevantCategories": [
+        "SF",
+        "PD",
+        "AF",
+        "HF"
+      ]
+    },
+    {
+      "id": "chair",
+      "name": "Chair",
+      "relevantCategories": [
+        "PD",
+        "SF",
+        "AF",
+        "HF"
+      ]
+    },
+    {
+      "id": "keys-and-access-cards",
+      "name": "Keys & Access Cards",
+      "relevantCategories": [
+        "MI",
+        "FO"
+      ]
+    },
+    {
+      "id": "remote-controls",
+      "name": "Remote Controls",
+      "relevantCategories": [
+        "MI",
+        "FO"
+      ]
+    },
+    {
+      "id": "water-meter-area",
+      "name": "Water Meter Area",
+      "relevantCategories": [
+        "PL",
+        "WM",
+        "CL"
+      ]
+    }
+  ]
+}

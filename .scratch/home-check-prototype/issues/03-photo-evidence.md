@@ -13,3 +13,7 @@
 - [ ] Delete a photo only while the Inspection is Draft
 - [ ] Evidence belongs to exactly one Item
 - [ ] Core tests (stubbed Image processor) cover capture, persistence of all three versions and Draft-only deletion
+
+## Comments
+
+- `removeItem` (from 02) currently deletes the Item outright. Once Items can hold Evidence, decide whether removing an Item with Evidence is refused (like `area-has-items`) or cascades. The brief says originals are never deleted by the app, which points to refusing.

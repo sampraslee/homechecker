@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 
 export function InspectorNameForm({ initialName = "", onSaved }: { initialName?: string; onSaved: (name: string) => void }) {
@@ -10,7 +11,7 @@ export function InspectorNameForm({ initialName = "", onSaved }: { initialName?:
     event.preventDefault();
     const result = await homeCheck.setInspectorName(name);
     if (!result.ok) {
-      setError("Enter your name");
+      setError(refusalMessage[result.reason]);
       return;
     }
     setError(null);

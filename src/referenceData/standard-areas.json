@@ -1,0 +1,292 @@
+{
+  "version": "appendix-a-draft-1",
+  "areas": [
+    {
+      "id": "entrance-foyer",
+      "name": "Entrance / Foyer",
+      "itemsShownFirst": [
+        "main-door",
+        "door-grille-gate",
+        "wall",
+        "floor",
+        "ceiling",
+        "light-fitting",
+        "switch",
+        "shoe-cabinet",
+        "intercom-doorbell"
+      ]
+    },
+    {
+      "id": "living-room",
+      "name": "Living Room",
+      "itemsShownFirst": [
+        "wall",
+        "floor",
+        "ceiling",
+        "window",
+        "sliding-door",
+        "curtain-blind",
+        "light-fitting",
+        "ceiling-fan",
+        "air-conditioner",
+        "switch",
+        "power-socket",
+        "sofa",
+        "tv-cabinet"
+      ]
+    },
+    {
+      "id": "dining-area",
+      "name": "Dining Area",
+      "itemsShownFirst": [
+        "wall",
+        "floor",
+        "ceiling",
+        "light-fitting",
+        "ceiling-fan",
+        "dining-table",
+        "chair",
+        "switch",
+        "power-socket"
+      ]
+    },
+    {
+      "id": "dry-kitchen",
+      "name": "Dry Kitchen",
+      "itemsShownFirst": [
+        "wall",
+        "floor",
+        "ceiling",
+        "kitchen-cabinet",
+        "countertop",
+        "hob",
+        "cooker-hood",
+        "oven",
+        "refrigerator",
+        "sink",
+        "tap",
+        "power-socket",
+        "light-fitting"
+      ]
+    },
+    {
+      "id": "wet-kitchen",
+      "name": "Wet Kitchen",
+      "itemsShownFirst": [
+        "wall",
+        "floor",
+        "ceiling",
+        "kitchen-cabinet",
+        "countertop",
+        "hob",
+        "sink",
+        "tap",
+        "floor-trap",
+        "window",
+        "power-socket"
+      ]
+    },
+    {
+      "id": "master-bedroom",
+      "name": "Master Bedroom",
+      "itemsShownFirst": [
+        "wall",
+        "floor",
+        "ceiling",
+        "internal-door",
+        "window",
+        "curtain-blind",
+        "wardrobe",
+        "bed-frame",
+        "mattress",
+        "air-conditioner",
+        "ceiling-fan",
+        "light-fitting",
+        "switch",
+        "power-socket"
+      ]
+    },
+    {
+      "id": "bedroom",
+      "name": "Bedroom",
+      "itemsShownFirst": [
+        "wall",
+        "floor",
+        "ceiling",
+        "internal-door",
+        "window",
+        "curtain-blind",
+        "wardrobe",
+        "bed-frame",
+        "mattress",
+        "air-conditioner",
+        "ceiling-fan",
+        "light-fitting",
+        "switch",
+        "power-socket"
+      ]
+    },
+    {
+      "id": "master-bathroom",
+      "name": "Master Bathroom",
+      "itemsShownFirst": [
+        "wall",
+        "floor",
+        "ceiling",
+        "internal-door",
+        "toilet",
+        "basin",
+        "vanity-cabinet",
+        "tap",
+        "shower-set",
+        "shower-screen",
+        "mirror",
+        "water-heater",
+        "exhaust-fan",
+        "floor-trap",
+        "bathroom-accessories"
+      ]
+    },
+    {
+      "id": "common-bathroom",
+      "name": "Common Bathroom",
+      "itemsShownFirst": [
+        "wall",
+        "floor",
+        "ceiling",
+        "internal-door",
+        "toilet",
+        "basin",
+        "vanity-cabinet",
+        "tap",
+        "shower-set",
+        "shower-screen",
+        "mirror",
+        "water-heater",
+        "exhaust-fan",
+        "floor-trap",
+        "bathroom-accessories"
+      ]
+    },
+    {
+      "id": "powder-room",
+      "name": "Powder Room",
+      "itemsShownFirst": [
+        "wall",
+        "floor",
+        "toilet",
+        "basin",
+        "tap",
+        "mirror",
+        "exhaust-fan",
+        "light-fitting"
+      ]
+    },
+    {
+      "id": "balcony",
+      "name": "Balcony",
+      "itemsShownFirst": [
+        "floor",
+        "wall",
+        "sliding-door",
+        "balcony-railing",
+        "floor-trap",
+        "light-fitting"
+      ]
+    },
+    {
+      "id": "yard-utility",
+      "name": "Yard / Utility",
+      "itemsShownFirst": [
+        "floor",
+        "wall",
+        "washing-machine",
+        "sink",
+        "tap",
+        "floor-trap",
+        "window",
+        "clothes-drying-rack"
+      ]
+    },
+    {
+      "id": "store-room",
+      "name": "Store Room",
+      "itemsShownFirst": [
+        "wall",
+        "floor",
+        "ceiling",
+        "internal-door",
+        "shelf",
+        "light-fitting"
+      ]
+    },
+    {
+      "id": "utility-maids-room",
+      "name": "Utility / Maid's Room",
+      "itemsShownFirst": [
+        "wall",
+        "floor",
+        "ceiling",
+        "internal-door",
+        "window",
+        "light-fitting",
+        "switch",
+        "power-socket"
+      ]
+    },
+    {
+      "id": "corridor-hallway",
+      "name": "Corridor / Hallway",
+      "itemsShownFirst": [
+        "wall",
+        "floor",
+        "ceiling",
+        "light-fitting",
+        "switch"
+      ]
+    },
+    {
+      "id": "staircase",
+      "name": "Staircase",
+      "itemsShownFirst": [
+        "staircase-handrail",
+        "wall",
+        "ceiling",
+        "light-fitting"
+      ]
+    },
+    {
+      "id": "car-porch",
+      "name": "Car Porch",
+      "itemsShownFirst": [
+        "floor",
+        "auto-gate",
+        "gate",
+        "light-fitting",
+        "ceiling"
+      ]
+    },
+    {
+      "id": "garden-exterior",
+      "name": "Garden / Exterior",
+      "itemsShownFirst": [
+        "exterior-wall",
+        "floor",
+        "gate",
+        "fence",
+        "roof-gutter",
+        "light-fitting"
+      ]
+    },
+    {
+      "id": "general-whole-unit",
+      "name": "General (whole Unit)",
+      "itemsShownFirst": [
+        "keys-and-access-cards",
+        "remote-controls",
+        "distribution-board",
+        "water-meter-area"
+      ]
+    }
+  ]
+}
