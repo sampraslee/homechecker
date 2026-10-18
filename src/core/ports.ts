@@ -1,0 +1,18 @@
+import type { Inspection, Settings } from "./model";
+
+/** Persists Home Check records. Production: Dexie. */
+export interface Storage {
+  getSettings(): Promise<Settings>;
+  saveSettings(settings: Settings): Promise<void>;
+  putInspection(inspection: Inspection): Promise<void>;
+  getInspection(id: string): Promise<Inspection | undefined>;
+  listInspections(): Promise<Inspection[]>;
+}
+
+/** The outside world's clock and connectivity. */
+export interface Environment {
+  now(): Date;
+  isOnline(): boolean;
+  /** Calls `listener` whenever online state changes; returns an unsubscribe function. */
+  onOnlineChange(listener: (online: boolean) => void): () => void;
+}

@@ -6,12 +6,12 @@
 
 **Status:** ready-for-agent
 
-- [ ] App builds, is installable as a PWA, and launches with no network after first load
-- [ ] Home Check core is framework-free TypeScript; the UI calls only core operations
-- [ ] Storage adapter (Dexie) and Environment adapter (time, online state) are injected into the core; tests use fakes
-- [ ] Settings: Inspector sets their name; starting an Inspection without a name prompts for it
-- [ ] Start Move-in with fields: unit number, building name (optional), street, area / Taman (optional), postcode, city, state
-- [ ] Postcode must be 5 digits; state is chosen from the 13 states and 3 Federal Territories; required fields enforced
-- [ ] Inspection records type Move-in, status Draft, Inspector name and started-at time; no tenant fields exist
-- [ ] Inspection list shows type, address, date and Draft/Completed status, and opens an Inspection
-- [ ] Vitest runs core tests against fake-indexeddb; tests cover address validation and Inspection creation through core operations only
+- [x] App builds, is installable as a PWA, and launches with no network after first load
+- [x] Home Check core is framework-free TypeScript; the UI calls only core operations
+- [x] Storage adapter (Dexie) and Environment adapter (time, online state) are injected into the core; tests use fakes
+- [x] Settings: Inspector sets their name; starting an Inspection without a name prompts for it
+- [x] Start Move-in with fields: unit number, building name (optional), street, area / Taman (optional), postcode, city, state
+- [x] Postcode must be 5 digits; state is chosen from the 13 states and 3 Federal Territories; required fields enforced
+- [x] Inspection records type Move-in, status Draft, Inspector name and started-at time; no tenant fields exist
+- [x] Inspection list shows type, address, date and Draft/Completed status, and opens an Inspection
+- [x] Vitest runs core tests against fake-indexeddb; tests cover address validation and Inspection creation through core operations only
