@@ -272,3 +272,75 @@ h3 {
 .cards:empty {
   display: none;
 }
+
+.item-link {
+  text-align: left;
+  color: inherit;
+}
+
+.thumbnails {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+  gap: 0.5rem;
+}
+
+.thumbnails:empty {
+  display: none;
+}
+
+.thumbnail {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  padding: env(safe-area-inset-top) 1rem env(safe-area-inset-bottom);
+}
+
+.viewer-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 3rem;
+}
+
+.viewer-image {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain;
+}
+
+.on-dark {
+  color: #fff;
+}
+
+.danger-on-dark {
+  color: #ff8a80;
+}
+
+button:disabled {
+  opacity: 0.6;
+}

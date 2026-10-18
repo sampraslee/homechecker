@@ -17,3 +17,7 @@
 - [ ] AI Suggestions are stored separately from Defects with photo, code, confidence, outcome "unreviewed" and timestamps; never overwritten
 - [ ] Item shows its AI Suggestions; status bar shows "Saved on device" and "Waiting for AI: N photos"
 - [ ] Core tests (fake AI client and Environment) cover enqueue rules, offline hold, retry, validation and separate storage
+
+## Comments
+
+- From 03: a photo can be unprocessed (`processed: false`, no Evidence copy) if resizing failed at capture. `finishPhotoProcessing()` retries these at app start. The AI queue should wait for, or trigger, that retry rather than sending the original.

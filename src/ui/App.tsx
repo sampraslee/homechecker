@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AreaScreen } from "./AreaScreen";
 import { InspectionListScreen } from "./InspectionListScreen";
 import { InspectionScreen } from "./InspectionScreen";
+import { ItemScreen } from "./ItemScreen";
 import { SettingsScreen } from "./SettingsScreen";
 import { StartInspectionScreen } from "./StartInspectionScreen";
 
@@ -10,6 +11,7 @@ export type Screen =
   | { name: "start" }
   | { name: "inspection"; id: string }
   | { name: "area"; id: string }
+  | { name: "item"; id: string }
   | { name: "settings" };
 
 export type Navigate = (screen: Screen) => void;
@@ -26,6 +28,8 @@ export function App() {
       return <InspectionScreen id={screen.id} navigate={setScreen} />;
     case "area":
       return <AreaScreen id={screen.id} navigate={setScreen} />;
+    case "item":
+      return <ItemScreen id={screen.id} navigate={setScreen} />;
     case "settings":
       return <SettingsScreen navigate={setScreen} />;
   }

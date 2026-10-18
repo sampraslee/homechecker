@@ -43,8 +43,13 @@ export function AreaScreen({ id, navigate }: { id: string; navigate: Navigate })
   }
 
   async function removeItem(itemId: string) {
-    await homeCheck.removeItem(itemId);
-    load();
+    const result = await homeCheck.removeItem(itemId);
+    if (result.ok) {
+      setError(null);
+      load();
+    } else {
+      setError(refusalMessage[result.reason]);
+    }
   }
 
   return (
@@ -100,7 +105,9 @@ export function AreaScreen({ id, navigate }: { id: string; navigate: Navigate })
             </li>
           ) : (
             <li key={item.id} className="row">
-              <span>{item.displayName}</span>
+              <button type="button" className="link item-link" onClick={() => navigate({ name: "item", id: item.id })}>
+                {item.displayName} ›
+              </button>
               <span className="button-row">
                 <button type="button" className="link" onClick={() => setEditingItemId(item.id)}>
                   Rename

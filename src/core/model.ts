@@ -96,3 +96,18 @@ export type ItemSource = { catalogItemId: string; shortName?: string } | { other
 
 /** Catalog Items for an Area: the Area's relevant ones first, then the rest. */
 export type ItemChoices = { shownFirst: CatalogItem[]; others: CatalogItem[] };
+
+export type PhotoVersion = "original" | "evidenceCopy" | "thumbnail";
+
+export type Evidence = {
+  id: string;
+  inspectionId: string;
+  /** Evidence belongs to exactly one Item. */
+  itemId: string;
+  kind: "photo";
+  capturedAt: string;
+  /** False until the Evidence copy and thumbnail exist; the original is always kept. */
+  processed: boolean;
+  /** Order within the Item. */
+  position: number;
+};

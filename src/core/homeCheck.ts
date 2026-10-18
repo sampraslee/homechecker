@@ -3,21 +3,24 @@ import type {
   Area,
   AreaSource,
   AreaView,
+  Evidence,
   Inspection,
   InspectionSummary,
   Item,
   ItemChoices,
   ItemSource,
   ItemView,
+  PhotoVersion,
   UnitAddressInput,
 } from "./model";
-import type { Environment, Storage } from "./ports";
+import type { Environment, ImageProcessor, Storage } from "./ports";
 import { checkReferenceData, findCatalogItem, findStandardArea, type ReferenceData } from "./referenceData";
 
 export type HomeCheckDeps = {
   storage: Storage;
   environment: Environment;
   referenceData: ReferenceData;
+  imageProcessor: ImageProcessor;
 };
 
 const inspectorNameRequired = { ok: false, reason: "inspector-name-required" } as const;
@@ -25,8 +28,21 @@ const areaNotFound = { ok: false, reason: "area-not-found" } as const;
 const itemNotFound = { ok: false, reason: "item-not-found" } as const;
 const itemNameRequired = { ok: false, reason: "item-name-required" } as const;
 
-export function createHomeCheck({ storage, environment, referenceData }: HomeCheckDeps) {
+export function createHomeCheck({ storage, environment, referenceData, imageProcessor }: HomeCheckDeps) {
   checkReferenceData(referenceData);
+
+  /** Adds the Evidence copy and thumbnail; on failure leaves the photo unprocessed with its original intact. */
+  async function makeSmallerVersions(evidence: Evidence, original: Blob): Promise<Evidence> {
+    let versions;
+    try {
+      versions = await imageProcessor.processPhoto(original);
+    } catch {
+      return evidence;
+    }
+    const processed = { ...evidence, processed: true };
+    await storage.putEvidence(processed, versions);
+    return processed;
+  }
 
   return {
     async getSettings() {
@@ -185,6 +201,7 @@ export function createHomeCheck({ storage, environment, referenceData }: HomeChe
     async removeItem(itemId: string) {
       const item = await storage.getItem(itemId);
       if (!item) return itemNotFound;
+      if ((await storage.listEvidence(itemId)).length > 0) return { ok: false as const, reason: "item-has-evidence" as const };
       await storage.deleteItem(itemId);
       return { ok: true as const };
     },
@@ -201,8 +218,57 @@ export function createHomeCheck({ storage, environment, referenceData }: HomeChe
       return { ok: true as const, ...choices };
     },
 
+    async getItem(itemId: string): Promise<ItemView | undefined> {
+      const item = await storage.getItem(itemId);
+      return item && toItemView(item);
+    },
+
     async listItems(areaId: string): Promise<ItemView[]> {
       return (await storage.listItems(areaId)).map(toItemView);
+    },
+
+    /** Saves the original before making the smaller versions, so a capture is never lost. */
+    async addPhoto(itemId: string, original: Blob) {
+      const item = await storage.getItem(itemId);
+      if (!item) return itemNotFound;
+      const evidence: Evidence = {
+        id: crypto.randomUUID(),
+        inspectionId: item.inspectionId,
+        itemId,
+        kind: "photo",
+        capturedAt: environment.now().toISOString(),
+        processed: false,
+        position: nextPosition(await storage.listEvidence(itemId)),
+      };
+      await storage.putEvidence(evidence, { original });
+      return { ok: true as const, evidence: await makeSmallerVersions(evidence, original) };
+    },
+
+    /** Retries photos whose Evidence copy and thumbnail couldn't be made at capture. Returns how many now have them. */
+    async finishPhotoProcessing() {
+      let finished = 0;
+      for (const evidence of await storage.listUnprocessedEvidence()) {
+        const original = await storage.getMedia(evidence.id, "original");
+        if (original && (await makeSmallerVersions(evidence, original)).processed) finished++;
+      }
+      return finished;
+    },
+
+    async listEvidence(itemId: string) {
+      return storage.listEvidence(itemId);
+    },
+
+    async deleteEvidence(evidenceId: string) {
+      if (!(await storage.getEvidence(evidenceId))) return { ok: false as const, reason: "evidence-not-found" as const };
+      await storage.deleteEvidence(evidenceId);
+      return { ok: true as const };
+    },
+
+    /** An unprocessed photo has no Evidence copy, and shows its original as its thumbnail. */
+    async getPhoto(evidenceId: string, version: PhotoVersion) {
+      const blob = await storage.getMedia(evidenceId, version);
+      if (blob || version !== "thumbnail") return blob;
+      return storage.getMedia(evidenceId, "original");
     },
   };
 }

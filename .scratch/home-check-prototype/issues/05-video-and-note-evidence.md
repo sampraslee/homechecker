@@ -13,3 +13,7 @@
 - [ ] Videos and notes are never placed in the AI queue
 - [ ] Delete a video only while Draft
 - [ ] Core tests cover the 30 s cap metadata, linking and Draft-only deletion
+
+## Comments
+
+- From 03: `Evidence` is currently `kind: "photo"` with a photo-only `processed` flag, and media is keyed by `PhotoVersion` (original / evidenceCopy / thumbnail). Videos and notes will need `Evidence` to become a discriminated union by kind. Video needs a duration and only original + thumbnail; a note needs text and no media. The Item screen also renders every piece of Evidence as a photo.

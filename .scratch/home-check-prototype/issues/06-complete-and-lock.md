@@ -16,3 +16,4 @@
 ## Comments
 
 - 02 shipped addArea, renameArea, removeArea, addItem, renameItem and removeItem with no Draft check. The lock and its tests here need to cover all six.
+- 03 added addPhoto and deleteEvidence with no Draft check. Include both in the lock and its tests.

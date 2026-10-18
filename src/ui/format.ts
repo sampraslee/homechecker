@@ -31,4 +31,6 @@ export const refusalMessage: Record<RefusalReason, string> = {
   "unknown-catalog-item": "That Item is not in the Item Catalog",
   "item-not-found": "This Item is not on this phone",
   "item-name-required": "Enter a name",
+  "item-has-evidence": "Delete this Item's photos first",
+  "evidence-not-found": "This photo is not on this phone",
 };

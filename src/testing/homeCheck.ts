@@ -1,7 +1,7 @@
 import { IDBFactory, IDBKeyRange } from "fake-indexeddb";
 import { createDexieStorage } from "../adapters/dexieStorage";
 import { createHomeCheck, type HomeCheck } from "../core/homeCheck";
-import type { Environment } from "../core/ports";
+import type { Environment, ImageProcessor } from "../core/ports";
 import type { ReferenceData } from "../core/referenceData";
 import { testReferenceData } from "./referenceData";
 
@@ -32,12 +32,43 @@ export function createFakeEnvironment(start = new Date("2026-01-05T09:00:00.000Z
   };
 }
 
+export type StubImageProcessor = ImageProcessor & { failNext(): void };
+
+/** Labels each version with the original's text, e.g. "evidence copy of <original>". */
+export function createStubImageProcessor(): StubImageProcessor {
+  let failNext = false;
+  return {
+    async processPhoto(original) {
+      if (failNext) {
+        failNext = false;
+        throw new Error("could not decode image");
+      }
+      const text = await original.text();
+      return {
+        evidenceCopy: new Blob([`evidence copy of ${text}`], { type: "image/jpeg" }),
+        thumbnail: new Blob([`thumbnail of ${text}`], { type: "image/jpeg" }),
+      };
+    },
+    failNext() {
+      failNext = true;
+    },
+  };
+}
+
 /** A Home Check core on a fresh fake-indexeddb database. */
 export function createTestHomeCheck(referenceData: ReferenceData = testReferenceData) {
   const environment = createFakeEnvironment();
-  const storage = createDexieStorage("home-check-test", { indexedDB: new IDBFactory(), IDBKeyRange });
-  const homeCheck = createHomeCheck({ storage, environment, referenceData });
-  return { homeCheck, environment };
+  const imageProcessor = createStubImageProcessor();
+  const indexedDB = new IDBFactory();
+  /** A fresh core on a new connection to the same database, as after closing and reopening the app. */
+  const reopen = () =>
+    createHomeCheck({
+      storage: createDexieStorage("home-check-test", { indexedDB, IDBKeyRange }),
+      environment,
+      referenceData,
+      imageProcessor,
+    });
+  return { homeCheck: reopen(), environment, imageProcessor, reopen };
 }
 
 /** A Home Check core with one Draft Move-in Inspection already started. */
