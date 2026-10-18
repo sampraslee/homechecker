@@ -15,3 +15,8 @@
 - [ ] On a Completed Inspection, AI processing and review still work and may add Defects or links; all other edits stay locked
 - [ ] Completion confirmation shows counts of photos waiting for AI and unreviewed AI Suggestions
 - [ ] Core tests cover each outcome, confirm-onto-existing, and the Completed exception
+
+## Comments
+
+- From 04: `DefectSource` is only `"manual"` for now; add `"ai-suggested"` and the AI Suggestion link here. `addDefect` refuses `OT` Defect Types without a note (`noteRequired` on the Category). Decide whether confirming an `OT-UNKNOWN` AI Suggestion needs a note, or is exempt.
+- The duplicate refusal already returns `existingDefectId`, which confirm-onto-existing can reuse.

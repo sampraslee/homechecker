@@ -1,0 +1,1702 @@
+{
+  "version": "master-v1",
+  "categories": [
+    {
+      "code": "SF",
+      "name": "Surface & Finish",
+      "defectTypes": [
+        {
+          "code": "SF-SCRATCH",
+          "name": "Scratched"
+        },
+        {
+          "code": "SF-SCUFF",
+          "name": "Scuffed"
+        },
+        {
+          "code": "SF-CHIP",
+          "name": "Chipped Finish"
+        },
+        {
+          "code": "SF-PEEL",
+          "name": "Paint Peeling"
+        },
+        {
+          "code": "SF-FLAKE",
+          "name": "Paint Flaking"
+        },
+        {
+          "code": "SF-BUBBLE",
+          "name": "Paint Bubbling"
+        },
+        {
+          "code": "SF-FADE",
+          "name": "Faded"
+        },
+        {
+          "code": "SF-DISCOLOR",
+          "name": "Discoloured"
+        },
+        {
+          "code": "SF-STAIN",
+          "name": "Stained"
+        },
+        {
+          "code": "SF-MARK",
+          "name": "Marked"
+        },
+        {
+          "code": "SF-UNEVEN",
+          "name": "Uneven Finish"
+        },
+        {
+          "code": "SF-PATCHY",
+          "name": "Patchy Finish"
+        },
+        {
+          "code": "SF-TOUCHUP",
+          "name": "Visible Touch-up"
+        },
+        {
+          "code": "SF-RESIDUE",
+          "name": "Adhesive Residue"
+        },
+        {
+          "code": "SF-BURN",
+          "name": "Burn / Scorch Mark"
+        },
+        {
+          "code": "SF-RUST",
+          "name": "Rust / Corrosion"
+        },
+        {
+          "code": "SF-TARNISH",
+          "name": "Tarnished"
+        },
+        {
+          "code": "SF-SURFACE-DMG",
+          "name": "General Surface Damage"
+        }
+      ]
+    },
+    {
+      "code": "PD",
+      "name": "Physical Damage",
+      "defectTypes": [
+        {
+          "code": "PD-DENT",
+          "name": "Dented"
+        },
+        {
+          "code": "PD-CHIP",
+          "name": "Chipped"
+        },
+        {
+          "code": "PD-BROKEN",
+          "name": "Broken"
+        },
+        {
+          "code": "PD-HOLE",
+          "name": "Hole / Puncture"
+        },
+        {
+          "code": "PD-BENT",
+          "name": "Bent"
+        },
+        {
+          "code": "PD-WARP",
+          "name": "Warped"
+        },
+        {
+          "code": "PD-TORN",
+          "name": "Torn"
+        },
+        {
+          "code": "PD-CUT",
+          "name": "Cut"
+        },
+        {
+          "code": "PD-FRAY",
+          "name": "Frayed"
+        },
+        {
+          "code": "PD-SPLIT",
+          "name": "Split"
+        },
+        {
+          "code": "PD-EDGE",
+          "name": "Damaged Edge"
+        },
+        {
+          "code": "PD-CORNER",
+          "name": "Damaged Corner"
+        },
+        {
+          "code": "PD-DETACHED",
+          "name": "Detached"
+        },
+        {
+          "code": "PD-PARTDET",
+          "name": "Partially Detached"
+        },
+        {
+          "code": "PD-CRUSH",
+          "name": "Crushed"
+        },
+        {
+          "code": "PD-IMPACT",
+          "name": "Impact Damage"
+        }
+      ]
+    },
+    {
+      "code": "CD",
+      "name": "Crack / Separation / Deformation",
+      "defectTypes": [
+        {
+          "code": "CD-HAIRLINE",
+          "name": "Hairline Crack"
+        },
+        {
+          "code": "CD-OPENCRACK",
+          "name": "Open Crack"
+        },
+        {
+          "code": "CD-DEEPCRACK",
+          "name": "Deep Crack"
+        },
+        {
+          "code": "CD-JOINTSEP",
+          "name": "Joint Separation"
+        },
+        {
+          "code": "CD-GAP",
+          "name": "Gap"
+        },
+        {
+          "code": "CD-BULGE",
+          "name": "Bulging"
+        },
+        {
+          "code": "CD-SAG",
+          "name": "Sagging"
+        },
+        {
+          "code": "CD-SWELL",
+          "name": "Swelling"
+        },
+        {
+          "code": "CD-DELAM",
+          "name": "Delamination"
+        },
+        {
+          "code": "CD-ROT",
+          "name": "Rot / Decay"
+        },
+        {
+          "code": "CD-HOLLOW",
+          "name": "Hollow Area"
+        },
+        {
+          "code": "CD-DISTORT",
+          "name": "Distortion / Deformation"
+        }
+      ]
+    },
+    {
+      "code": "AF",
+      "name": "Alignment & Fit",
+      "defectTypes": [
+        {
+          "code": "AF-MISALIGN",
+          "name": "Misaligned"
+        },
+        {
+          "code": "AF-UNEVEN",
+          "name": "Uneven"
+        },
+        {
+          "code": "AF-NOTLEVEL",
+          "name": "Not Level"
+        },
+        {
+          "code": "AF-NOTFLUSH",
+          "name": "Not Flush"
+        },
+        {
+          "code": "AF-GAP",
+          "name": "Excessive Gap"
+        },
+        {
+          "code": "AF-RUB",
+          "name": "Rubbing"
+        },
+        {
+          "code": "AF-STICK",
+          "name": "Sticking"
+        },
+        {
+          "code": "AF-JAM",
+          "name": "Jammed"
+        },
+        {
+          "code": "AF-OFFTRACK",
+          "name": "Out of Track"
+        },
+        {
+          "code": "AF-OPEN",
+          "name": "Does Not Open Fully"
+        },
+        {
+          "code": "AF-CLOSE",
+          "name": "Does Not Close Fully"
+        },
+        {
+          "code": "AF-LATCH",
+          "name": "Does Not Latch"
+        },
+        {
+          "code": "AF-SEAL",
+          "name": "Does Not Seal Properly"
+        },
+        {
+          "code": "AF-LOOSEFIT",
+          "name": "Loose Fit"
+        }
+      ]
+    },
+    {
+      "code": "HF",
+      "name": "Hardware & Fittings",
+      "defectTypes": [
+        {
+          "code": "HF-HINGE-LOOSE",
+          "name": "Loose Hinge"
+        },
+        {
+          "code": "HF-HINGE-BROKEN",
+          "name": "Broken Hinge"
+        },
+        {
+          "code": "HF-HINGE-MISSING",
+          "name": "Missing Hinge"
+        },
+        {
+          "code": "HF-HANDLE-LOOSE",
+          "name": "Loose Handle"
+        },
+        {
+          "code": "HF-HANDLE-BROKEN",
+          "name": "Broken Handle"
+        },
+        {
+          "code": "HF-HANDLE-MISSING",
+          "name": "Missing Handle"
+        },
+        {
+          "code": "HF-KNOB-LOOSE",
+          "name": "Loose Knob"
+        },
+        {
+          "code": "HF-KNOB-BROKEN",
+          "name": "Broken Knob"
+        },
+        {
+          "code": "HF-KNOB-MISSING",
+          "name": "Missing Knob"
+        },
+        {
+          "code": "HF-LOCK-FAULT",
+          "name": "Faulty Lock"
+        },
+        {
+          "code": "HF-LOCK-MISSING",
+          "name": "Missing Lock"
+        },
+        {
+          "code": "HF-LATCH-FAULT",
+          "name": "Faulty Latch"
+        },
+        {
+          "code": "HF-SCREW-LOOSE",
+          "name": "Loose Screw / Fastener"
+        },
+        {
+          "code": "HF-SCREW-MISSING",
+          "name": "Missing Screw / Fastener"
+        },
+        {
+          "code": "HF-BRACKET-LOOSE",
+          "name": "Loose Bracket"
+        },
+        {
+          "code": "HF-BRACKET-BROKEN",
+          "name": "Broken Bracket"
+        },
+        {
+          "code": "HF-RAIL-FAULT",
+          "name": "Faulty Rail"
+        },
+        {
+          "code": "HF-RUNNER-FAULT",
+          "name": "Faulty Runner"
+        },
+        {
+          "code": "HF-TRACK-FAULT",
+          "name": "Faulty Track"
+        },
+        {
+          "code": "HF-WHEEL-FAULT",
+          "name": "Faulty Wheel / Caster"
+        },
+        {
+          "code": "HF-STOPPER-MISSING",
+          "name": "Missing Stopper"
+        },
+        {
+          "code": "HF-SEAL-DMG",
+          "name": "Damaged Seal / Gasket"
+        },
+        {
+          "code": "HF-SEAL-MISSING",
+          "name": "Missing Seal / Gasket"
+        },
+        {
+          "code": "HF-COVER-MISSING",
+          "name": "Missing Cap / Cover"
+        }
+      ]
+    },
+    {
+      "code": "FO",
+      "name": "Function & Operation",
+      "defectTypes": [
+        {
+          "code": "FO-NOTWORK",
+          "name": "Not Working"
+        },
+        {
+          "code": "FO-PARTIAL",
+          "name": "Partially Working"
+        },
+        {
+          "code": "FO-INTERMIT",
+          "name": "Intermittent"
+        },
+        {
+          "code": "FO-DIFFICULT",
+          "name": "Difficult to Operate"
+        },
+        {
+          "code": "FO-STUCK",
+          "name": "Stuck"
+        },
+        {
+          "code": "FO-WEAK",
+          "name": "Weak Performance"
+        },
+        {
+          "code": "FO-SLOW",
+          "name": "Slow Response"
+        },
+        {
+          "code": "FO-SENSOR",
+          "name": "Sensor Fault"
+        },
+        {
+          "code": "FO-CONTROL",
+          "name": "Control Fault"
+        },
+        {
+          "code": "FO-TIMER",
+          "name": "Timer Fault"
+        },
+        {
+          "code": "FO-DISPLAY",
+          "name": "Display Fault"
+        },
+        {
+          "code": "FO-REMOTE",
+          "name": "Remote Function Fault"
+        },
+        {
+          "code": "FO-AUTO",
+          "name": "Automatic Function Fault"
+        },
+        {
+          "code": "FO-ABNORMAL",
+          "name": "Abnormal Operation"
+        }
+      ]
+    },
+    {
+      "code": "WM",
+      "name": "Water & Moisture",
+      "defectTypes": [
+        {
+          "code": "WM-LEAK",
+          "name": "Active Leak"
+        },
+        {
+          "code": "WM-DRIP",
+          "name": "Dripping"
+        },
+        {
+          "code": "WM-SEEP",
+          "name": "Seepage"
+        },
+        {
+          "code": "WM-WATERMARK",
+          "name": "Watermark"
+        },
+        {
+          "code": "WM-WATERSTAIN",
+          "name": "Water Stain"
+        },
+        {
+          "code": "WM-DAMP",
+          "name": "Damp"
+        },
+        {
+          "code": "WM-WET",
+          "name": "Wet Surface"
+        },
+        {
+          "code": "WM-CONDENSE",
+          "name": "Condensation"
+        },
+        {
+          "code": "WM-POOL",
+          "name": "Water Pooling"
+        },
+        {
+          "code": "WM-WATERDMG",
+          "name": "Water Damage"
+        },
+        {
+          "code": "WM-SWELL",
+          "name": "Moisture Swelling"
+        },
+        {
+          "code": "WM-WARP",
+          "name": "Moisture Warping"
+        },
+        {
+          "code": "WM-SEALFAIL",
+          "name": "Failed Sealant / Silicone"
+        },
+        {
+          "code": "WM-WATERPROOF",
+          "name": "Suspected Waterproofing Failure"
+        }
+      ]
+    },
+    {
+      "code": "PL",
+      "name": "Plumbing & Drainage",
+      "defectTypes": [
+        {
+          "code": "PL-NOWATER",
+          "name": "No Water"
+        },
+        {
+          "code": "PL-LOWPRESS",
+          "name": "Low Water Pressure"
+        },
+        {
+          "code": "PL-WEAKFLOW",
+          "name": "Weak Flow"
+        },
+        {
+          "code": "PL-IRREGFLOW",
+          "name": "Irregular Flow"
+        },
+        {
+          "code": "PL-TAPDRIP",
+          "name": "Tap Dripping"
+        },
+        {
+          "code": "PL-TAPLEAK",
+          "name": "Tap Leaking"
+        },
+        {
+          "code": "PL-PIPELEAK",
+          "name": "Pipe Leak"
+        },
+        {
+          "code": "PL-JOINTLEAK",
+          "name": "Joint Leak"
+        },
+        {
+          "code": "PL-TRAPLEAK",
+          "name": "Trap Leak"
+        },
+        {
+          "code": "PL-HOSELEAK",
+          "name": "Flexible Hose Leak"
+        },
+        {
+          "code": "PL-BLOCK",
+          "name": "Blocked Drain"
+        },
+        {
+          "code": "PL-SLOWDRAIN",
+          "name": "Slow Drainage"
+        },
+        {
+          "code": "PL-BACKFLOW",
+          "name": "Drain Backflow"
+        },
+        {
+          "code": "PL-FLUSHFAIL",
+          "name": "Flush Not Working"
+        },
+        {
+          "code": "PL-WEAKFLUSH",
+          "name": "Weak Flush"
+        },
+        {
+          "code": "PL-CONFLUSH",
+          "name": "Continuous Flushing"
+        },
+        {
+          "code": "PL-CISTERN",
+          "name": "Cistern Leak"
+        },
+        {
+          "code": "PL-FIXTURELOOSE",
+          "name": "Sanitary Fixture Loose"
+        },
+        {
+          "code": "PL-NOHOTWATER",
+          "name": "Hot Water Not Available"
+        },
+        {
+          "code": "PL-DRAINODOUR",
+          "name": "Drain Odour"
+        }
+      ]
+    },
+    {
+      "code": "EL",
+      "name": "Electrical & Power",
+      "defectTypes": [
+        {
+          "code": "EL-NOPOWER",
+          "name": "No Power"
+        },
+        {
+          "code": "EL-INTERMIT",
+          "name": "Intermittent Power"
+        },
+        {
+          "code": "EL-SOCKETFAIL",
+          "name": "Socket Not Working"
+        },
+        {
+          "code": "EL-SOCKETLOOSE",
+          "name": "Socket Loose"
+        },
+        {
+          "code": "EL-SOCKETDMG",
+          "name": "Socket Damaged"
+        },
+        {
+          "code": "EL-SWITCHFAIL",
+          "name": "Switch Not Working"
+        },
+        {
+          "code": "EL-SWITCHLOOSE",
+          "name": "Switch Loose"
+        },
+        {
+          "code": "EL-SWITCHDMG",
+          "name": "Switch Damaged"
+        },
+        {
+          "code": "EL-COVERMISS",
+          "name": "Electrical Cover Missing"
+        },
+        {
+          "code": "EL-WIREEXPOSE",
+          "name": "Exposed Wire"
+        },
+        {
+          "code": "EL-WIRELOOSE",
+          "name": "Loose Wire"
+        },
+        {
+          "code": "EL-CABLEDMG",
+          "name": "Damaged Cable"
+        },
+        {
+          "code": "EL-PLUGDMG",
+          "name": "Damaged Plug"
+        },
+        {
+          "code": "EL-BURN",
+          "name": "Burn Mark"
+        },
+        {
+          "code": "EL-OVERHEAT",
+          "name": "Overheating"
+        },
+        {
+          "code": "EL-TRIP",
+          "name": "Electrical Tripping"
+        },
+        {
+          "code": "EL-UNSAFEWIRE",
+          "name": "Unsafe Wiring"
+        },
+        {
+          "code": "EL-FITTINGLOOSE",
+          "name": "Electrical Fitting Loose"
+        }
+      ]
+    },
+    {
+      "code": "LT",
+      "name": "Lighting",
+      "defectTypes": [
+        {
+          "code": "LT-NOTWORK",
+          "name": "Light Not Working"
+        },
+        {
+          "code": "LT-FLICKER",
+          "name": "Flickering"
+        },
+        {
+          "code": "LT-DIM",
+          "name": "Dim"
+        },
+        {
+          "code": "LT-INTERMIT",
+          "name": "Intermittent"
+        },
+        {
+          "code": "LT-BULBMISS",
+          "name": "Bulb Missing"
+        },
+        {
+          "code": "LT-BULBDMG",
+          "name": "Bulb Damaged"
+        },
+        {
+          "code": "LT-FITTINGLOOSE",
+          "name": "Light Fitting Loose"
+        },
+        {
+          "code": "LT-FITTINGDMG",
+          "name": "Light Fitting Damaged"
+        },
+        {
+          "code": "LT-COVERMISS",
+          "name": "Cover / Diffuser Missing"
+        },
+        {
+          "code": "LT-COVERDMG",
+          "name": "Cover / Diffuser Damaged"
+        },
+        {
+          "code": "LT-DRIVER",
+          "name": "Driver / Transformer Fault"
+        },
+        {
+          "code": "LT-SWITCH",
+          "name": "Lighting Switch Fault"
+        }
+      ]
+    },
+    {
+      "code": "AC",
+      "name": "Air-conditioning & Ventilation",
+      "defectTypes": [
+        {
+          "code": "AC-NOTCOOL",
+          "name": "Not Cooling"
+        },
+        {
+          "code": "AC-WEAKCOOL",
+          "name": "Weak Cooling"
+        },
+        {
+          "code": "AC-UNEVENCOOL",
+          "name": "Uneven Cooling"
+        },
+        {
+          "code": "AC-WEAKAIR",
+          "name": "Weak Airflow"
+        },
+        {
+          "code": "AC-LEAK",
+          "name": "Water Leaking"
+        },
+        {
+          "code": "AC-CONDENSE",
+          "name": "Excessive Condensation"
+        },
+        {
+          "code": "AC-NOISE",
+          "name": "Abnormal Noise"
+        },
+        {
+          "code": "AC-VIBRATE",
+          "name": "Excessive Vibration"
+        },
+        {
+          "code": "AC-ODOUR",
+          "name": "Bad Odour"
+        },
+        {
+          "code": "AC-FILTERDIRTY",
+          "name": "Filter Dirty"
+        },
+        {
+          "code": "AC-FILTERMISS",
+          "name": "Filter Missing"
+        },
+        {
+          "code": "AC-REMOTEMISS",
+          "name": "Remote Missing"
+        },
+        {
+          "code": "AC-REMOTEFAIL",
+          "name": "Remote Not Working"
+        },
+        {
+          "code": "AC-DISPLAY",
+          "name": "Display Fault"
+        },
+        {
+          "code": "AC-FANFAIL",
+          "name": "Fan Not Working"
+        },
+        {
+          "code": "AC-EXHAUSTFAIL",
+          "name": "Exhaust / Ventilation Fan Not Working"
+        },
+        {
+          "code": "AC-WEAKEXHAUST",
+          "name": "Weak Exhaust"
+        },
+        {
+          "code": "AC-VENTDIRTY",
+          "name": "Vent Dirty"
+        }
+      ]
+    },
+    {
+      "code": "AP",
+      "name": "Appliance & Equipment",
+      "defectTypes": [
+        {
+          "code": "AP-NOPOWER",
+          "name": "Does Not Power On"
+        },
+        {
+          "code": "AP-NOTWORK",
+          "name": "Not Working"
+        },
+        {
+          "code": "AP-PARTIAL",
+          "name": "Partially Working"
+        },
+        {
+          "code": "AP-INTERMIT",
+          "name": "Intermittent"
+        },
+        {
+          "code": "AP-HEATFAIL",
+          "name": "Heating Fault"
+        },
+        {
+          "code": "AP-COOLFAIL",
+          "name": "Cooling Fault"
+        },
+        {
+          "code": "AP-TEMPFAULT",
+          "name": "Temperature Fault"
+        },
+        {
+          "code": "AP-LEAK",
+          "name": "Water Leak"
+        },
+        {
+          "code": "AP-NOISE",
+          "name": "Abnormal Noise"
+        },
+        {
+          "code": "AP-VIBRATE",
+          "name": "Excessive Vibration"
+        },
+        {
+          "code": "AP-ODOUR",
+          "name": "Abnormal Smell"
+        },
+        {
+          "code": "AP-DISPLAY",
+          "name": "Display Fault"
+        },
+        {
+          "code": "AP-CONTROL",
+          "name": "Control / Button Fault"
+        },
+        {
+          "code": "AP-DOOR",
+          "name": "Door / Lid Fault"
+        },
+        {
+          "code": "AP-SEAL",
+          "name": "Seal / Gasket Damaged"
+        },
+        {
+          "code": "AP-CABLE",
+          "name": "Cable Damaged"
+        },
+        {
+          "code": "AP-PLUG",
+          "name": "Plug Damaged"
+        },
+        {
+          "code": "AP-ACCESSMISS",
+          "name": "Accessory Missing"
+        },
+        {
+          "code": "AP-COMPMISS",
+          "name": "Component Missing"
+        }
+      ]
+    },
+    {
+      "code": "CL",
+      "name": "Cleanliness & Hygiene",
+      "defectTypes": [
+        {
+          "code": "CL-DUST",
+          "name": "Dusty"
+        },
+        {
+          "code": "CL-DIRTY",
+          "name": "Dirty"
+        },
+        {
+          "code": "CL-GREASE",
+          "name": "Greasy"
+        },
+        {
+          "code": "CL-STAIN",
+          "name": "Stained"
+        },
+        {
+          "code": "CL-STICKY",
+          "name": "Sticky"
+        },
+        {
+          "code": "CL-FOOD",
+          "name": "Food Residue"
+        },
+        {
+          "code": "CL-CONSTRUCT",
+          "name": "Construction Residue"
+        },
+        {
+          "code": "CL-ADHESIVE",
+          "name": "Adhesive Residue"
+        },
+        {
+          "code": "CL-LIMESCALE",
+          "name": "Limescale"
+        },
+        {
+          "code": "CL-SOAP",
+          "name": "Soap Scum"
+        },
+        {
+          "code": "CL-DEBRIS",
+          "name": "Debris"
+        },
+        {
+          "code": "CL-HAIR",
+          "name": "Hair / Dirt Accumulation"
+        },
+        {
+          "code": "CL-DRAIN",
+          "name": "Drain Dirty"
+        },
+        {
+          "code": "CL-INTERIOR",
+          "name": "Interior Dirty"
+        },
+        {
+          "code": "CL-EXTERIOR",
+          "name": "Exterior Dirty"
+        },
+        {
+          "code": "CL-CLEANREQ",
+          "name": "Requires Cleaning"
+        }
+      ]
+    },
+    {
+      "code": "MB",
+      "name": "Mould & Biological Growth",
+      "defectTypes": [
+        {
+          "code": "MB-MOULD",
+          "name": "Mould"
+        },
+        {
+          "code": "MB-MILDEW",
+          "name": "Mildew"
+        },
+        {
+          "code": "MB-FUNGUS",
+          "name": "Fungus"
+        },
+        {
+          "code": "MB-ALGAE",
+          "name": "Algae"
+        },
+        {
+          "code": "MB-ORGANIC",
+          "name": "Organic Growth"
+        },
+        {
+          "code": "MB-STAIN",
+          "name": "Mould Staining"
+        },
+        {
+          "code": "MB-DAMP",
+          "name": "Damp-Related Growth"
+        }
+      ]
+    },
+    {
+      "code": "PE",
+      "name": "Pest Evidence",
+      "defectTypes": [
+        {
+          "code": "PE-TERMITE",
+          "name": "Termite Evidence"
+        },
+        {
+          "code": "PE-TERMITEDMG",
+          "name": "Termite Damage"
+        },
+        {
+          "code": "PE-ANT",
+          "name": "Ant Evidence"
+        },
+        {
+          "code": "PE-ROACH",
+          "name": "Cockroach Evidence"
+        },
+        {
+          "code": "PE-RODENT",
+          "name": "Rodent Evidence"
+        },
+        {
+          "code": "PE-INSECT",
+          "name": "Other Insect Evidence"
+        },
+        {
+          "code": "PE-DROPPING",
+          "name": "Pest Droppings"
+        },
+        {
+          "code": "PE-NEST",
+          "name": "Pest Nest"
+        },
+        {
+          "code": "PE-SPIDER",
+          "name": "Spider / Cobweb Evidence"
+        },
+        {
+          "code": "PE-UNKNOWN",
+          "name": "Unknown Pest Evidence"
+        }
+      ]
+    },
+    {
+      "code": "MI",
+      "name": "Missing / Incomplete",
+      "defectTypes": [
+        {
+          "code": "MI-ITEM",
+          "name": "Item Missing"
+        },
+        {
+          "code": "MI-COMPONENT",
+          "name": "Component Missing"
+        },
+        {
+          "code": "MI-ACCESSORY",
+          "name": "Accessory Missing"
+        },
+        {
+          "code": "MI-FIXTURE",
+          "name": "Fixture Missing"
+        },
+        {
+          "code": "MI-FITTING",
+          "name": "Fitting Missing"
+        },
+        {
+          "code": "MI-COVER",
+          "name": "Cover Missing"
+        },
+        {
+          "code": "MI-CAP",
+          "name": "Cap Missing"
+        },
+        {
+          "code": "MI-SHELF",
+          "name": "Shelf Missing"
+        },
+        {
+          "code": "MI-DRAWER",
+          "name": "Drawer Missing"
+        },
+        {
+          "code": "MI-KEY",
+          "name": "Key Missing"
+        },
+        {
+          "code": "MI-REMOTE",
+          "name": "Remote Missing"
+        },
+        {
+          "code": "MI-BULB",
+          "name": "Bulb Missing"
+        },
+        {
+          "code": "MI-SEAL",
+          "name": "Seal / Gasket Missing"
+        },
+        {
+          "code": "MI-FASTENER",
+          "name": "Screw / Fastener Missing"
+        },
+        {
+          "code": "MI-INCOMPLETE",
+          "name": "Installation Incomplete"
+        },
+        {
+          "code": "MI-NOTINSTALLED",
+          "name": "Not Installed"
+        }
+      ]
+    },
+    {
+      "code": "IW",
+      "name": "Installation & Workmanship",
+      "defectTypes": [
+        {
+          "code": "IW-POORINSTALL",
+          "name": "Poor Installation"
+        },
+        {
+          "code": "IW-POORFINISH",
+          "name": "Poor Finishing"
+        },
+        {
+          "code": "IW-UNEVEN",
+          "name": "Uneven Installation"
+        },
+        {
+          "code": "IW-MISALIGN",
+          "name": "Misaligned Installation"
+        },
+        {
+          "code": "IW-JOINT",
+          "name": "Poor Joint"
+        },
+        {
+          "code": "IW-SEALANT",
+          "name": "Poor Sealant"
+        },
+        {
+          "code": "IW-SEALANTMISS",
+          "name": "Missing / Incomplete Sealant"
+        },
+        {
+          "code": "IW-GROUT",
+          "name": "Poor Grouting"
+        },
+        {
+          "code": "IW-GROUTMISS",
+          "name": "Missing Grout"
+        },
+        {
+          "code": "IW-GROUTUNEVEN",
+          "name": "Uneven Grout"
+        },
+        {
+          "code": "IW-FASTENER",
+          "name": "Exposed Fastener"
+        },
+        {
+          "code": "IW-GAP",
+          "name": "Exposed Gap"
+        },
+        {
+          "code": "IW-PATCH",
+          "name": "Visible Patching"
+        },
+        {
+          "code": "IW-PAINTEDGE",
+          "name": "Poor Paint Edge"
+        },
+        {
+          "code": "IW-TEMP",
+          "name": "Temporary Repair"
+        },
+        {
+          "code": "IW-INCORRECT",
+          "name": "Incorrect Installation"
+        },
+        {
+          "code": "IW-POSITION",
+          "name": "Incorrect Positioning"
+        }
+      ]
+    },
+    {
+      "code": "NV",
+      "name": "Noise & Vibration",
+      "defectTypes": [
+        {
+          "code": "NV-SQUEAK",
+          "name": "Squeaking"
+        },
+        {
+          "code": "NV-CREAK",
+          "name": "Creaking"
+        },
+        {
+          "code": "NV-RATTLE",
+          "name": "Rattling"
+        },
+        {
+          "code": "NV-HUM",
+          "name": "Humming"
+        },
+        {
+          "code": "NV-GRIND",
+          "name": "Grinding"
+        },
+        {
+          "code": "NV-KNOCK",
+          "name": "Knocking"
+        },
+        {
+          "code": "NV-BUZZ",
+          "name": "Buzzing"
+        },
+        {
+          "code": "NV-NOISE",
+          "name": "Excessive Operating Noise"
+        },
+        {
+          "code": "NV-VIBRATE",
+          "name": "Excessive Vibration"
+        },
+        {
+          "code": "NV-UNKNOWN",
+          "name": "Unknown Abnormal Noise"
+        }
+      ]
+    },
+    {
+      "code": "OD",
+      "name": "Odour",
+      "defectTypes": [
+        {
+          "code": "OD-DAMP",
+          "name": "Damp Smell"
+        },
+        {
+          "code": "OD-MOULD",
+          "name": "Mould Smell"
+        },
+        {
+          "code": "OD-DRAIN",
+          "name": "Drain / Sewage Smell"
+        },
+        {
+          "code": "OD-SMOKE",
+          "name": "Smoke Smell"
+        },
+        {
+          "code": "OD-BURNT",
+          "name": "Burnt Smell"
+        },
+        {
+          "code": "OD-CHEMICAL",
+          "name": "Chemical Smell"
+        },
+        {
+          "code": "OD-FOOD",
+          "name": "Food Smell"
+        },
+        {
+          "code": "OD-PEST",
+          "name": "Pest Odour"
+        },
+        {
+          "code": "OD-UNKNOWN",
+          "name": "Unknown Abnormal Odour"
+        }
+      ]
+    },
+    {
+      "code": "WD",
+      "name": "Wear & Deterioration",
+      "defectTypes": [
+        {
+          "code": "WD-WORN",
+          "name": "Worn"
+        },
+        {
+          "code": "WD-HEAVYWORN",
+          "name": "Heavily Worn"
+        },
+        {
+          "code": "WD-ABRADED",
+          "name": "Abraded"
+        },
+        {
+          "code": "WD-PERISHED",
+          "name": "Perished"
+        },
+        {
+          "code": "WD-BRITTLE",
+          "name": "Brittle"
+        },
+        {
+          "code": "WD-FADED",
+          "name": "Faded from Age"
+        },
+        {
+          "code": "WD-COATING",
+          "name": "Worn Coating"
+        },
+        {
+          "code": "WD-EDGE",
+          "name": "Worn Edge"
+        },
+        {
+          "code": "WD-SURFACE",
+          "name": "Worn Surface"
+        },
+        {
+          "code": "WD-SEALANT",
+          "name": "Aged Sealant"
+        },
+        {
+          "code": "WD-RUBBER",
+          "name": "Aged Rubber"
+        },
+        {
+          "code": "WD-LOOSE",
+          "name": "Loose Due to Wear"
+        },
+        {
+          "code": "WD-GENERAL",
+          "name": "General Deterioration"
+        }
+      ]
+    },
+    {
+      "code": "GM",
+      "name": "Glass / Mirror",
+      "defectTypes": [
+        {
+          "code": "GM-CRACK",
+          "name": "Cracked Glass"
+        },
+        {
+          "code": "GM-CHIP",
+          "name": "Chipped Glass"
+        },
+        {
+          "code": "GM-BROKEN",
+          "name": "Broken Glass"
+        },
+        {
+          "code": "GM-SCRATCH",
+          "name": "Scratched Glass"
+        },
+        {
+          "code": "GM-FOG",
+          "name": "Fogged / Cloudy Glass"
+        },
+        {
+          "code": "GM-STAIN",
+          "name": "Stained Glass"
+        },
+        {
+          "code": "GM-LOOSE",
+          "name": "Glass / Mirror Loose"
+        },
+        {
+          "code": "GM-SEAL",
+          "name": "Glass Seal Failure"
+        },
+        {
+          "code": "GM-MIRROR-DAMAGE",
+          "name": "Mirror Surface Damage"
+        },
+        {
+          "code": "GM-MIRROR-DISCOLOR",
+          "name": "Mirror Discolouration"
+        }
+      ]
+    },
+    {
+      "code": "FL",
+      "name": "Floor / Tile / Stone",
+      "defectTypes": [
+        {
+          "code": "FL-CRACK",
+          "name": "Cracked Tile / Flooring"
+        },
+        {
+          "code": "FL-CHIP",
+          "name": "Chipped Tile / Flooring"
+        },
+        {
+          "code": "FL-LOOSE",
+          "name": "Loose Tile / Flooring"
+        },
+        {
+          "code": "FL-HOLLOW",
+          "name": "Hollow Tile"
+        },
+        {
+          "code": "FL-LIFT",
+          "name": "Flooring Lifted"
+        },
+        {
+          "code": "FL-WARP",
+          "name": "Flooring Warped"
+        },
+        {
+          "code": "FL-GAP",
+          "name": "Flooring Gap"
+        },
+        {
+          "code": "FL-STAIN",
+          "name": "Flooring Stained"
+        },
+        {
+          "code": "FL-SCRATCH",
+          "name": "Flooring Scratched"
+        },
+        {
+          "code": "FL-GROUT",
+          "name": "Grout Defect"
+        },
+        {
+          "code": "FL-UNEVEN",
+          "name": "Uneven Floor"
+        },
+        {
+          "code": "FL-DISPLACE",
+          "name": "Tile Displaced"
+        }
+      ]
+    },
+    {
+      "code": "DW",
+      "name": "Door / Window",
+      "defectTypes": [
+        {
+          "code": "DW-STICK",
+          "name": "Sticking"
+        },
+        {
+          "code": "DW-JAM",
+          "name": "Jammed"
+        },
+        {
+          "code": "DW-MISALIGN",
+          "name": "Misaligned"
+        },
+        {
+          "code": "DW-CLOSEFAIL",
+          "name": "Cannot Close Properly"
+        },
+        {
+          "code": "DW-OPENFAIL",
+          "name": "Cannot Open Properly"
+        },
+        {
+          "code": "DW-LOCKFAIL",
+          "name": "Lock Fault"
+        },
+        {
+          "code": "DW-HINGE",
+          "name": "Hinge Fault"
+        },
+        {
+          "code": "DW-TRACK",
+          "name": "Track Fault"
+        },
+        {
+          "code": "DW-ROLLER",
+          "name": "Roller Fault"
+        },
+        {
+          "code": "DW-SEAL",
+          "name": "Seal Fault"
+        },
+        {
+          "code": "DW-GAP",
+          "name": "Excessive Gap"
+        },
+        {
+          "code": "DW-FRAME",
+          "name": "Frame Damage"
+        },
+        {
+          "code": "DW-MESH",
+          "name": "Mosquito Mesh Damage"
+        }
+      ]
+    },
+    {
+      "code": "CW",
+      "name": "Ceiling / Wall Specific",
+      "defectTypes": [
+        {
+          "code": "CW-HAIRLINE",
+          "name": "Hairline Crack"
+        },
+        {
+          "code": "CW-OPENCRACK",
+          "name": "Open Crack"
+        },
+        {
+          "code": "CW-PEEL",
+          "name": "Paint Peeling"
+        },
+        {
+          "code": "CW-BUBBLE",
+          "name": "Paint Bubbling"
+        },
+        {
+          "code": "CW-WATERMARK",
+          "name": "Watermark"
+        },
+        {
+          "code": "CW-DAMP",
+          "name": "Damp Area"
+        },
+        {
+          "code": "CW-MOULD",
+          "name": "Mould"
+        },
+        {
+          "code": "CW-HOLE",
+          "name": "Hole"
+        },
+        {
+          "code": "CW-PATCH",
+          "name": "Visible Patch"
+        },
+        {
+          "code": "CW-UNEVEN",
+          "name": "Uneven Surface"
+        },
+        {
+          "code": "CW-SAG",
+          "name": "Ceiling Sagging"
+        },
+        {
+          "code": "CW-DAMAGE",
+          "name": "General Wall/Ceiling Damage"
+        }
+      ]
+    },
+    {
+      "code": "CF",
+      "name": "Cabinet / Furniture Specific",
+      "defectTypes": [
+        {
+          "code": "CF-HINGE",
+          "name": "Hinge Fault"
+        },
+        {
+          "code": "CF-RUNNER",
+          "name": "Drawer Runner Fault"
+        },
+        {
+          "code": "CF-HANDLE",
+          "name": "Handle Fault"
+        },
+        {
+          "code": "CF-DOOR-MISALIGN",
+          "name": "Door Misaligned"
+        },
+        {
+          "code": "CF-DRAWER-MISALIGN",
+          "name": "Drawer Misaligned"
+        },
+        {
+          "code": "CF-SHELF",
+          "name": "Shelf Damage"
+        },
+        {
+          "code": "CF-LAMINATE",
+          "name": "Laminate Peeling"
+        },
+        {
+          "code": "CF-SWELL",
+          "name": "Swollen Board"
+        },
+        {
+          "code": "CF-CHIP",
+          "name": "Chipped Board"
+        },
+        {
+          "code": "CF-SCRATCH",
+          "name": "Scratched Surface"
+        },
+        {
+          "code": "CF-LOOSE",
+          "name": "Loose Structure"
+        },
+        {
+          "code": "CF-BROKEN",
+          "name": "Broken Component"
+        }
+      ]
+    },
+    {
+      "code": "SN",
+      "name": "Sanitary Fittings",
+      "defectTypes": [
+        {
+          "code": "SN-TOILET-LOOSE",
+          "name": "Toilet Bowl Loose"
+        },
+        {
+          "code": "SN-TOILET-CRACK",
+          "name": "Toilet Bowl Cracked"
+        },
+        {
+          "code": "SN-SEAT-BROKEN",
+          "name": "Toilet Seat Broken"
+        },
+        {
+          "code": "SN-SEAT-LOOSE",
+          "name": "Toilet Seat Loose"
+        },
+        {
+          "code": "SN-BASIN-CRACK",
+          "name": "Basin Cracked"
+        },
+        {
+          "code": "SN-BASIN-LOOSE",
+          "name": "Basin Loose"
+        },
+        {
+          "code": "SN-TAP-LOOSE",
+          "name": "Tap Loose"
+        },
+        {
+          "code": "SN-SHOWER-FAULT",
+          "name": "Shower Fitting Fault"
+        },
+        {
+          "code": "SN-HOSE-FAULT",
+          "name": "Shower Hose Fault"
+        },
+        {
+          "code": "SN-HOLDER",
+          "name": "Holder / Accessory Fault"
+        },
+        {
+          "code": "SN-SEAL",
+          "name": "Silicone / Seal Failure"
+        },
+        {
+          "code": "SN-LEAK",
+          "name": "Sanitary Fixture Leak"
+        }
+      ]
+    },
+    {
+      "code": "CB",
+      "name": "Curtain / Blind",
+      "defectTypes": [
+        {
+          "code": "CB-DIRTY",
+          "name": "Dirty"
+        },
+        {
+          "code": "CB-STAIN",
+          "name": "Stained"
+        },
+        {
+          "code": "CB-TORN",
+          "name": "Torn"
+        },
+        {
+          "code": "CB-HOOKMISS",
+          "name": "Hook / Ring Missing"
+        },
+        {
+          "code": "CB-RAIL",
+          "name": "Rail Fault"
+        },
+        {
+          "code": "CB-ROD",
+          "name": "Rod Fault"
+        },
+        {
+          "code": "CB-CHAIN",
+          "name": "Chain Fault"
+        },
+        {
+          "code": "CB-MOTOR",
+          "name": "Motor Fault"
+        },
+        {
+          "code": "CB-STUCK",
+          "name": "Stuck"
+        },
+        {
+          "code": "CB-MISALIGN",
+          "name": "Misaligned"
+        },
+        {
+          "code": "CB-FABRIC",
+          "name": "Fabric Damage"
+        }
+      ]
+    },
+    {
+      "code": "OT",
+      "name": "Other / Unknown",
+      "noteRequired": true,
+      "defectTypes": [
+        {
+          "code": "OT-OTHER",
+          "name": "Other Defect"
+        },
+        {
+          "code": "OT-UNKNOWN",
+          "name": "Unable to Determine"
+        },
+        {
+          "code": "OT-INSPECT",
+          "name": "Further Inspection Required"
+        }
+      ]
+    }
+  ]
+}

@@ -2,4 +2,13 @@ export { createHomeCheck, type HomeCheck, type HomeCheckDeps, type RefusalReason
 export { formatAddress } from "./address";
 export * from "./model";
 export type { Environment, ImageProcessor, Storage } from "./ports";
-export type { CatalogItem, ItemCatalog, ReferenceData, StandardArea, StandardAreaList } from "./referenceData";
+export type {
+  CatalogItem,
+  DefectCategory,
+  DefectDictionary,
+  DefectType,
+  ItemCatalog,
+  ReferenceData,
+  StandardArea,
+  StandardAreaList,
+} from "./referenceData";

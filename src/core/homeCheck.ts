@@ -3,6 +3,11 @@ import type {
   Area,
   AreaSource,
   AreaView,
+  Defect,
+  DefectChanges,
+  DefectChoices,
+  DefectInput,
+  DefectView,
   Evidence,
   Inspection,
   InspectionSummary,
@@ -14,7 +19,7 @@ import type {
   UnitAddressInput,
 } from "./model";
 import type { Environment, ImageProcessor, Storage } from "./ports";
-import { checkReferenceData, findCatalogItem, findStandardArea, type ReferenceData } from "./referenceData";
+import { checkReferenceData, findCatalogItem, findDefectType, findStandardArea, type ReferenceData } from "./referenceData";
 
 export type HomeCheckDeps = {
   storage: Storage;
@@ -27,6 +32,9 @@ const inspectorNameRequired = { ok: false, reason: "inspector-name-required" } a
 const areaNotFound = { ok: false, reason: "area-not-found" } as const;
 const itemNotFound = { ok: false, reason: "item-not-found" } as const;
 const itemNameRequired = { ok: false, reason: "item-name-required" } as const;
+const noteRequired = { ok: false, reason: "note-required" } as const;
+const evidenceNotOnItem = { ok: false, reason: "evidence-not-on-item" } as const;
+const defectNotFound = { ok: false, reason: "defect-not-found" } as const;
 
 export function createHomeCheck({ storage, environment, referenceData, imageProcessor }: HomeCheckDeps) {
   checkReferenceData(referenceData);
@@ -42,6 +50,33 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     const processed = { ...evidence, processed: true };
     await storage.putEvidence(processed, versions);
     return processed;
+  }
+
+  async function withDefectCount(item: Item): Promise<ItemView> {
+    return toItemView(item, (await storage.listDefects(item.id)).length);
+  }
+
+  /** A code missing from the bundled Dictionary (recorded under an older version) shows as itself. */
+  function toDefectView(defect: Defect): DefectView {
+    const dictionaryEntry = findDefectType(referenceData, defect.defectTypeCode);
+    return {
+      ...defect,
+      defectTypeName: dictionaryEntry?.defectType.name ?? defect.defectTypeCode,
+      categoryName: dictionaryEntry?.category.name ?? "Not in the bundled Defect Dictionary",
+      noteRequired: needsNote(defect.defectTypeCode),
+    };
+  }
+
+  /** Other / Unknown and any other Category marked `noteRequired` can't be recorded without a note. */
+  function needsNote(defectTypeCode: string): boolean {
+    return !!findDefectType(referenceData, defectTypeCode)?.category.noteRequired;
+  }
+
+  /** The Evidence ids without repeats, or null if any isn't Evidence of this Item. */
+  async function evidenceOfItem(itemId: string, evidenceIds: string[]): Promise<string[] | null> {
+    const ofItem = new Set((await storage.listEvidence(itemId)).map((evidence) => evidence.id));
+    const unique = [...new Set(evidenceIds)];
+    return unique.every((id) => ofItem.has(id)) ? unique : null;
   }
 
   return {
@@ -178,7 +213,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
         position: nextPosition(existing),
       };
       await storage.putItem(item);
-      return { ok: true as const, item: toItemView(item) };
+      return { ok: true as const, item: toItemView(item, 0) };
     },
 
     /** Sets a catalog Item's short name (blank clears it), or an Other item's free-text name. */
@@ -195,12 +230,13 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
         renamed = { ...item, name: trimmed };
       }
       await storage.putItem(renamed);
-      return { ok: true as const, item: toItemView(renamed) };
+      return { ok: true as const, item: await withDefectCount(renamed) };
     },
 
     async removeItem(itemId: string) {
       const item = await storage.getItem(itemId);
       if (!item) return itemNotFound;
+      if ((await storage.listDefects(itemId)).length > 0) return { ok: false as const, reason: "item-has-defects" as const };
       if ((await storage.listEvidence(itemId)).length > 0) return { ok: false as const, reason: "item-has-evidence" as const };
       await storage.deleteItem(itemId);
       return { ok: true as const };
@@ -220,11 +256,11 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
 
     async getItem(itemId: string): Promise<ItemView | undefined> {
       const item = await storage.getItem(itemId);
-      return item && toItemView(item);
+      return item && withDefectCount(item);
     },
 
     async listItems(areaId: string): Promise<ItemView[]> {
-      return (await storage.listItems(areaId)).map(toItemView);
+      return Promise.all((await storage.listItems(areaId)).map(withDefectCount));
     },
 
     /** Saves the original before making the smaller versions, so a capture is never lost. */
@@ -258,8 +294,15 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       return storage.listEvidence(itemId);
     },
 
+    /** Unlinks the Evidence from its Item's Defects first, so no Defect is left pointing at a deleted photo. */
     async deleteEvidence(evidenceId: string) {
-      if (!(await storage.getEvidence(evidenceId))) return { ok: false as const, reason: "evidence-not-found" as const };
+      const evidence = await storage.getEvidence(evidenceId);
+      if (!evidence) return { ok: false as const, reason: "evidence-not-found" as const };
+      for (const defect of await storage.listDefects(evidence.itemId)) {
+        if (defect.evidenceIds.includes(evidenceId)) {
+          await storage.putDefect({ ...defect, evidenceIds: defect.evidenceIds.filter((id) => id !== evidenceId) });
+        }
+      }
       await storage.deleteEvidence(evidenceId);
       return { ok: true as const };
     },
@@ -269,6 +312,79 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       const blob = await storage.getMedia(evidenceId, version);
       if (blob || version !== "thumbnail") return blob;
       return storage.getMedia(evidenceId, "original");
+    },
+
+    async defectChoices(itemId: string) {
+      const item = await storage.getItem(itemId);
+      if (!item) return itemNotFound;
+      const relevant = (item.catalogItemId && findCatalogItem(referenceData, item.catalogItemId)?.relevantCategories) || [];
+      const { categories } = referenceData.defectDictionary;
+      // checkReferenceData guarantees every relevant Category is in the Dictionary.
+      const choices: DefectChoices = {
+        shownFirst: relevant.map((code) => categories.find((category) => category.code === code)!),
+        others: categories.filter((category) => !relevant.includes(category.code)),
+      };
+      return { ok: true as const, ...choices };
+    },
+
+    async addDefect(itemId: string, input: DefectInput) {
+      const item = await storage.getItem(itemId);
+      if (!item) return itemNotFound;
+      if (!findDefectType(referenceData, input.defectTypeCode)) return { ok: false as const, reason: "unknown-defect-type" as const };
+      const existing = await storage.listDefects(itemId);
+      const sameType = existing.find((other) => other.defectTypeCode === input.defectTypeCode);
+      if (sameType) {
+        return { ok: false as const, reason: "defect-type-already-recorded" as const, existingDefectId: sameType.id };
+      }
+      const evidenceIds = await evidenceOfItem(itemId, input.evidenceIds ?? []);
+      if (!evidenceIds) return evidenceNotOnItem;
+      const note = input.note?.trim();
+      if (needsNote(input.defectTypeCode) && !note) return noteRequired;
+      const defect: Defect = {
+        id: crypto.randomUUID(),
+        inspectionId: item.inspectionId,
+        itemId,
+        defectTypeCode: input.defectTypeCode,
+        dictionaryVersion: referenceData.defectDictionary.version,
+        source: "manual",
+        ...(note && { note }),
+        evidenceIds,
+        position: nextPosition(existing),
+      };
+      await storage.putDefect(defect);
+      return { ok: true as const, defect: toDefectView(defect) };
+    },
+
+    async editDefect(defectId: string, changes: DefectChanges) {
+      const defect = await storage.getDefect(defectId);
+      if (!defect) return defectNotFound;
+      let evidenceIds = defect.evidenceIds;
+      if (changes.evidenceIds) {
+        const checked = await evidenceOfItem(defect.itemId, changes.evidenceIds);
+        if (!checked) return evidenceNotOnItem;
+        evidenceIds = checked;
+      }
+      const { note: oldNote, ...rest } = defect;
+      const note = changes.note === undefined ? oldNote : changes.note.trim();
+      if (needsNote(defect.defectTypeCode) && !note) return noteRequired;
+      const edited: Defect = { ...rest, ...(note && { note }), evidenceIds };
+      await storage.putDefect(edited);
+      return { ok: true as const, defect: toDefectView(edited) };
+    },
+
+    async removeDefect(defectId: string) {
+      if (!(await storage.getDefect(defectId))) return defectNotFound;
+      await storage.deleteDefect(defectId);
+      return { ok: true as const };
+    },
+
+    async getDefect(defectId: string): Promise<DefectView | undefined> {
+      const defect = await storage.getDefect(defectId);
+      return defect && toDefectView(defect);
+    },
+
+    async listDefects(itemId: string): Promise<DefectView[]> {
+      return (await storage.listDefects(itemId)).map(toDefectView);
     },
   };
 }
@@ -284,8 +400,8 @@ function nextPosition(siblings: { position: number }[]): number {
   return Math.max(0, ...siblings.map((sibling) => sibling.position)) + 1;
 }
 
-function toItemView(item: Item): ItemView {
-  return { ...item, displayName: item.shortName ? `${item.name} – ${item.shortName}` : item.name };
+function toItemView(item: Item, defectCount: number): ItemView {
+  return { ...item, displayName: item.shortName ? `${item.name} – ${item.shortName}` : item.name, defectCount };
 }
 
 /** `base`, or `base 2`, `base 3`… whichever is first not already taken. */

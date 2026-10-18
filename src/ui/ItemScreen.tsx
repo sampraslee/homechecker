@@ -1,14 +1,28 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
-import type { Evidence, ItemView, PhotoVersion } from "../core";
+import type { DefectView, Evidence, ItemView } from "../core";
 import type { Navigate } from "./App";
 import { BackBar } from "./BackBar";
+import { DefectEditor, DefectTypePicker, type PickedDefectType } from "./DefectPanels";
 import { refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
+import { PhotoImage } from "./PhotoImage";
+
+type DefectPanel =
+  | { mode: "pick" }
+  | { mode: "add"; defectType: PickedDefectType }
+  | { mode: "edit"; defectId: string; notice?: string };
+
+/** An Item has at most one Defect per Defect Type, so picking one it already has opens that Defect. */
+function alreadyRecorded(defectId: string, defectType: PickedDefectType): DefectPanel {
+  return { mode: "edit", defectId, notice: `This Item already has ${defectType.name}. Add to this Defect instead.` };
+}
 
 export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate }) {
   const homeCheck = useHomeCheck();
   const [item, setItem] = useState<ItemView | null | undefined>(undefined);
   const [photos, setPhotos] = useState<Evidence[]>([]);
+  const [defects, setDefects] = useState<DefectView[]>([]);
+  const [defectPanel, setDefectPanel] = useState<DefectPanel | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
   const [viewing, setViewing] = useState<Evidence | null>(null);
@@ -18,6 +32,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   const load = useCallback(async () => {
     setItem((await homeCheck.getItem(id)) ?? null);
     setPhotos(await homeCheck.listEvidence(id));
+    setDefects(await homeCheck.listDefects(id));
   }, [homeCheck, id]);
 
   useEffect(() => {
@@ -38,6 +53,11 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     }
     setSaving(false);
     setSavedCount(saved);
+    load();
+  }
+
+  function closeDefectPanel() {
+    setDefectPanel(null);
     load();
   }
 
@@ -84,6 +104,67 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         <p className="muted" role="status">
           {savedCount === 1 ? "Photo saved on device." : `${savedCount} photos saved on device.`}
         </p>
+      )}
+
+      <h2>Defects{defects.length > 0 && ` (${defects.length})`}</h2>
+      {defects.length === 0 && <p className="muted">No Defects recorded.</p>}
+      <ul className="cards">
+        {defects.map((defect) => (
+          <li key={defect.id}>
+            <button type="button" className="card" onClick={() => setDefectPanel({ mode: "edit", defectId: defect.id })}>
+              <span className="card-row">
+                <strong>{defect.defectTypeName}</strong>
+                <span className="muted defect-meta">
+                  {defect.evidenceIds.length} {defect.evidenceIds.length === 1 ? "photo" : "photos"}
+                </span>
+              </span>
+              <span className="muted defect-meta">
+                {defect.defectTypeCode} · {defect.categoryName}
+              </span>
+              {defect.note && <span>{defect.note}</span>}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {defectPanel === null && (
+        <button type="button" className="primary spaced" onClick={() => setDefectPanel({ mode: "pick" })}>
+          Add Defect
+        </button>
+      )}
+      {defectPanel?.mode === "pick" && (
+        <DefectTypePicker
+          itemId={id}
+          itemName={item.name}
+          recordedCodes={defects.map((defect) => defect.defectTypeCode)}
+          onPicked={(defectType) => {
+            const existing = defects.find((defect) => defect.defectTypeCode === defectType.code);
+            setDefectPanel(existing ? alreadyRecorded(existing.id, defectType) : { mode: "add", defectType });
+          }}
+          onCancel={() => setDefectPanel(null)}
+        />
+      )}
+      {defectPanel?.mode === "add" && (
+        <DefectEditor
+          key={defectPanel.defectType.code}
+          itemId={id}
+          photos={photos}
+          defectType={defectPanel.defectType}
+          onSaved={closeDefectPanel}
+          onDuplicate={(existingDefectId) => setDefectPanel(alreadyRecorded(existingDefectId, defectPanel.defectType))}
+          onCancel={() => setDefectPanel(null)}
+        />
+      )}
+      {defectPanel?.mode === "edit" && (
+        <ExistingDefectEditor
+          key={defectPanel.defectId}
+          defectId={defectPanel.defectId}
+          itemId={id}
+          photos={photos}
+          notice={defectPanel.notice}
+          onSaved={closeDefectPanel}
+          onCancel={() => setDefectPanel(null)}
+        />
       )}
 
       {viewing && (
@@ -139,33 +220,16 @@ function PhotoViewer({ evidence, onClose, onDeleted }: { evidence: Evidence; onC
   );
 }
 
-function PhotoImage({
-  evidenceId,
-  version,
-  alt,
-  className,
-}: {
-  evidenceId: string;
-  version: PhotoVersion;
-  alt: string;
-  className?: string;
-}) {
+function ExistingDefectEditor({
+  defectId,
+  ...props
+}: { defectId: string; itemId: string; photos: Evidence[]; notice?: string; onSaved: () => void; onCancel: () => void }) {
   const homeCheck = useHomeCheck();
-  const [url, setUrl] = useState<string | null>(null);
+  const [defect, setDefect] = useState<DefectView | null>(null);
 
   useEffect(() => {
-    let objectUrl: string | null = null;
-    let cancelled = false;
-    homeCheck.getPhoto(evidenceId, version).then((blob) => {
-      if (cancelled || !blob) return;
-      objectUrl = URL.createObjectURL(blob);
-      setUrl(objectUrl);
-    });
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [homeCheck, evidenceId, version]);
+    homeCheck.getDefect(defectId).then((found) => setDefect(found ?? null));
+  }, [homeCheck, defectId]);
 
-  return url ? <img src={url} alt={alt} className={className} /> : null;
+  return defect && <DefectEditor {...props} defect={defect} />;
 }

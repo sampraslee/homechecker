@@ -1,5 +1,5 @@
 import Dexie, { type DexieOptions, type EntityTable } from "dexie";
-import type { Area, Evidence, Inspection, Item, PhotoVersion, Settings } from "../core/model";
+import type { Area, Defect, Evidence, Inspection, Item, PhotoVersion, Settings } from "../core/model";
 import type { Storage } from "../core/ports";
 
 type SettingsRow = Settings & { key: "settings" };
@@ -13,6 +13,7 @@ class HomeCheckDb extends Dexie {
   items!: EntityTable<Item, "id">;
   evidence!: EntityTable<Evidence, "id">;
   media!: Dexie.Table<MediaRow, [string, PhotoVersion]>;
+  defects!: EntityTable<Defect, "id">;
 
   constructor(name: string, options?: DexieOptions) {
     super(name, options);
@@ -27,6 +28,9 @@ class HomeCheckDb extends Dexie {
     this.version(3).stores({
       evidence: "id, itemId",
       media: "[evidenceId+version], evidenceId",
+    });
+    this.version(4).stores({
+      defects: "id, itemId",
     });
   }
 }
@@ -101,6 +105,18 @@ export function createDexieStorage(name = "home-check", options?: DexieOptions):
         await db.media.where({ evidenceId: id }).delete();
         await db.evidence.delete(id);
       });
+    },
+    async putDefect(defect) {
+      await db.defects.put(defect);
+    },
+    async getDefect(id) {
+      return db.defects.get(id);
+    },
+    async listDefects(itemId) {
+      return db.defects.where({ itemId }).sortBy("position");
+    },
+    async deleteDefect(id) {
+      await db.defects.delete(id);
     },
   };
 }

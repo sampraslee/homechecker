@@ -107,6 +107,11 @@ export function AreaScreen({ id, navigate }: { id: string; navigate: Navigate })
             <li key={item.id} className="row">
               <button type="button" className="link item-link" onClick={() => navigate({ name: "item", id: item.id })}>
                 {item.displayName} ›
+                {item.defectCount > 0 && (
+                  <span className="badge defects">
+                    {item.defectCount} {item.defectCount === 1 ? "Defect" : "Defects"}
+                  </span>
+                )}
               </button>
               <span className="button-row">
                 <button type="button" className="link" onClick={() => setEditingItemId(item.id)}>

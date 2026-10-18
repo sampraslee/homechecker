@@ -1,4 +1,4 @@
-import type { Area, Evidence, Inspection, Item, PhotoVersion, Settings } from "./model";
+import type { Area, Defect, Evidence, Inspection, Item, PhotoVersion, Settings } from "./model";
 
 /** Persists Home Check records. Production: Dexie. */
 export interface Storage {
@@ -24,6 +24,10 @@ export interface Storage {
   getMedia(evidenceId: string, version: PhotoVersion): Promise<Blob | undefined>;
   /** Removes Evidence metadata and all its media. */
   deleteEvidence(id: string): Promise<void>;
+  putDefect(defect: Defect): Promise<void>;
+  getDefect(id: string): Promise<Defect | undefined>;
+  listDefects(itemId: string): Promise<Defect[]>;
+  deleteDefect(id: string): Promise<void>;
 }
 
 /** Makes the smaller versions of a photo. Production: canvas. */

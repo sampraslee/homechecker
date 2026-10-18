@@ -344,3 +344,69 @@ h3 {
 button:disabled {
   opacity: 0.6;
 }
+
+.badge.defects {
+  margin-left: 0.5rem;
+  background: #fde8e6;
+  color: var(--error);
+}
+
+.defect-meta {
+  font-size: 0.85rem;
+}
+
+.note-input {
+  font: inherit;
+  font-size: 1rem;
+  min-height: 5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: inherit;
+  resize: vertical;
+}
+
+.thumbnail.selectable {
+  position: relative;
+}
+
+.thumbnail.selectable[aria-pressed="true"] {
+  outline: 3px solid var(--brand);
+  outline-offset: -3px;
+}
+
+.thumbnail.selectable[aria-pressed="true"]::after {
+  content: "✓";
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1.5rem;
+  text-align: center;
+}
+
+.notice {
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--draft-bg);
+  color: var(--draft-text);
+}
+
+.type-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+}

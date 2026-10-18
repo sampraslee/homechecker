@@ -1,4 +1,4 @@
-import type { CatalogItem } from "./referenceData";
+import type { CatalogItem, DefectCategory } from "./referenceData";
 
 export const MALAYSIAN_STATES = [
   "Johor",
@@ -89,7 +89,7 @@ export type Item = {
   position: number;
 };
 
-export type ItemView = Item & { displayName: string };
+export type ItemView = Item & { displayName: string; defectCount: number };
 
 /** A catalog Item (optionally with a short name), or an Other item with free text. */
 export type ItemSource = { catalogItemId: string; shortName?: string } | { otherName: string };
@@ -111,3 +111,33 @@ export type Evidence = {
   /** Order within the Item. */
   position: number;
 };
+
+/** Where a Defect came from. Defects confirmed from AI Suggestions will add "ai-suggested". */
+export type DefectSource = "manual";
+
+export type Defect = {
+  id: string;
+  inspectionId: string;
+  itemId: string;
+  defectTypeCode: string;
+  /** The Defect Dictionary version the code comes from, so the record stays readable after the Dictionary changes. */
+  dictionaryVersion: string;
+  source: DefectSource;
+  note?: string;
+  /** Evidence of the same Item that supports this Defect. */
+  evidenceIds: string[];
+  /** Order within the Item. */
+  position: number;
+};
+
+/** A Defect with the names of its Defect Type and Category, and whether it needs a note, from the bundled Dictionary. */
+export type DefectView = Defect & { defectTypeName: string; categoryName: string; noteRequired: boolean };
+
+/** What the Inspector chose when adding a Defect. */
+export type DefectInput = { defectTypeCode: string; note?: string; evidenceIds?: string[] };
+
+/** What to change on a Defect; a blank note clears it. Its Defect Type never changes. */
+export type DefectChanges = { note?: string; evidenceIds?: string[] };
+
+/** Defect Categories for an Item: its relevant ones first, then the rest. */
+export type DefectChoices = { shownFirst: DefectCategory[]; others: DefectCategory[] };

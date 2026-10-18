@@ -32,5 +32,11 @@ export const refusalMessage: Record<RefusalReason, string> = {
   "item-not-found": "This Item is not on this phone",
   "item-name-required": "Enter a name",
   "item-has-evidence": "Delete this Item's photos first",
+  "item-has-defects": "Remove this Item's Defects first",
   "evidence-not-found": "This photo is not on this phone",
+  "unknown-defect-type": "That Defect Type is not in the Defect Dictionary",
+  "defect-type-already-recorded": "This Item already has that Defect",
+  "evidence-not-on-item": "Only this Item's photos can be linked",
+  "note-required": "Add a note describing what you see",
+  "defect-not-found": "This Defect is not on this phone",
 };
