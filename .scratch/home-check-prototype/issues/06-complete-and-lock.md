@@ -1,0 +1,14 @@
+# 06: Completing and locking an Inspection
+
+**What to build:** The Inspector marks a Draft Inspection Completed after a confirmation step. The completion time is recorded and the Inspection's Areas, Items, Evidence and Defects become read-only. There is no reopening. See the spec: Domain rules (lifecycle).
+
+**Blocked by:** 04
+
+**Status:** ready-for-agent
+
+- [ ] "Complete Inspection" shows a confirmation step before completing
+- [ ] Completing records completed-at time and sets status Completed; Draft → Completed is the only transition
+- [ ] Core refuses add, edit or remove of Areas, Items, Evidence and Defects on a Completed Inspection
+- [ ] UI hides or disables editing on Completed Inspections
+- [ ] Inspection list shows Completed status
+- [ ] Core tests cover the transition, timestamps and every refused mutation
