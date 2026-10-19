@@ -60,6 +60,7 @@ export const refusalMessage: Record<RefusalReason, string> = {
   "defect-type-already-recorded": "This Item already has that Defect",
   "evidence-not-on-item": "Only this Item's Evidence can be linked",
   "note-required": "Add a note describing what you see",
+  "no-areas": "Add at least one Area before completing",
   "defect-not-found": "This Defect is not on this phone",
   "video-too-long": `Videos can be at most ${VIDEO_TIME_LIMIT_SECONDS} seconds`,
   "blank-note": "Write something in the note",

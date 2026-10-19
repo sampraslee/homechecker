@@ -19,6 +19,7 @@ import type {
   DefectView,
   Inspection,
   InspectionSummary,
+  InspectionTotals,
   InspectionType,
   Item,
   ItemChoices,
@@ -60,6 +61,8 @@ const inspectorNameRequired = { ok: false, reason: "inspector-name-required" } a
 const inspectionNotFound = { ok: false, reason: "inspection-not-found" } as const;
 /** A Completed Inspection's Areas, Items, Evidence and Defects are locked. */
 const inspectionCompleted = { ok: false, reason: "inspection-completed" } as const;
+/** An Inspection with no Areas records nothing, so it can't be completed. */
+const noAreas = { ok: false, reason: "no-areas" } as const;
 const areaNotFound = { ok: false, reason: "area-not-found" } as const;
 const itemNotFound = { ok: false, reason: "item-not-found" } as const;
 const itemNameRequired = { ok: false, reason: "item-name-required" } as const;
@@ -414,9 +417,28 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       const inspection = await storage.getInspection(id);
       if (!inspection) return inspectionNotFound;
       if (inspection.status === "completed") return inspectionCompleted;
+      if ((await storage.listAreas(id)).length === 0) return noAreas;
       const completed: Inspection = { ...inspection, status: "completed", completedAt: environment.now().toISOString() };
       await storage.putInspection(completed);
       return { ok: true as const, inspection: completed };
+    },
+
+    /** What completing would lock in, so the Inspector can spot an empty Inspection first. */
+    async inspectionTotals(id: string): Promise<InspectionTotals> {
+      const areas = await storage.listAreas(id);
+      const items = (await Promise.all(areas.map((area) => storage.listItems(area.id)))).flat();
+      const perItem = await Promise.all(
+        items.map(async (item) => ({
+          evidence: (await storage.listEvidence(item.id)).length,
+          defects: (await storage.listDefects(item.id)).length,
+        })),
+      );
+      return {
+        areas: areas.length,
+        items: items.length,
+        evidence: perItem.reduce((total, counts) => total + counts.evidence, 0),
+        defects: perItem.reduce((total, counts) => total + counts.defects, 0),
+      };
     },
 
     /** The Inspection as a zip of `inspection.xlsx` and its media, Draft or Completed. Records when it was exported. */

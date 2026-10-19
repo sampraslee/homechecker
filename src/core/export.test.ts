@@ -35,7 +35,7 @@ function imagesOf(workbook: ExcelJS.Workbook, sheetName: string) {
 
 describe("exporting an Inspection", () => {
   test("gives a zip whose Inspection sheet describes the Inspection", async () => {
-    const { homeCheck, environment, inspectionId } = await createTestHomeCheckWithInspection();
+    const { homeCheck, environment, inspectionId } = await createTestHomeCheckWithItem();
     environment.setNow(new Date("2026-01-05T11:45:00.000Z"));
     expectOk(await homeCheck.completeInspection(inspectionId));
 
@@ -406,7 +406,7 @@ describe("the last export of an Inspection", () => {
   });
 
   test("is recorded on a Completed Inspection, which stays Completed and unchanged otherwise", async () => {
-    const { homeCheck, environment, inspectionId } = await createTestHomeCheckWithInspection();
+    const { homeCheck, environment, inspectionId } = await createTestHomeCheckWithItem();
     const completed = expectOk(await homeCheck.completeInspection(inspectionId)).inspection;
     environment.setNow(new Date("2026-01-06T08:00:00.000Z"));
 

@@ -42,7 +42,7 @@ type Completed = Awaited<ReturnType<typeof completedInspectionWithEverything>>;
 
 describe("completing an Inspection", () => {
   test("marks the Draft Completed and records when", async () => {
-    const { homeCheck, environment, inspectionId } = await createTestHomeCheckWithInspection();
+    const { homeCheck, environment, inspectionId } = await createTestHomeCheckWithItem();
     environment.setNow(new Date("2026-01-05T11:45:00.000Z"));
 
     const result = await homeCheck.completeInspection(inspectionId);
@@ -56,7 +56,7 @@ describe("completing an Inspection", () => {
   });
 
   test("can't be done twice, so the first completion time stands", async () => {
-    const { homeCheck, environment, inspectionId } = await createTestHomeCheckWithInspection();
+    const { homeCheck, environment, inspectionId } = await createTestHomeCheckWithItem();
     environment.setNow(new Date("2026-01-05T11:45:00.000Z"));
     await homeCheck.completeInspection(inspectionId);
     environment.setNow(new Date("2026-01-06T08:00:00.000Z"));
@@ -67,6 +67,24 @@ describe("completing an Inspection", () => {
     expect(await homeCheck.getInspection(inspectionId)).toMatchObject({ completedAt: "2026-01-05T11:45:00.000Z" });
   });
 
+  test("with no Areas is refused, and it stays a Draft", async () => {
+    const { homeCheck, inspectionId } = await createTestHomeCheckWithInspection();
+
+    expect(await homeCheck.completeInspection(inspectionId)).toEqual({ ok: false, reason: "no-areas" });
+    expect(await homeCheck.getInspection(inspectionId)).toMatchObject({ status: "draft" });
+  });
+
+  test("counts what will be locked in: Areas, Items, Evidence and Defects", async () => {
+    const { homeCheck, inspectionId, areaId, itemId } = await createTestHomeCheckWithItem();
+    expectOk(await homeCheck.addItem(areaId, { otherName: "Curtain rail" }));
+    expectOk(await homeCheck.addArea(inspectionId, { customName: "Store room" }));
+    const photo = expectOk(await homeCheck.addPhoto(itemId, new Blob(["scratched door"]))).evidence;
+    expectOk(await homeCheck.addNote(itemId, "Smells of damp"));
+    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [photo.id] }));
+
+    expect(await homeCheck.inspectionTotals(inspectionId)).toEqual({ areas: 2, items: 2, evidence: 2, defects: 1 });
+  });
+
   test("of an Inspection not on this phone is refused", async () => {
     const { homeCheck } = await createTestHomeCheckWithInspection();
 
@@ -74,7 +92,7 @@ describe("completing an Inspection", () => {
   });
 
   test("shows as Completed on the Inspection list", async () => {
-    const { homeCheck, inspectionId } = await createTestHomeCheckWithInspection();
+    const { homeCheck, inspectionId } = await createTestHomeCheckWithItem();
 
     await homeCheck.completeInspection(inspectionId);
 
@@ -84,13 +102,13 @@ describe("completing an Inspection", () => {
 
 describe("a Completed Inspection", () => {
   test("refuses a new Area", async () => {
-    const { homeCheck, inspectionId } = await createTestHomeCheckWithInspection();
+    const { homeCheck, inspectionId } = await createTestHomeCheckWithItem();
     await homeCheck.completeInspection(inspectionId);
 
     const result = await homeCheck.addArea(inspectionId, { standardAreaId: "bedroom" });
 
     expect(result).toEqual({ ok: false, reason: "inspection-completed" });
-    expect(await homeCheck.listAreas(inspectionId)).toEqual([]);
+    expect((await homeCheck.listAreas(inspectionId)).map((area) => area.name)).toEqual(["Bedroom"]);
   });
 
   const refusedChanges: [string, (c: Completed) => Promise<{ ok: boolean }>][] = [

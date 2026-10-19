@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { formatAddress, type AiWorkLeft, type AreaSource, type AreaView, type Inspection, type UnreviewedAiSuggestionView } from "../core";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { formatAddress, type AiWorkLeft, type AreaSource, type AreaView, type Inspection, type InspectionTotals, type UnreviewedAiSuggestionView } from "../core";
 import type { Navigate } from "./App";
-import { BackBar } from "./BackBar";
-import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel, lockedNotice, refusalMessage } from "./format";
+import { Band } from "./Band";
+import { Dock } from "./Dock";
+import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel, lockedNotice, refusalMessage, shortAddress } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 import { shareOrDownload, TapTooOldError, type ShareOutcome } from "./shareFile";
 import { useAiChanges } from "./useAiChanges";
@@ -39,134 +40,164 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
 
   const locked = inspection?.status === "completed";
 
+  if (inspection === undefined) return null;
+  if (inspection === null) {
+    return (
+      <main className="screen">
+        <Band navigate={navigate} back={{ to: { name: "list" }, label: "Inspections" }} title="Inspection not found" />
+        <p className="muted">This Inspection is not on this phone.</p>
+        <Dock />
+      </main>
+    );
+  }
+
   return (
     <main className="screen">
-      <BackBar navigate={navigate} />
+      <Band
+        navigate={navigate}
+        back={{ to: { name: "list" }, label: "Inspections" }}
+        unit={shortAddress(inspection.address)}
+        title={inspectionTypeLabel[inspection.type]}
+        action={<span className={`badge ${inspection.status}`}>{inspectionStatusLabel[inspection.status]}</span>}
+      >
+        {locked && <p className="notice">{lockedNotice}</p>}
+      </Band>
 
-      {inspection === null && <p className="muted">This Inspection is not on this phone.</p>}
+      <dl className="details">
+        <dt>Unit</dt>
+        <dd>{formatAddress(inspection.address)}</dd>
+        {inspection.type === "move-out" && (
+          <>
+            <dt>Move-in</dt>
+            <dd>
+              {!linkedMoveInId
+                ? "Not linked"
+                : linkedMoveIn && `${formatDate(linkedMoveIn.startedAt)}, by ${linkedMoveIn.inspectorName}`}
+            </dd>
+          </>
+        )}
+        <dt>Inspector</dt>
+        <dd>{inspection.inspectorName}</dd>
+        <dt>Started</dt>
+        <dd>{formatDateTime(inspection.startedAt)}</dd>
+        {inspection.completedAt && (
+          <>
+            <dt>Completed</dt>
+            <dd>{formatDateTime(inspection.completedAt)}</dd>
+          </>
+        )}
+        <dt>Last exported</dt>
+        <dd>{inspection.lastExportedAt ? formatDateTime(inspection.lastExportedAt) : "Never"}</dd>
+      </dl>
 
-      {inspection && (
+      {toReview.length > 0 && (
         <>
-          <h1>
-            {inspectionTypeLabel[inspection.type]}{" "}
-            <span className={`badge ${inspection.status}`}>{inspectionStatusLabel[inspection.status]}</span>
-          </h1>
-          <dl className="details">
-            <dt>Unit</dt>
-            <dd>{formatAddress(inspection.address)}</dd>
-            {inspection.type === "move-out" && (
-              <>
-                <dt>Move-in</dt>
-                <dd>
-                  {!linkedMoveInId
-                    ? "Not linked"
-                    : linkedMoveIn && `${formatDate(linkedMoveIn.startedAt)}, by ${linkedMoveIn.inspectorName}`}
-                </dd>
-              </>
-            )}
-            <dt>Inspector</dt>
-            <dd>{inspection.inspectorName}</dd>
-            <dt>Started</dt>
-            <dd>{formatDateTime(inspection.startedAt)}</dd>
-            {inspection.completedAt && (
-              <>
-                <dt>Completed</dt>
-                <dd>{formatDateTime(inspection.completedAt)}</dd>
-              </>
-            )}
-            <dt>Last exported</dt>
-            <dd>{inspection.lastExportedAt ? formatDateTime(inspection.lastExportedAt) : "Never"}</dd>
-          </dl>
-          {locked && <p className="notice">{lockedNotice}</p>}
-
-          <h2>Areas</h2>
-          {areas.length === 0 && <p className="muted">No Areas yet.</p>}
+          <div className="section-head">
+            <h2>AI Suggestions</h2>
+            <span className="count">{toReview.length} to review</span>
+          </div>
           <ul className="cards">
-            {areas.map((area) => (
-              <li key={area.id}>
-                <button type="button" className="card" onClick={() => navigate({ name: "area", id: area.id })}>
-                  <span className="card-row">
-                    <strong>{area.name}</strong>
-                    <span className="muted">
-                      {area.itemCount} {area.itemCount === 1 ? "Item" : "Items"}
+            {toReview.map((suggestion) => (
+              <li key={suggestion.id}>
+                <button type="button" className="card item-card ai-suggestion" onClick={() => navigate({ name: "item", id: suggestion.itemId })}>
+                  <span className="grow">
+                    <strong>{suggestion.defectTypeName}</strong>
+                    <span className="summary">
+                      {suggestion.itemName} in {suggestion.areaName}
                     </span>
+                  </span>
+                  <span className="chevron" aria-hidden="true">
+                    ›
                   </span>
                 </button>
               </li>
             ))}
           </ul>
-
-          {toReview.length > 0 && (
-            <>
-              <h2>AI Suggestions to review ({toReview.length})</h2>
-              <ul className="cards">
-                {toReview.map((suggestion) => (
-                  <li key={suggestion.id}>
-                    <button type="button" className="card" onClick={() => navigate({ name: "item", id: suggestion.itemId })}>
-                      <span className="card-row">
-                        <strong>{suggestion.defectTypeName}</strong>
-                        <span className="badge confidence">{suggestion.confidence}</span>
-                      </span>
-                      <span className="muted defect-meta">
-                        {suggestion.areaName} · {suggestion.itemName}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-
-          {locked ? null : adding ? (
-            <AddAreaPanel
-              inspectionId={id}
-              onAdded={() => {
-                setAdding(false);
-                loadAreas();
-              }}
-              onCancel={() => setAdding(false)}
-            />
-          ) : (
-            <button type="button" className="primary spaced" onClick={() => setAdding(true)}>
-              Add Area
-            </button>
-          )}
-
-          {!locked &&
-            (confirmingComplete ? (
-              <CompletePanel
-                inspectionId={id}
-                areas={areas}
-                onCompleted={() => {
-                  setConfirmingComplete(false);
-                  setJustCompleted(true);
-                  loadInspection();
-                }}
-                onCancel={() => setConfirmingComplete(false)}
-              />
-            ) : (
-              <button
-                type="button"
-                className="secondary spaced"
-                onClick={() => {
-                  setAdding(false);
-                  setConfirmingComplete(true);
-                }}
-              >
-                Complete Inspection
-              </button>
-            ))}
-
-          <ExportPanel
-            inspectionId={id}
-            promptToExport={justCompleted}
-            onExported={(exported) => {
-              setJustCompleted(false);
-              setInspection(exported);
-            }}
-          />
         </>
       )}
+
+      <div className="section-head">
+        <h2>Areas</h2>
+        <span className="count">{areas.length > 0 && areas.length}</span>
+      </div>
+      {areas.length === 0 && (
+        <p className="muted">{locked ? "No Areas." : "Add the rooms you'll inspect, starting from the front door."}</p>
+      )}
+      <ul className="cards">
+        {areas.map((area) => (
+          <li key={area.id}>
+            <button type="button" className="card item-card" onClick={() => navigate({ name: "area", id: area.id })}>
+              <span className="grow">
+                <strong>{area.name}</strong>
+                <span className="summary">{area.itemCount === 0 ? "No Items yet" : area.itemCount === 1 ? "1 Item" : `${area.itemCount} Items`}</span>
+              </span>
+              <span className="chevron" aria-hidden="true">
+                ›
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {!locked && adding && (
+        <AddAreaPanel
+          inspectionId={id}
+          onAdded={() => {
+            setAdding(false);
+            loadAreas();
+          }}
+          onCancel={() => setAdding(false)}
+        />
+      )}
+
+      <ExportPanel
+        inspectionId={id}
+        promptToExport={justCompleted}
+        onExported={(exported) => {
+          setJustCompleted(false);
+          setInspection(exported);
+        }}
+      />
+
+      {/* Kept apart from Export: completing locks the Inspection for good. */}
+      {!locked &&
+        (confirmingComplete ? (
+          <CompletePanel
+            inspectionId={id}
+            onCompleted={() => {
+              setConfirmingComplete(false);
+              setJustCompleted(true);
+              loadInspection();
+            }}
+            onCancel={() => setConfirmingComplete(false)}
+          />
+        ) : (
+          <section className="lock-zone">
+            <p className="muted">When every Area is done, complete the Inspection. It is then locked and can't be changed.</p>
+            <button
+              type="button"
+              className="lock-button"
+              onClick={() => {
+                setAdding(false);
+                setConfirmingComplete(true);
+              }}
+            >
+              Complete Inspection
+            </button>
+          </section>
+        ))}
+
+      <Dock
+        action={
+          !locked &&
+          !adding &&
+          !confirmingComplete && (
+            <button type="button" className="primary" onClick={() => setAdding(true)}>
+              Add Area
+            </button>
+          )
+        }
+      />
     </main>
   );
 }
@@ -257,20 +288,25 @@ function ExportPanel({
 /** The confirmation step before completing; completing can't be undone. */
 function CompletePanel({
   inspectionId,
-  areas,
   onCompleted,
   onCancel,
 }: {
   inspectionId: string;
-  areas: AreaView[];
   onCompleted: () => void;
   onCancel: () => void;
 }) {
   const homeCheck = useHomeCheck();
   const [error, setError] = useState<string | null>(null);
+  const [totals, setTotals] = useState<InspectionTotals | null>(null);
   const [aiWork, setAiWork] = useState<AiWorkLeft | null>(null);
-  const itemCount = areas.reduce((total, area) => total + area.itemCount, 0);
+  const panel = useRef<HTMLElement>(null);
 
+  useEffect(() => {
+    homeCheck.inspectionTotals(inspectionId).then(setTotals);
+  }, [homeCheck, inspectionId]);
+  useEffect(() => {
+    panel.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
   useAiChanges(useCallback(() => homeCheck.aiWorkLeft(inspectionId).then(setAiWork), [homeCheck, inspectionId]));
 
   async function complete() {
@@ -279,31 +315,55 @@ function CompletePanel({
     else setError(refusalMessage[result.reason]);
   }
 
+  if (!totals) return null;
+  const rows: [string, number][] = [
+    ["Areas", totals.areas],
+    ["Items", totals.items],
+    ["Evidence", totals.evidence],
+    ["Defects", totals.defects],
+  ];
+
   return (
-    <section className="panel">
+    <section className="panel" ref={panel}>
       <h2>Complete this Inspection?</h2>
-      <p>
-        {areas.length} {areas.length === 1 ? "Area" : "Areas"}, {itemCount} {itemCount === 1 ? "Item" : "Items"} recorded.
-      </p>
-      {aiWork && (
-        <p>
-          Photos waiting for AI: {aiWork.waitingForAi}
-          <br />
-          AI Suggestions not reviewed: {aiWork.unreviewedAiSuggestions}
-        </p>
+      <dl className="totals">
+        {rows.map(([label, count]) => (
+          <div key={label} className={count === 0 ? "zero" : undefined}>
+            <dt>{label}</dt>
+            <dd>{count}</dd>
+          </div>
+        ))}
+      </dl>
+      {totals.areas === 0 ? (
+        <p className="notice">This Inspection has no Areas, so there is nothing to complete. Add the Areas you inspected first.</p>
+      ) : (
+        <>
+          {totals.evidence === 0 && (
+            <p className="notice">This Inspection has no Evidence: no photos, videos or notes. Check that this is right before you complete it.</p>
+          )}
+          {aiWork && (aiWork.waitingForAi > 0 || aiWork.unreviewedAiSuggestions > 0) && (
+            <p>
+              Photos waiting for AI: {aiWork.waitingForAi}
+              <br />
+              AI Suggestions not reviewed: {aiWork.unreviewedAiSuggestions}
+            </p>
+          )}
+          <p className="muted">
+            Once completed, its Areas, Items, Evidence and Defects can't be added to, changed or removed. It can't be reopened.
+            Photos still waiting are sent to the AI, and AI Suggestions can still be reviewed.
+          </p>
+        </>
       )}
-      <p className="muted">
-        Once completed, its Areas, Items, Evidence and Defects can't be added to, changed or removed. It can't be reopened.
-        Photos still waiting are sent to the AI, and AI Suggestions can still be reviewed.
-      </p>
       {error && <p className="error">{error}</p>}
       <div className="button-row">
         <button type="button" className="secondary" onClick={onCancel}>
-          Keep editing
+          {totals.areas === 0 ? "Back" : "Keep editing"}
         </button>
-        <button type="button" className="primary" onClick={complete}>
-          Complete Inspection
-        </button>
+        {totals.areas > 0 && (
+          <button type="button" className="lock-button" onClick={complete}>
+            Complete
+          </button>
+        )}
       </div>
     </section>
   );
@@ -322,6 +382,12 @@ function AddAreaPanel({
   const [standardAreas, setStandardAreas] = useState<{ id: string; name: string }[]>([]);
   const [customName, setCustomName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const panel = useRef<HTMLElement>(null);
+
+  // The panel opens below the Areas, often off screen.
+  useEffect(() => {
+    panel.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   useEffect(() => {
     homeCheck.listStandardAreas().then(setStandardAreas);
@@ -339,7 +405,7 @@ function AddAreaPanel({
   }
 
   return (
-    <section className="panel">
+    <section className="panel" ref={panel}>
       <div className="card-row">
         <h2>Add Area</h2>
         <button type="button" className="link" onClick={onCancel}>

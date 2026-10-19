@@ -904,3 +904,56 @@ body:has(:is(input, textarea, select):focus) .dock {
   border-color: var(--danger);
   color: var(--danger);
 }
+
+/* Completing locks the Inspection for good, so it looks unlike any routine button. */
+.lock-zone {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line-soft);
+}
+
+.lock-button {
+  width: 100%;
+  min-height: 3rem;
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--night);
+  color: #fff;
+  font-weight: 700;
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.totals > div {
+  padding: 0.5rem;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-control);
+  text-align: center;
+}
+
+.totals dt {
+  color: var(--ink-muted);
+  font-size: 0.8rem;
+}
+
+.totals dd {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A count of zero is worth a second look before completing. */
+.totals .zero {
+  border-color: var(--warn);
+  background: var(--warn-tint);
+}
+
+.totals .zero dd {
+  color: var(--warn);
+}

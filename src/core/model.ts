@@ -247,6 +247,9 @@ export type UnreviewedAiSuggestionView = AiSuggestionView & { areaName: string; 
 /** An Inspection's AI work still to come or to review, shown before completing. */
 export type AiWorkLeft = { waitingForAi: number; unreviewedAiSuggestions: number };
 
+/** How much an Inspection holds, counted across all its Areas and Items. */
+export type InspectionTotals = { areas: number; items: number; evidence: number; defects: number };
+
 /** What the Inspector adds when confirming an AI Suggestion: a note for a new Defect, needed for Other / Unknown. */
 export type AiConfirmInput = { note?: string };
 
