@@ -832,3 +832,75 @@ body:has(:is(input, textarea, select):focus) .dock {
   font-size: 0.85rem;
   font-weight: 600;
 }
+
+.band-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+/* Buttons in the band, after the pill buttons on rizurf.com's dark hero. */
+.on-band {
+  flex: none;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 8%);
+  color: #fff;
+  font-weight: 600;
+}
+
+.on-band.danger {
+  border-color: #fca5a5;
+  color: #fca5a5;
+}
+
+.band-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* One row per Item: the whole card opens it; in Edit mode it carries Rename and Remove instead. */
+.item-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 4rem;
+}
+
+.item-card .grow {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.item-card .summary {
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+}
+
+.chevron {
+  color: var(--teal-deep);
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.row-action {
+  flex: none;
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-control);
+  background: var(--surface);
+  color: var(--teal-deep);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.row-action.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}

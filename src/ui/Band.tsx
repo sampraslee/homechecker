@@ -7,6 +7,7 @@ export function Band({
   back,
   unit,
   title,
+  action,
   children,
 }: {
   navigate: Navigate;
@@ -14,6 +15,8 @@ export function Band({
   /** The Unit's address, so the Inspector can tell one Basin from another. */
   unit?: string;
   title: string;
+  /** A button beside the title, such as Edit. */
+  action?: ReactNode;
   children?: ReactNode;
 }) {
   return (
@@ -22,7 +25,10 @@ export function Band({
         {back.label}
       </button>
       {unit && <p className="unit">{unit}</p>}
-      <h1>{title}</h1>
+      <div className="band-title">
+        <h1>{title}</h1>
+        {action}
+      </div>
       {children}
     </header>
   );

@@ -22,8 +22,8 @@ export function App() {
   return (
     <>
       <CurrentScreen screen={screen} navigate={setScreen} />
-      {/* The Item screen puts its main button in its own Dock; the other screens move theirs there next. */}
-      {screen.name !== "item" && <Dock />}
+      {/* The Item and Area screens put their main button in their own Dock; the other screens move theirs there next. */}
+      {screen.name !== "item" && screen.name !== "area" && <Dock />}
     </>
   );
 }
