@@ -10,7 +10,7 @@ import { NameEditor } from "./NameEditor";
 import { useLocked } from "./useLocked";
 
 /** An Item with what has been recorded on it, e.g. "4 photos, 1 Defect". */
-type ItemRow = ItemView & { summary: string };
+type ItemRow = ItemView & { summary: string; hasContents: boolean };
 
 export function AreaScreen({ id, addingItem = false, navigate }: { id: string; addingItem?: boolean; navigate: Navigate }) {
   const homeCheck = useHomeCheck();
@@ -20,6 +20,8 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
   const [editing, setEditing] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  /** An Item with Evidence or Defects, waiting for the Inspector to confirm deleting it all. */
+  const [confirmingRemoveId, setConfirmingRemoveId] = useState<string | null>(null);
   const [picking, setPicking] = useState(addingItem);
   const [error, setError] = useState<string | null>(null);
   const locked = useLocked(area?.inspectionId);
@@ -33,7 +35,10 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
     const views = await homeCheck.listItems(id);
     setItems(
       await Promise.all(
-        views.map(async (item) => ({ ...item, summary: itemSummary(await homeCheck.listEvidence(item.id), item.defectCount) })),
+        views.map(async (item) => {
+          const evidence = await homeCheck.listEvidence(item.id);
+          return { ...item, summary: itemSummary(evidence, item.defectCount), hasContents: evidence.length > 0 || item.defectCount > 0 };
+        }),
       ),
     );
   }, [homeCheck, id]);
@@ -61,8 +66,10 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
     else setError(refusalMessage[result.reason]);
   }
 
+  /** Only reached for an empty Item, or once the Inspector confirmed deleting its contents. */
   async function removeItem(itemId: string) {
-    const result = await homeCheck.removeItem(itemId);
+    setConfirmingRemoveId(null);
+    const result = await homeCheck.removeItem(itemId, { withContents: true });
     if (result.ok) {
       setError(null);
       load();
@@ -73,6 +80,7 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
 
   function stopEditing() {
     setEditing(false);
+    setConfirmingRemoveId(null);
     setRenaming(false);
     setEditingItemId(null);
     setError(null);
@@ -157,6 +165,19 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
                   }}
                 />
               </div>
+            ) : confirmingRemoveId === item.id ? (
+              <div className="card confirm-card" role="group" aria-label={`Remove ${item.displayName}?`}>
+                <strong>Remove {item.displayName}?</strong>
+                <p>This permanently deletes its {item.summary.replace(/, ([^,]*)$/, " and $1")}, which won't appear in future exports.</p>
+                <div className="button-row">
+                  <button type="button" className="secondary" onClick={() => setConfirmingRemoveId(null)}>
+                    Keep Item
+                  </button>
+                  <button type="button" className="danger-button" onClick={() => removeItem(item.id)}>
+                    Delete Item
+                  </button>
+                </div>
+              </div>
             ) : editing ? (
               <div className="card item-card">
                 <span className="grow">
@@ -166,7 +187,11 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
                 <button type="button" className="row-action" onClick={() => setEditingItemId(item.id)}>
                   Rename
                 </button>
-                <button type="button" className="row-action danger" onClick={() => removeItem(item.id)}>
+                <button
+                  type="button"
+                  className="row-action danger"
+                  onClick={() => (item.hasContents ? setConfirmingRemoveId(item.id) : removeItem(item.id))}
+                >
                   Remove
                 </button>
               </div>

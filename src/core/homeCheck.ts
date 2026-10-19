@@ -601,13 +601,23 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       return { ok: true as const, item: await withDefectCount(renamed) };
     },
 
-    async removeItem(itemId: string) {
+    /**
+     * Takes an Item out of its Area. An Item with Evidence or Defects is refused, unless `withContents`:
+     * then its Defects, its Evidence with all media, AI queue entries and AI Suggestions go too, for good.
+     */
+    async removeItem(itemId: string, { withContents = false }: { withContents?: boolean } = {}) {
       const item = await storage.getItem(itemId);
       if (!item) return itemNotFound;
       if (await isLocked(item.inspectionId)) return inspectionCompleted;
-      if ((await storage.listDefects(itemId)).length > 0) return { ok: false as const, reason: "item-has-defects" as const };
-      if ((await storage.listEvidence(itemId)).length > 0) return { ok: false as const, reason: "item-has-evidence" as const };
+      const defects = await storage.listDefects(itemId);
+      const evidence = await storage.listEvidence(itemId);
+      if (!withContents && defects.length > 0) return { ok: false as const, reason: "item-has-defects" as const };
+      if (!withContents && evidence.length > 0) return { ok: false as const, reason: "item-has-evidence" as const };
+      // Defects first, as they point at the Evidence; the Item last, so an interrupted removal can simply be tried again.
+      for (const defect of defects) await storage.deleteDefect(defect.id);
+      for (const each of evidence) await storage.deleteEvidence(each.id);
       await storage.deleteItem(itemId);
+      if (evidence.some((each) => each.kind === "photo")) aiChanged();
       return { ok: true as const };
     },
 

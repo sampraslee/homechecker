@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { createTestHomeCheckWithInspection } from "../testing/homeCheck";
+import { createTestHomeCheckWithInspection, createTestHomeCheckWithItem, expectOk } from "../testing/homeCheck";
 
 async function areaInDraft(standardAreaId = "bedroom") {
   const { homeCheck, inspectionId } = await createTestHomeCheckWithInspection();
@@ -126,5 +126,38 @@ describe("removing an Item", () => {
 
     expect(result).toEqual({ ok: true });
     expect(displayNames(await homeCheck.listItems(areaId))).toEqual(["Window"]);
+  });
+  test("with Evidence or Defects is refused, unless its contents go too", async () => {
+    const { homeCheck, itemId } = await createTestHomeCheckWithItem();
+    expectOk(await homeCheck.addNote(itemId, "Door scratched"));
+
+    expect(await homeCheck.removeItem(itemId)).toEqual({ ok: false, reason: "item-has-evidence" });
+    expect(await homeCheck.getItem(itemId)).toBeDefined();
+  });
+
+  test("with its contents deletes its Evidence, media, Defects and AI queue entries", async () => {
+    const { homeCheck, areaId, itemId } = await createTestHomeCheckWithItem();
+    const photo = expectOk(await homeCheck.addPhoto(itemId, new Blob(["scratched door"]))).evidence;
+    const note = expectOk(await homeCheck.addNote(itemId, "Door scratched")).evidence;
+    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [photo.id, note.id] }));
+    expect(await homeCheck.countWaitingForAi()).toBe(1);
+
+    const result = await homeCheck.removeItem(itemId, { withContents: true });
+
+    expect(result).toEqual({ ok: true });
+    expect(await homeCheck.listItems(areaId)).toEqual([]);
+    expect(await homeCheck.listEvidence(itemId)).toEqual([]);
+    expect(await homeCheck.listDefects(itemId)).toEqual([]);
+    expect(await homeCheck.getMedia(photo.id, "original")).toBeUndefined();
+    expect(await homeCheck.countWaitingForAi()).toBe(0);
+  });
+
+  test("with its contents is still refused on a Completed Inspection", async () => {
+    const { homeCheck, inspectionId, itemId } = await createTestHomeCheckWithItem();
+    expectOk(await homeCheck.addNote(itemId, "Door scratched"));
+    expectOk(await homeCheck.completeInspection(inspectionId));
+
+    expect(await homeCheck.removeItem(itemId, { withContents: true })).toEqual({ ok: false, reason: "inspection-completed" });
+    expect(await homeCheck.listEvidence(itemId)).toHaveLength(1);
   });
 });

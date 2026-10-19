@@ -1004,3 +1004,25 @@ body:has(:is(input, textarea, select):focus) .dock {
 .band:not(:has(> .back)) {
   padding-top: calc(env(safe-area-inset-top) + 1.25rem);
 }
+
+/* Confirming a deletion that can't be undone. */
+.confirm-card {
+  border: 2px solid var(--danger);
+}
+
+.confirm-card p {
+  margin: 0;
+}
+
+.confirm-card .button-row > * {
+  flex: 1;
+}
+
+.danger-button {
+  min-height: 3rem;
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--danger);
+  color: #fff;
+  font-weight: 700;
+}
