@@ -18,3 +18,4 @@
 ## Comments
 
 - The dev server (`npm run dev -- --host`) serves HTTPS with a self-signed certificate (`@vitejs/plugin-basic-ssl`), so phones on the LAN get a secure page: the camera, microphone and `crypto.randomUUID` work. Each phone accepts the certificate warning once. `vite preview` stays on HTTP for localhost. A hosted build still needs a real certificate.
+- Host: Cloudflare Pages, in the Rizurf Cloudflare account. `npm run deploy` builds and uploads `dist` with Wrangler (direct upload, no git remote needed). The key comes from `.env.local` at build time, and the build warns when it is missing. The steps to do by hand (deploy, key lockdown, the device run-through) are in `docs/deploy.md`.
