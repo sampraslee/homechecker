@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { AreaScreen } from "./AreaScreen";
-import { Dock } from "./Dock";
 import { InspectionListScreen } from "./InspectionListScreen";
 import { InspectionScreen } from "./InspectionScreen";
 import { ItemScreen } from "./ItemScreen";
@@ -19,16 +18,7 @@ export type Navigate = (screen: Screen) => void;
 
 export function App() {
   const [screen, setScreen] = useState<Screen>({ name: "list" });
-  return (
-    <>
-      <CurrentScreen screen={screen} navigate={setScreen} />
-      {/* Rebuilt screens put their main button in their own Dock; the others move theirs there next. */}
-      {(screen.name === "list" || screen.name === "start" || screen.name === "settings") && <Dock />}
-    </>
-  );
-}
 
-function CurrentScreen({ screen, navigate: setScreen }: { screen: Screen; navigate: Navigate }) {
   switch (screen.name) {
     case "list":
       return <InspectionListScreen navigate={setScreen} />;

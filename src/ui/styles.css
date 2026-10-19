@@ -63,18 +63,6 @@ h1 {
   padding: calc(env(safe-area-inset-top) + 0.75rem) 1rem calc(env(safe-area-inset-bottom) + 7.5rem);
 }
 
-.bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 2.75rem;
-  margin-bottom: 0.5rem;
-}
-
-.bar h1 {
-  margin: 0;
-}
-
 button {
   font: inherit;
 }
@@ -143,12 +131,6 @@ button {
 .badge.completed {
   background: var(--done-tint);
   color: var(--done);
-}
-
-/** Only on this phone: losing the phone loses it. */
-.badge.unexported {
-  background: var(--danger-tint);
-  color: var(--danger);
 }
 
 .form {
@@ -652,7 +634,7 @@ button:disabled {
 
 .band {
   position: relative;
-  margin: 0 -1rem 0.5rem;
+  margin: 0 -1rem 1rem;
   padding: calc(env(safe-area-inset-top) + 0.5rem) 1rem 1.25rem;
   color: #fff;
   background:
@@ -715,6 +697,10 @@ button:disabled {
   align-items: baseline;
   gap: 1rem;
   margin: 1.5rem 0 0.5rem;
+}
+
+.band + .section-head {
+  margin-top: 0;
 }
 
 .section-head h2 {
@@ -956,4 +942,23 @@ body:has(:is(input, textarea, select):focus) .dock {
 
 .totals .zero dd {
   color: var(--warn);
+}
+
+/* Never exported: only on this phone, so losing the phone loses it. */
+.unexported {
+  color: var(--warn);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.kept-notice {
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--r-control);
+  background: var(--done-tint);
+  color: var(--done);
+}
+
+/* The Band on the first screen has no way back above the title. */
+.band:not(:has(> .back)) {
+  padding-top: calc(env(safe-area-inset-top) + 1.25rem);
 }

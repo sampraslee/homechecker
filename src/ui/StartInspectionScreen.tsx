@@ -12,7 +12,8 @@ import {
   type UnitAddressInput,
 } from "../core";
 import type { Navigate } from "./App";
-import { BackBar } from "./BackBar";
+import { Band } from "./Band";
+import { Dock } from "./Dock";
 import { formatDate, inspectionStatusLabel, inspectionTypeLabel, refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 import { InspectorNameForm } from "./InspectorNameForm";
@@ -31,10 +32,13 @@ const textFields: { field: Exclude<AddressField, "state">; label: string; inputM
   { field: "unitNumber", label: "Unit number" },
   { field: "buildingName", label: "Building name (optional)" },
   { field: "street", label: "Street" },
-  { field: "locality", label: "Area / Taman (optional)" },
+  { field: "locality", label: "Taman / neighbourhood (optional)" },
   { field: "postcode", label: "Postcode", inputMode: "numeric" },
   { field: "city", label: "City" },
 ];
+
+/** Lets the Dock's button, outside the form, submit it. */
+const ADDRESS_FORM_ID = "address-form";
 
 /** Enough to pick from on a phone screen without pushing the rest of the form away. */
 const MAX_SHOWN_SUGGESTIONS = 4;
@@ -70,11 +74,11 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
   }
 
   const pickingMoveIn = type === "move-out" && !typingMoveOutAddress && moveIns !== null && moveIns.length > 0;
+  const typingAddress = hasName === true && (type === "move-in" || (!pickingMoveIn && moveIns !== null));
 
   return (
     <main className="screen">
-      <BackBar navigate={navigate} />
-      <h1>Start {inspectionTypeLabel[type]} Inspection</h1>
+      <Band navigate={navigate} back={{ to: { name: "list" }, label: "Inspections" }} title={`Start ${inspectionTypeLabel[type]}`} />
 
       {hasName === false && (
         <section className="prompt">
@@ -117,11 +121,11 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
                       className="card"
                       onClick={async () => openOrExplain(await homeCheck.startMoveOut({ moveInId: moveIn.id }))}
                     >
+                      <strong>{moveIn.addressLine}</strong>
                       <span className="card-row">
-                        <strong>{formatDate(moveIn.startedAt)}</strong>
+                        <span className="muted">{formatDate(moveIn.startedAt)}</span>
                         <span className={`badge ${moveIn.status}`}>{inspectionStatusLabel[moveIn.status]}</span>
                       </span>
-                      <span>{moveIn.addressLine}</span>
                     </button>
                   </li>
                 ))}
@@ -143,6 +147,16 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
           )}
         </>
       )}
+
+      <Dock
+        action={
+          typingAddress && (
+            <button type="submit" form={ADDRESS_FORM_ID} className="primary">
+              Start {inspectionTypeLabel[type]}
+            </button>
+          )
+        }
+      />
     </main>
   );
 }
@@ -191,7 +205,7 @@ function AddressForm({ onSubmit }: { onSubmit: (address: UnitAddressInput) => Pr
   }
 
   return (
-    <form className="form" onSubmit={submit} noValidate>
+    <form id={ADDRESS_FORM_ID} className="form spaced" onSubmit={submit} noValidate>
       {textFields.map(({ field, label, inputMode }) => (
         <Fragment key={field}>
           <label>
@@ -230,9 +244,6 @@ function AddressForm({ onSubmit }: { onSubmit: (address: UnitAddressInput) => Pr
         </select>
         {errors.state && <span className="error">{errors.state}</span>}
       </label>
-      <button type="submit" className="primary">
-        Start Inspection
-      </button>
     </form>
   );
 }

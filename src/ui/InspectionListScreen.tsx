@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { InspectionSummary } from "../core";
 import type { Navigate } from "./App";
+import { Band } from "./Band";
+import { Dock } from "./Dock";
 import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 
@@ -14,40 +16,49 @@ export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
 
   return (
     <main className="screen">
-      <header className="bar">
-        <h1>Inspections</h1>
-        <button type="button" className="link" onClick={() => navigate({ name: "settings" })}>
-          Settings
-        </button>
-      </header>
+      <Band
+        navigate={navigate}
+        title="Inspections"
+        action={
+          <button type="button" className="on-band" onClick={() => navigate({ name: "settings" })}>
+            Settings
+          </button>
+        }
+      />
 
-      <button type="button" className="primary" onClick={() => navigate({ name: "start" })}>
-        Start Inspection
-      </button>
-
-      {inspections?.length === 0 && <p className="muted">No Inspections on this phone yet.</p>}
+      {inspections?.length === 0 && <p className="muted spaced">No Inspections on this phone yet. Start one when you reach the Unit.</p>}
 
       <ul className="cards">
         {inspections?.map((inspection) => (
           <li key={inspection.id}>
             <button type="button" className="card" onClick={() => navigate({ name: "inspection", id: inspection.id })}>
+              {/* The address first: it's what the Inspector looks for. */}
               <span className="card-row">
-                <strong>{inspectionTypeLabel[inspection.type]}</strong>
+                <strong>{inspection.addressLine}</strong>
+              </span>
+              <span className="card-row">
+                <span className="muted">
+                  {inspectionTypeLabel[inspection.type]}, {formatDate(inspection.startedAt)}
+                </span>
                 <span className={`badge ${inspection.status}`}>{inspectionStatusLabel[inspection.status]}</span>
               </span>
-              <span>{inspection.addressLine}</span>
-              <span className="card-row">
-                <span className="muted">{formatDate(inspection.startedAt)}</span>
-                {inspection.lastExportedAt ? (
-                  <span className="muted">Exported {formatDateTime(inspection.lastExportedAt)}</span>
-                ) : (
-                  <span className="badge unexported">Never exported</span>
-                )}
-              </span>
+              {inspection.lastExportedAt ? (
+                <span className="muted defect-meta">Exported {formatDateTime(inspection.lastExportedAt)}</span>
+              ) : (
+                <span className="unexported">Not exported yet: only on this phone</span>
+              )}
             </button>
           </li>
         ))}
       </ul>
+
+      <Dock
+        action={
+          <button type="button" className="primary" onClick={() => navigate({ name: "start" })}>
+            Start Inspection
+          </button>
+        }
+      />
     </main>
   );
 }
