@@ -12,7 +12,7 @@ import { useLocked } from "./useLocked";
 /** An Item with what has been recorded on it, e.g. "4 photos, 1 Defect". */
 type ItemRow = ItemView & { summary: string };
 
-export function AreaScreen({ id, navigate }: { id: string; navigate: Navigate }) {
+export function AreaScreen({ id, addingItem = false, navigate }: { id: string; addingItem?: boolean; navigate: Navigate }) {
   const homeCheck = useHomeCheck();
   const [area, setArea] = useState<Area | null | undefined>(undefined);
   const [inspection, setInspection] = useState<Inspection | null>(null);
@@ -20,7 +20,7 @@ export function AreaScreen({ id, navigate }: { id: string; navigate: Navigate })
   const [editing, setEditing] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [picking, setPicking] = useState(false);
+  const [picking, setPicking] = useState(addingItem);
   const [error, setError] = useState<string | null>(null);
   const locked = useLocked(area?.inspectionId);
   // Editing controls wait until the lock is known, so they never flash up on a Completed Inspection.
@@ -189,10 +189,8 @@ export function AreaScreen({ id, navigate }: { id: string; navigate: Navigate })
         <ItemPicker
           areaId={id}
           areaName={area.name}
-          onAdded={() => {
-            setPicking(false);
-            load();
-          }}
+          // Straight into the new Item, ready to take its photos.
+          onAdded={(itemId) => navigate({ name: "item", id: itemId })}
           onCancel={() => setPicking(false)}
         />
       )}
@@ -226,7 +224,7 @@ function ItemPicker({
 }: {
   areaId: string;
   areaName: string;
-  onAdded: () => void;
+  onAdded: (itemId: string) => void;
   onCancel: () => void;
 }) {
   const homeCheck = useHomeCheck();
@@ -249,7 +247,7 @@ function ItemPicker({
 
   async function add(source: ItemSource) {
     const result = await homeCheck.addItem(areaId, source);
-    if (result.ok) onAdded();
+    if (result.ok) onAdded(result.item.id);
     else setError(refusalMessage[result.reason]);
   }
 

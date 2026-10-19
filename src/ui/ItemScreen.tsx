@@ -458,7 +458,7 @@ function MediaViewer({
       </div>
       {error && <p className="error" role="alert">{error}</p>}
       {evidence.kind === "photo" ? (
-        <MediaImage evidenceId={evidence.id} version="original" alt="Photo" className="viewer-image" />
+        <MediaImage evidenceId={evidence.id} version="original" alt="Photo" className="viewer-image square" />
       ) : (
         <VideoPlayer evidenceId={evidence.id} />
       )}
@@ -468,7 +468,7 @@ function MediaViewer({
 
 function VideoPlayer({ evidenceId }: { evidenceId: string }) {
   const url = useMediaUrl(evidenceId, "original");
-  return url && <video src={url} className="viewer-image" controls playsInline />;
+  return url && <video src={url} className="viewer-image square" controls playsInline />;
 }
 
 function NoteEditor({

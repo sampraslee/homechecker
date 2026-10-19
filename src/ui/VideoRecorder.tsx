@@ -126,7 +126,7 @@ export function VideoRecorder({ itemId, onSaved, onClose }: { itemId: string; on
         </span>
       </div>
       {error && <p className="error on-dark-error">{error}</p>}
-      <video ref={preview} className="viewer-image" autoPlay muted playsInline />
+      <video ref={preview} className="viewer-image square" autoPlay muted playsInline />
       <div className="recorder-controls">
         {phase === "recording" ? (
           <button type="button" className="record-button recording" onClick={() => stopRecording.current()} aria-label="Stop recording" />

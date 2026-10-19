@@ -10,7 +10,8 @@ export type Screen =
   | { name: "list" }
   | { name: "start" }
   | { name: "inspection"; id: string }
-  | { name: "area"; id: string }
+  /** `addingItem`: opened straight after the Area was added, so Add Item is already open. */
+  | { name: "area"; id: string; addingItem?: boolean }
   | { name: "item"; id: string }
   | { name: "settings" };
 
@@ -27,7 +28,7 @@ export function App() {
     case "inspection":
       return <InspectionScreen id={screen.id} navigate={setScreen} />;
     case "area":
-      return <AreaScreen id={screen.id} navigate={setScreen} />;
+      return <AreaScreen id={screen.id} addingItem={screen.addingItem} navigate={setScreen} />;
     case "item":
       return <ItemScreen id={screen.id} navigate={setScreen} />;
     case "settings":

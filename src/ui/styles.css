@@ -355,6 +355,15 @@ h3 {
   object-fit: contain;
 }
 
+/* Photos and video are shown square, centred; the saved and exported files keep their full frame. */
+.viewer-image.square {
+  flex: none;
+  width: min(100%, 100vh - 12rem);
+  aspect-ratio: 1;
+  margin: auto;
+  object-fit: cover;
+}
+
 .on-dark {
   color: #fff;
 }

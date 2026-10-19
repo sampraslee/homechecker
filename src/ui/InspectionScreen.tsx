@@ -143,10 +143,8 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
       {!locked && adding && (
         <AddAreaPanel
           inspectionId={id}
-          onAdded={() => {
-            setAdding(false);
-            loadAreas();
-          }}
+          // Straight into the new Area, ready to add its Items.
+          onAdded={(areaId) => navigate({ name: "area", id: areaId, addingItem: true })}
           onCancel={() => setAdding(false)}
         />
       )}
@@ -376,7 +374,7 @@ function AddAreaPanel({
   onCancel,
 }: {
   inspectionId: string;
-  onAdded: () => void;
+  onAdded: (areaId: string) => void;
   onCancel: () => void;
 }) {
   const homeCheck = useHomeCheck();
@@ -396,7 +394,7 @@ function AddAreaPanel({
 
   async function add(source: AreaSource) {
     const result = await homeCheck.addArea(inspectionId, source);
-    if (result.ok) onAdded();
+    if (result.ok) onAdded(result.area.id);
     else setError(refusalMessage[result.reason]);
   }
 
