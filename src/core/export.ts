@@ -19,6 +19,8 @@ import {
 /** What goes into an export, gathered by the core. Areas, Items and Evidence are in order. */
 export type ExportContent = {
   inspection: Inspection;
+  /** The Move-in a Move-out is linked to, if any. */
+  linkedMoveIn?: Inspection;
   /** The bundled Defect Dictionary's version. */
   dictionaryVersion: string;
   areas: {
@@ -168,6 +170,13 @@ export async function buildExportZip(content: ExportContent): Promise<Uint8Array
     ["Duration", inspection.completedAt ? formatInspectionDuration(inspection.startedAt, inspection.completedAt) : null],
     ["Defect Dictionary version", content.dictionaryVersion],
   ]);
+  if (inspection.type === "move-out") {
+    const { linkedMoveIn } = content;
+    inspectionSheet.addRows([
+      ["Linked Move-in address", linkedMoveIn ? formatAddress(linkedMoveIn.address) : "Not linked"],
+      ["Linked Move-in date", linkedMoveIn ? dateFormat.format(new Date(linkedMoveIn.startedAt)) : null],
+    ]);
+  }
   // Label and value pairs, so no header row.
   styleSheet(inspectionSheet, { headerRow: false });
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { formatAddress, type AiWorkLeft, type AreaSource, type AreaView, type Inspection, type UnreviewedAiSuggestionView } from "../core";
 import type { Navigate } from "./App";
 import { BackBar } from "./BackBar";
-import { formatDateTime, inspectionStatusLabel, inspectionTypeLabel, lockedNotice, refusalMessage } from "./format";
+import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel, lockedNotice, refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 import { shareOrDownload, TapTooOldError, type ShareOutcome } from "./shareFile";
 import { useAiChanges } from "./useAiChanges";
@@ -14,6 +14,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
   const [adding, setAdding] = useState(false);
   const [confirmingComplete, setConfirmingComplete] = useState(false);
   const [toReview, setToReview] = useState<UnreviewedAiSuggestionView[]>([]);
+  const [linkedMoveIn, setLinkedMoveIn] = useState<Inspection | undefined>(undefined);
 
   const loadAreas = useCallback(() => homeCheck.listAreas(id).then(setAreas), [homeCheck, id]);
   const loadInspection = useCallback(
@@ -25,6 +26,11 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
     loadInspection();
     loadAreas();
   }, [loadInspection, loadAreas]);
+
+  const linkedMoveInId = inspection?.linkedMoveInId;
+  useEffect(() => {
+    if (linkedMoveInId) homeCheck.getInspection(linkedMoveInId).then(setLinkedMoveIn);
+  }, [homeCheck, linkedMoveInId]);
 
   // Also reloads as AI Suggestions arrive or are reviewed.
   useAiChanges(useCallback(() => homeCheck.listUnreviewedAiSuggestions(id).then(setToReview), [homeCheck, id]));
@@ -46,6 +52,16 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
           <dl className="details">
             <dt>Unit</dt>
             <dd>{formatAddress(inspection.address)}</dd>
+            {inspection.type === "move-out" && (
+              <>
+                <dt>Move-in</dt>
+                <dd>
+                  {!linkedMoveInId
+                    ? "Not linked"
+                    : linkedMoveIn && `${formatDate(linkedMoveIn.startedAt)}, by ${linkedMoveIn.inspectorName}`}
+                </dd>
+              </>
+            )}
             <dt>Inspector</dt>
             <dd>{inspection.inspectorName}</dd>
             <dt>Started</dt>

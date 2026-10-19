@@ -16,6 +16,8 @@ export interface Storage {
   getSettings(): Promise<Settings>;
   saveSettings(settings: Settings): Promise<void>;
   putInspection(inspection: Inspection): Promise<void>;
+  /** Saves a new Inspection together with the Areas and Items it starts with, atomically. */
+  putInspectionWithAreasAndItems(inspection: Inspection, areas: Area[], items: Item[]): Promise<void>;
   getInspection(id: string): Promise<Inspection | undefined>;
   listInspections(): Promise<Inspection[]>;
   putArea(area: Area): Promise<void>;

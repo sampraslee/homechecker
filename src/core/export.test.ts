@@ -52,6 +52,42 @@ describe("exporting an Inspection", () => {
     ]);
   });
 
+  test("names a Move-out's linked Move-in on the Inspection sheet", async () => {
+    const { homeCheck, environment, inspectionId: moveInId } = await createTestHomeCheckWithInspection();
+    environment.setNow(new Date("2027-01-04T02:00:00.000Z"));
+    const moveOut = expectOk(await homeCheck.startMoveOut({ moveInId })).inspection;
+
+    const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(moveOut.id)).zip);
+
+    expect(rowsOf(workbook, "Inspection")).toEqual([
+      ["Inspection type", "Move-out"],
+      ["Unit address", "7, Jalan Kenari 3, 47100 Puchong, Selangor"],
+      ["Inspector", "Aisyah"],
+      ["Started at", "4 Jan 2027, 10:00"],
+      ["Completed at"],
+      ["Duration"],
+      ["Defect Dictionary version", "test-dictionary-1"],
+      ["Linked Move-in address", "7, Jalan Kenari 3, 47100 Puchong, Selangor"],
+      ["Linked Move-in date", "5 Jan 2026"],
+    ]);
+  });
+
+  test("says when a Move-out is not linked to a Move-in", async () => {
+    const { homeCheck } = await createTestHomeCheckWithInspection();
+    const moveOut = expectOk(
+      await homeCheck.startMoveOut({
+        address: { unitNumber: "9", street: "Jalan Kenari 5", postcode: "47100", city: "Puchong", state: "Selangor" },
+      }),
+    ).inspection;
+
+    const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(moveOut.id)).zip);
+
+    expect(rowsOf(workbook, "Inspection").slice(-2)).toEqual([
+      ["Linked Move-in address", "Not linked"],
+      ["Linked Move-in date"],
+    ]);
+  });
+
   test("is named after the Inspection's type, Unit and start date", async () => {
     const { homeCheck, inspectionId } = await createTestHomeCheckWithInspection();
 

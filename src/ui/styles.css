@@ -572,3 +572,28 @@ button:disabled {
   background: var(--info-bg);
   color: var(--brand);
 }
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--surface);
+}
+
+.segmented button {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: none;
+  color: inherit;
+  font-weight: 500;
+}
+
+.segmented button[aria-pressed="true"] {
+  background: var(--brand);
+  color: #fff;
+}

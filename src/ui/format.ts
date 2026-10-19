@@ -43,6 +43,7 @@ export const refusalMessage: Record<RefusalReason, string> = {
   "inspector-name-required": "Enter your name",
   "invalid-address": "Check the address",
   "inspection-not-found": "This Inspection is not on this phone",
+  "not-a-move-in": "A Move-out can only be linked to a Move-in",
   "inspection-completed": "This Inspection is Completed and can't be changed",
   "unknown-standard-area": "That Area is not in the standard list",
   "area-not-found": "This Area is not on this phone",

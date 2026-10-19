@@ -56,6 +56,13 @@ export function createDexieStorage(name = "home-check", options?: DexieOptions):
     async putInspection(inspection) {
       await db.inspections.put(inspection);
     },
+    async putInspectionWithAreasAndItems(inspection, areas, items) {
+      await db.transaction("rw", db.inspections, db.areas, db.items, async () => {
+        await db.inspections.put(inspection);
+        await db.areas.bulkPut(areas);
+        await db.items.bulkPut(items);
+      });
+    },
     async getInspection(id) {
       return db.inspections.get(id);
     },

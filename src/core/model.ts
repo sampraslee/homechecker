@@ -59,7 +59,12 @@ export type Inspection = {
   completedAt?: string;
   /** When the Inspection was last exported, Draft or Completed; unset if never. */
   lastExportedAt?: string;
+  /** The Move-in a Move-out was started from; unset for a Move-in or an unlinked Move-out. */
+  linkedMoveInId?: string;
 };
+
+/** A linked Move-out starts from a Move-in on this phone; an unlinked one from a typed address. */
+export type MoveOutSource = { moveInId: string } | { address: UnitAddressInput };
 
 export type Settings = {
   inspectorName: string | null;

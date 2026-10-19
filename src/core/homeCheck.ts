@@ -19,14 +19,17 @@ import type {
   DefectView,
   Inspection,
   InspectionSummary,
+  InspectionType,
   Item,
   ItemChoices,
   ItemSource,
   ItemView,
   MediaEvidence,
+  MoveOutSource,
   NoteEvidence,
   MediaVersion,
   PhotoEvidence,
+  UnitAddress,
   UnitAddressInput,
   UnreviewedAiSuggestionView,
   VideoEvidence,
@@ -100,6 +103,20 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     const processed = { ...evidence, processed: true };
     await storage.putEvidence(processed, versions);
     return processed;
+  }
+
+  /** A new Draft, stamped with the Inspector and start time. */
+  function newInspection(type: InspectionType, address: UnitAddress, inspectorName: string): Inspection {
+    return { id: newId(), type, status: "draft", address, inspectorName, startedAt: environment.now().toISOString() };
+  }
+
+  /** A new Draft at the typed address, once it passes validation. */
+  async function startAtAddress(type: InspectionType, input: UnitAddressInput, inspectorName: string) {
+    const validation = validateAddress(input);
+    if (!validation.ok) return { ok: false as const, reason: "invalid-address" as const, errors: validation.errors };
+    const inspection = newInspection(type, validation.address, inspectorName);
+    await storage.putInspection(inspection);
+    return { ok: true as const, inspection };
   }
 
   /** Whether the Inspection is Completed, so its Areas, Items, Evidence and Defects can't change. */
@@ -332,17 +349,41 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async startMoveIn(input: UnitAddressInput) {
       const { inspectorName } = await storage.getSettings();
       if (!inspectorName) return inspectorNameRequired;
-      const validation = validateAddress(input);
-      if (!validation.ok) return { ok: false as const, reason: "invalid-address" as const, errors: validation.errors };
-      const inspection: Inspection = {
-        id: newId(),
-        type: "move-in",
-        status: "draft",
-        address: validation.address,
-        inspectorName,
-        startedAt: environment.now().toISOString(),
-      };
-      await storage.putInspection(inspection);
+      return startAtAddress("move-in", input, inspectorName);
+    },
+
+    /**
+     * A linked Move-out copies its Move-in's address, Areas and Items, and nothing else: no Evidence, Defects or AI Suggestions.
+     * An unlinked Move-out, for a Unit with no Move-in on this phone, starts from a typed address.
+     */
+    async startMoveOut(source: MoveOutSource) {
+      const { inspectorName } = await storage.getSettings();
+      if (!inspectorName) return inspectorNameRequired;
+      if ("address" in source) return startAtAddress("move-out", source.address, inspectorName);
+
+      const moveIn = await storage.getInspection(source.moveInId);
+      if (!moveIn) return inspectionNotFound;
+      if (moveIn.type !== "move-in") return { ok: false as const, reason: "not-a-move-in" as const };
+      const inspection: Inspection = { ...newInspection("move-out", moveIn.address, inspectorName), linkedMoveInId: moveIn.id };
+      const areas: Area[] = [];
+      const items: Item[] = [];
+      for (const moveInArea of await storage.listAreas(moveIn.id)) {
+        const { name, standardAreaId, position } = moveInArea;
+        const area: Area = { id: newId(), inspectionId: inspection.id, name, standardAreaId, position };
+        areas.push(area);
+        for (const { catalogItemId, name, shortName, position } of await storage.listItems(moveInArea.id)) {
+          items.push({
+            id: newId(),
+            inspectionId: inspection.id,
+            areaId: area.id,
+            catalogItemId,
+            name,
+            ...(shortName && { shortName }),
+            position,
+          });
+        }
+      }
+      await storage.putInspectionWithAreasAndItems(inspection, areas, items);
       return { ok: true as const, inspection };
     },
 
@@ -380,6 +421,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       );
       const zip = await buildExportZip({
         inspection,
+        linkedMoveIn: inspection.linkedMoveInId ? await storage.getInspection(inspection.linkedMoveInId) : undefined,
         dictionaryVersion: referenceData.defectDictionary.version,
         areas,
         getMedia: (evidenceId, version) => storage.getMedia(evidenceId, version),
@@ -393,16 +435,12 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     },
 
     async listInspections(): Promise<InspectionSummary[]> {
-      const inspections = await storage.listInspections();
-      return inspections
-        .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-        .map(({ id, type, status, startedAt, address }) => ({
-          id,
-          type,
-          status,
-          addressLine: formatAddress(address),
-          startedAt,
-        }));
+      return summarise(await storage.listInspections());
+    },
+
+    /** The Move-ins on this phone a Move-out can link to, Draft or Completed, newest first. */
+    async listMoveIns(): Promise<InspectionSummary[]> {
+      return summarise((await storage.listInspections()).filter((inspection) => inspection.type === "move-in"));
     },
 
     async listStandardAreas() {
@@ -801,6 +839,13 @@ type OperationResult = { [Op in keyof HomeCheck]: Awaited<ReturnType<HomeCheck[O
 
 /** Every reason a core operation can refuse. */
 export type RefusalReason = Extract<OperationResult, { ok: false }>["reason"];
+
+/** Summaries for the Inspection list and Move-in picker, sorted newest first. */
+function summarise(inspections: Inspection[]): InspectionSummary[] {
+  return inspections
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+    .map(({ id, type, status, startedAt, address }) => ({ id, type, status, addressLine: formatAddress(address), startedAt }));
+}
 
 function nextPosition(siblings: { position: number }[]): number {
   return Math.max(0, ...siblings.map((sibling) => sibling.position)) + 1;
