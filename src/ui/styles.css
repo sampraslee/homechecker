@@ -761,6 +761,21 @@ body:has(:is(input, textarea, select):focus) .dock {
   font-size: 1.15rem;
 }
 
+/* The main button, with a smaller one beside it. */
+.dock-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dock-actions > .primary {
+  flex: 2;
+}
+
+.dock-actions > .secondary {
+  flex: 1;
+  min-height: 3.3rem;
+}
+
 .status-line {
   margin: 0;
   display: flex;

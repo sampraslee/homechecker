@@ -356,11 +356,17 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           )
         }
         action={
-          editable && (
-            <button type="button" className="primary" disabled={saving} onClick={() => cameraInput.current?.click()}>
-              {saving ? "Saving…" : "Take photo"}
+          <div className="dock-actions">
+            {editable && (
+              <button type="button" className="primary" disabled={saving} onClick={() => cameraInput.current?.click()}>
+                {saving ? "Saving…" : "Take photo"}
+              </button>
+            )}
+            {/* Finished with this Item: back to the Area's Items, in thumb reach. */}
+            <button type="button" className="secondary" onClick={() => navigate({ name: "area", id: item.areaId })}>
+              Done
             </button>
-          )
+          </div>
         }
       />
 
