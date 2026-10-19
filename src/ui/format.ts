@@ -1,4 +1,4 @@
-import { VIDEO_TIME_LIMIT_SECONDS, type AiSuggestionView, type InspectionStatus, type RefusalReason } from "../core";
+import { VIDEO_TIME_LIMIT_SECONDS, type AiSuggestionView, type Evidence, type InspectionStatus, type RefusalReason, type UnitAddress } from "../core";
 
 export { inspectionTypeLabel } from "../core";
 
@@ -67,3 +67,22 @@ export const refusalMessage: Record<RefusalReason, string> = {
   "ai-suggestion-not-found": "This AI Suggestion is not on this phone",
   "ai-suggestion-already-reviewed": "This AI Suggestion has already been reviewed",
 };
+
+/** The part of a Unit's address an Inspector says out loud, e.g. "A-12-3, Residensi Harmoni". */
+export function shortAddress(address: UnitAddress): string {
+  return `${address.unitNumber}, ${address.buildingName || address.street}`;
+}
+
+/** What some Evidence is made of, e.g. "4 photos, 1 video"; empty when there is none. */
+export function countEvidence(evidence: Evidence[]): string {
+  const plural = (count: number, one: string) => (count === 1 ? `1 ${one}` : `${count} ${one}s`);
+  const counts: [number, string][] = [
+    [evidence.filter((e) => e.kind === "photo").length, "photo"],
+    [evidence.filter((e) => e.kind === "video").length, "video"],
+    [evidence.filter((e) => e.kind === "note").length, "note"],
+  ];
+  return counts
+    .filter(([count]) => count > 0)
+    .map(([count, one]) => plural(count, one))
+    .join(", ");
+}

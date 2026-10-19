@@ -24,8 +24,8 @@ export default defineConfig(({ command, mode, isPreview }) => {
           name: "Home Check",
           short_name: "Home Check",
           description: "Record the condition of a rental Unit at Move-in and Move-out.",
-          theme_color: "#1f5f8b",
-          background_color: "#ffffff",
+          theme_color: "#0a101a",
+          background_color: "#f8fafc",
           display: "standalone",
           start_url: "/",
           icons: [

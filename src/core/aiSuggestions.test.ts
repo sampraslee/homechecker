@@ -211,6 +211,7 @@ describe("what the AI is asked", () => {
         "CD-HAIRLINE",
         "DW-STICK",
         "GM-CRACK",
+        "SN-BASIN-CRACK",
         "SN-TOILET-LOOSE",
         "PL-FLUSHFAIL",
         "CF-HINGE",

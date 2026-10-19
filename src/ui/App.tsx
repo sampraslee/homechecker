@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AreaScreen } from "./AreaScreen";
+import { Dock } from "./Dock";
 import { InspectionListScreen } from "./InspectionListScreen";
 import { InspectionScreen } from "./InspectionScreen";
 import { ItemScreen } from "./ItemScreen";
@@ -18,7 +19,16 @@ export type Navigate = (screen: Screen) => void;
 
 export function App() {
   const [screen, setScreen] = useState<Screen>({ name: "list" });
+  return (
+    <>
+      <CurrentScreen screen={screen} navigate={setScreen} />
+      {/* The Item screen puts its main button in its own Dock; the other screens move theirs there next. */}
+      {screen.name !== "item" && <Dock />}
+    </>
+  );
+}
 
+function CurrentScreen({ screen, navigate: setScreen }: { screen: Screen; navigate: Navigate }) {
   switch (screen.name) {
     case "list":
       return <InspectionListScreen navigate={setScreen} />;

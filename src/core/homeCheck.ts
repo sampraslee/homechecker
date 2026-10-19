@@ -44,6 +44,7 @@ import {
   findCategory,
   findDefectType,
   findStandardArea,
+  type DefectType,
   type ReferenceData,
 } from "./referenceData";
 
@@ -708,8 +709,12 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async defectChoices(itemId: string) {
       const item = await storage.getItem(itemId);
       if (!item) return itemNotFound;
-      const relevant = (item.catalogItemId && findCatalogItem(referenceData, item.catalogItemId)?.relevantCategories) || [];
-      const { categories } = referenceData.defectDictionary;
+      const catalogItem = item.catalogItemId ? findCatalogItem(referenceData, item.catalogItemId) : undefined;
+      const relevant = catalogItem?.relevantCategories ?? [];
+      // Within each Category, the Item's own Defect Types first: Basin Cracked before Toilet Bowl Loose for a Basin.
+      const categories = referenceData.defectDictionary.categories.map((category) =>
+        catalogItem ? { ...category, defectTypes: namedAfterFirst(category.defectTypes, catalogItem.name) } : category,
+      );
       // checkReferenceData guarantees every relevant Category is in the Dictionary.
       const choices: DefectChoices = {
         shownFirst: relevant.map((code) => categories.find((category) => category.code === code)!),
@@ -915,4 +920,14 @@ function areaNameProblem(name: string, taken: string[]) {
 
 function comparableName(name: string): string {
   return name.trim().toLowerCase();
+}
+
+/** Defect Types whose name starts with the Item's name, as a whole word, then the rest; each group in Dictionary order. */
+function namedAfterFirst(defectTypes: DefectType[], itemName: string): DefectType[] {
+  const prefix = itemName.toLowerCase();
+  const isNamedAfter = (defectType: DefectType) => {
+    const name = defectType.name.toLowerCase();
+    return name === prefix || name.startsWith(`${prefix} `);
+  };
+  return [...defectTypes.filter(isNamedAfter), ...defectTypes.filter((defectType) => !isNamedAfter(defectType))];
 }

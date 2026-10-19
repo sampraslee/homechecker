@@ -82,24 +82,19 @@ export function AiSuggestionList({
             <span>
               <span className="card-row">
                 <strong>{suggestion.defectTypeName}</strong>
-                <span className="badge confidence">{suggestion.confidence}</span>
+                {suggestion.outcome !== "unreviewed" && <span className={`badge ${suggestion.outcome}`}>{aiOutcomeLabel(suggestion)}</span>}
               </span>
-              <span className="card-row">
-                <span className="muted defect-meta">
-                  {suggestion.defectTypeCode} · {suggestion.categoryName}
-                </span>
-                <span className={`badge ${suggestion.outcome}`}>{aiOutcomeLabel(suggestion)}</span>
-              </span>
+              <span className="ai-why">AI suggestion, {suggestion.confidence.toLowerCase()} confidence</span>
             </span>
             {suggestion.outcome === "unreviewed" && panel?.suggestion.id !== suggestion.id && (
               <span className="button-row review-actions">
-                <button type="button" className="secondary" onClick={() => accept(suggestion, { code: suggestion.defectTypeCode, name: suggestion.defectTypeName })}>
+                <button type="button" className="primary" onClick={() => accept(suggestion, { code: suggestion.defectTypeCode, name: suggestion.defectTypeName })}>
                   Confirm
                 </button>
                 <button type="button" className="secondary" onClick={() => setPanel({ mode: "correct", suggestion })}>
                   Correct
                 </button>
-                <button type="button" className="secondary" onClick={() => reject(suggestion)}>
+                <button type="button" className="quiet" onClick={() => reject(suggestion)}>
                   Reject
                 </button>
               </span>

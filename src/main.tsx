@@ -9,7 +9,6 @@ import { bundledReferenceData } from "./referenceData";
 import { App } from "./ui/App";
 import { ErrorNotice, listenForUnexpectedErrors } from "./ui/ErrorNotice";
 import { HomeCheckProvider } from "./ui/homeCheckContext";
-import { StatusBar } from "./ui/StatusBar";
 import "./ui/styles.css";
 
 listenForUnexpectedErrors();
@@ -33,7 +32,6 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <HomeCheckProvider value={homeCheck}>
       <App />
-      <StatusBar />
       <ErrorNotice />
     </HomeCheckProvider>
   </StrictMode>,

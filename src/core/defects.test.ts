@@ -66,6 +66,22 @@ describe("picking a Defect Type", () => {
     expect(choices.others).toHaveLength(10);
   });
 
+  test("in each Category, the Defect Types named after the Item come first", async () => {
+    const { homeCheck, inspectionId } = await createTestHomeCheckWithInspection();
+    const area = await homeCheck.addArea(inspectionId, { standardAreaId: "bathroom" });
+    if (!area.ok) throw new Error("could not add Area");
+    const toilet = await homeCheck.addItem(area.area.id, { catalogItemId: "toilet" });
+    if (!toilet.ok) throw new Error("could not add Item");
+
+    const choices = await homeCheck.defectChoices(toilet.item.id);
+    if (!choices.ok) throw new Error("no Defect choices");
+
+    expect(choices.shownFirst.find((category) => category.code === "SN")?.defectTypes.map((type) => type.name)).toEqual([
+      "Toilet Bowl Loose",
+      "Basin Cracked",
+    ]);
+  });
+
   test("each Category lists its Defect Types", async () => {
     const { homeCheck, itemId } = await wardrobeInBedroom();
 

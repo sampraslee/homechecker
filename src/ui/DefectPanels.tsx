@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { isMedia, isNote, type DefectCategory, type DefectChoices, type DefectType, type DefectView, type Evidence } from "../core";
 import { refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
@@ -26,6 +26,12 @@ export function DefectTypePicker({
   const homeCheck = useHomeCheck();
   const [choices, setChoices] = useState<DefectChoices | null>(null);
   const [category, setCategory] = useState<DefectCategory | null>(null);
+  const panel = useRef<HTMLElement>(null);
+
+  // The picker opens below the Item's Defects, often off screen: bring each step into view.
+  useEffect(() => {
+    panel.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [category]);
 
   useEffect(() => {
     homeCheck.defectChoices(itemId).then((result) => {
@@ -44,7 +50,7 @@ export function DefectTypePicker({
   );
 
   return (
-    <section className="panel">
+    <section className="panel" ref={panel}>
       <div className="card-row">
         <h2>{category ? category.name : title}</h2>
         <button type="button" className="link" onClick={category ? () => setCategory(null) : onCancel}>
@@ -61,9 +67,7 @@ export function DefectTypePicker({
                 className="type-row"
                 onClick={() => onPicked({ ...defectType, noteRequired: !!category.noteRequired })}
               >
-                <span>
-                  {defectType.name} <span className="muted defect-meta">{defectType.code}</span>
-                </span>
+                <span>{defectType.name}</span>
                 {recordedCodes.includes(defectType.code) && <span className="badge defects">Recorded</span>}
               </button>
             </li>
@@ -116,7 +120,6 @@ export function DefectEditor({
   const [error, setError] = useState<string | null>(null);
 
   const title = defect?.defectTypeName ?? defectType?.name;
-  const code = defect?.defectTypeCode ?? defectType?.code;
 
   function toggle(evidenceId: string) {
     setLinked((current) =>
@@ -154,10 +157,7 @@ export function DefectEditor({
           Cancel
         </button>
       </div>
-      <p className="muted defect-meta">
-        {code}
-        {defect && ` · ${defect.categoryName}`}
-      </p>
+      {defect && <p className="muted defect-meta">{defect.categoryName}</p>}
       {notice && (
         <p className="notice" role="status">
           {notice}

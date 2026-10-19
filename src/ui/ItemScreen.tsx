@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEv
 import { isMedia, isNote, type AiSuggestionView, type DefectView, type Evidence, type ItemView, type MediaEvidence, type NoteEvidence } from "../core";
 import type { Navigate } from "./App";
 import { AiSuggestionList } from "./AiSuggestionList";
-import { BackBar } from "./BackBar";
+import { Band } from "./Band";
+import { Dock } from "./Dock";
 import { DefectEditor, DefectTypePicker, type PickedDefectType } from "./DefectPanels";
-import { lockedNotice, refusalMessage } from "./format";
+import { countEvidence, lockedNotice, refusalMessage, shortAddress } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 import { MediaImage, MediaThumbnail, useMediaUrl } from "./MediaImage";
 import { useAiChanges } from "./useAiChanges";
@@ -24,9 +25,16 @@ function alreadyRecorded(defectId: string, defectType: PickedDefectType): Defect
   return { mode: "edit", defectId, notice: `This Item already has ${defectType.name}. Add to this Defect instead.` };
 }
 
+/** A passing message in the Dock, with Undo when the last action can be taken back. */
+type Flash = { text: string; undo?: () => void };
+
+/** How long Undo stays on offer. */
+const FLASH_SECONDS = 6;
+
 export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate }) {
   const homeCheck = useHomeCheck();
   const [item, setItem] = useState<ItemView | null | undefined>(undefined);
+  const [place, setPlace] = useState<{ areaName: string; unit: string } | null>(null);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [defects, setDefects] = useState<DefectView[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<AiSuggestionView[]>([]);
@@ -34,8 +42,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   const [notePanel, setNotePanel] = useState<NotePanel | null>(null);
   const [recording, setRecording] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState<string | null>(null);
-  const [reviewed, setReviewed] = useState<string | null>(null);
+  const [flash, setFlash] = useState<Flash | null>(null);
   const [viewing, setViewing] = useState<MediaEvidence | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
@@ -44,7 +51,12 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   const editable = locked === false;
 
   const load = useCallback(async () => {
-    setItem((await homeCheck.getItem(id)) ?? null);
+    const found = await homeCheck.getItem(id);
+    setItem(found ?? null);
+    if (found) {
+      const [area, inspection] = await Promise.all([homeCheck.getArea(found.areaId), homeCheck.getInspection(found.inspectionId)]);
+      if (area && inspection) setPlace({ areaName: area.name, unit: shortAddress(inspection.address) });
+    }
     setEvidence(await homeCheck.listEvidence(id));
     setDefects(await homeCheck.listDefects(id));
     setAiSuggestions(await homeCheck.listAiSuggestions(id));
@@ -53,12 +65,18 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   // Also reloads when AI Suggestions arrive while the Item is open.
   useAiChanges(load);
 
+  useEffect(() => {
+    if (!flash) return;
+    const timer = setTimeout(() => setFlash(null), FLASH_SECONDS * 1000);
+    return () => clearTimeout(timer);
+  }, [flash]);
+
   async function capture(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
     event.target.value = "";
     if (files.length === 0) return;
     setSaving(true);
-    setSaved(null);
+    setFlash(null);
     setError(null);
     let savedCount = 0;
     try {
@@ -70,9 +88,39 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     } finally {
       // Free the button even if a save throws, so the Inspector can try again.
       setSaving(false);
-      if (savedCount > 0) setSaved(savedCount === 1 ? "Photo saved on device." : `${savedCount} photos saved on device.`);
+      if (savedCount > 0) setFlash({ text: savedCount === 1 ? "Photo saved." : `${savedCount} photos saved.` });
       load();
     }
+  }
+
+  /** Picking a Defect Type records the Defect straight away, unless it needs a note first. */
+  async function pickDefectType(defectType: PickedDefectType) {
+    const existing = defects.find((defect) => defect.defectTypeCode === defectType.code);
+    if (existing) return setDefectPanel(alreadyRecorded(existing.id, defectType));
+    if (defectType.noteRequired) return setDefectPanel({ mode: "add", defectType });
+    setError(null);
+    const result = await homeCheck.addDefect(id, { defectTypeCode: defectType.code });
+    if (result.ok) {
+      setDefectPanel(null);
+      setFlash({ text: `Added ${defectType.name}.`, undo: () => undoDefect(result.defect.id) });
+      load();
+    } else if (result.reason === "defect-type-already-recorded") {
+      setDefectPanel(alreadyRecorded(result.existingDefectId, defectType));
+    } else if (result.reason === "note-required") {
+      setDefectPanel({ mode: "add", defectType });
+    } else {
+      setError(refusalMessage[result.reason]);
+    }
+  }
+
+  async function undoDefect(defectId: string) {
+    const result = await homeCheck.removeDefect(defectId);
+    if (result.ok) setFlash({ text: "Defect removed." });
+    else {
+      setFlash(null);
+      setError(refusalMessage[result.reason]);
+    }
+    load();
   }
 
   function closeNotePanel() {
@@ -89,20 +137,31 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   if (item === null) {
     return (
       <main className="screen">
-        <BackBar navigate={navigate} />
+        <Band navigate={navigate} back={{ to: { name: "list" }, label: "Inspections" }} title="Item not found" />
         <p className="muted">This Item is not on this phone.</p>
+        <Dock />
       </main>
     );
   }
 
+  const photos = evidence.filter((e) => e.kind === "photo");
+
   return (
     <main className="screen">
-      <BackBar navigate={navigate} to={{ name: "area", id: item.areaId }} label="Area" />
-      <h1>{item.displayName}</h1>
-      {locked && <p className="notice">{lockedNotice}</p>}
+      <Band
+        navigate={navigate}
+        back={{ to: { name: "area", id: item.areaId }, label: place?.areaName ?? "Area" }}
+        unit={place?.unit}
+        title={item.displayName}
+      >
+        {locked && <p className="notice">{lockedNotice}</p>}
+      </Band>
 
-      <h2>Evidence</h2>
-      {evidence.length === 0 && <p className="muted">No photos, videos or notes yet.</p>}
+      <div className="section-head">
+        <h2>Evidence</h2>
+        <span className="count">{countEvidence(evidence)}</span>
+      </div>
+      {evidence.length === 0 && <p className="muted">{editable ? `Take a photo of the ${item.name} to start.` : "No Evidence."}</p>}
       <ul className="thumbnails">
         {evidence.filter(isMedia).map((media) => (
           <li key={media.id}>
@@ -146,16 +205,13 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
             hidden
             onChange={capture}
           />
-          <button type="button" className="primary spaced" disabled={saving} onClick={() => cameraInput.current?.click()}>
-            {saving ? "Saving…" : "Take photo"}
-          </button>
           <div className="button-row spaced capture-row">
             <button
               type="button"
               className="secondary"
               disabled={saving}
               onClick={() => {
-                setSaved(null);
+                setFlash(null);
                 setRecording(true);
               }}
             >
@@ -166,7 +222,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
               className="secondary"
               disabled={notePanel !== null}
               onClick={() => {
-                setSaved(null);
+                setFlash(null);
                 setNotePanel({ mode: "add" });
               }}
             >
@@ -176,11 +232,6 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         </>
       )}
       {error && <p className="error">{error}</p>}
-      {!saving && saved && (
-        <p className="muted" role="status">
-          {saved}
-        </p>
-      )}
       {notePanel && (
         <NoteEditor
           key={notePanel.mode === "edit" ? notePanel.note.id : "new"}
@@ -191,23 +242,43 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         />
       )}
 
-      <h2>Defects{defects.length > 0 && ` (${defects.length})`}</h2>
-      {defects.length === 0 && <p className="muted">No Defects recorded.</p>}
+      {/* Straight after the photos they came from, so review happens while the Item is in front of the Inspector. */}
+      {(aiSuggestions.length > 0 || photos.length > 0) && (
+        <>
+          <div className="section-head">
+            <h2>AI Suggestions</h2>
+            <span className="count">{unreviewedCount(aiSuggestions)}</span>
+          </div>
+          {aiSuggestions.length === 0 && <p className="muted">None yet. Photos are sent to the AI whenever the phone is online.</p>}
+          <AiSuggestionList
+            itemId={id}
+            itemName={item.name}
+            suggestions={aiSuggestions}
+            defects={defects}
+            onReviewed={(message) => {
+              setFlash({ text: message });
+              load();
+            }}
+          />
+        </>
+      )}
+
+      <div className="section-head">
+        <h2>Defects</h2>
+        <span className="count">{defects.length > 0 && defects.length}</span>
+      </div>
+      {defects.length === 0 && <p className="muted">No Defects yet.</p>}
       <ul className="cards">
         {defects.map((defect) => {
+          const linked = countEvidence(evidence.filter((e) => defect.evidenceIds.includes(e.id)));
           const summary = (
             <>
               <span className="card-row">
-                <strong>
-                  {defect.defectTypeName}
-                  {defect.source === "ai-suggested" && <span className="badge ai-suggested">AI-suggested</span>}
-                </strong>
-                <span className="muted defect-meta">
-                  {defect.evidenceIds.length} linked
-                </span>
+                <strong>{defect.defectTypeName}</strong>
+                {defect.source === "ai-suggested" && <span className="ai-why">From AI Suggestion</span>}
               </span>
               <span className="muted defect-meta">
-                {defect.defectTypeCode} · {defect.categoryName}
+                {defect.categoryName}. {linked ? `Linked: ${linked}` : "No Evidence linked"}
               </span>
               {defect.note && <span>{defect.note}</span>}
             </>
@@ -227,7 +298,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
       </ul>
 
       {editable && defectPanel === null && (
-        <button type="button" className="primary spaced" onClick={() => setDefectPanel({ mode: "pick" })}>
+        <button type="button" className="secondary spaced" onClick={() => setDefectPanel({ mode: "pick" })}>
           Add Defect
         </button>
       )}
@@ -236,10 +307,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           itemId={id}
           itemName={item.name}
           recordedCodes={defects.map((defect) => defect.defectTypeCode)}
-          onPicked={(defectType) => {
-            const existing = defects.find((defect) => defect.defectTypeCode === defectType.code);
-            setDefectPanel(existing ? alreadyRecorded(existing.id, defectType) : { mode: "add", defectType });
-          }}
+          onPicked={pickDefectType}
           onCancel={() => setDefectPanel(null)}
         />
       )}
@@ -266,27 +334,27 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         />
       )}
 
-      {(aiSuggestions.length > 0 || evidence.some((e) => e.kind === "photo")) && (
-        <>
-          <h2>AI Suggestions{aiSuggestions.length > 0 && ` (${aiSuggestions.length})`}</h2>
-          {aiSuggestions.length === 0 && <p className="muted">None yet. Photos are sent to the AI whenever the phone is online.</p>}
-          <AiSuggestionList
-            itemId={id}
-            itemName={item.name}
-            suggestions={aiSuggestions}
-            defects={defects}
-            onReviewed={(message) => {
-              setReviewed(message);
-              load();
-            }}
-          />
-          {reviewed && (
-            <p className="muted" role="status">
-              {reviewed}
-            </p>
-          )}
-        </>
-      )}
+      <Dock
+        message={
+          flash && (
+            <div className="toast" role="status">
+              <span>{flash.text}</span>
+              {flash.undo && (
+                <button type="button" onClick={flash.undo}>
+                  Undo
+                </button>
+              )}
+            </div>
+          )
+        }
+        action={
+          editable && (
+            <button type="button" className="primary" disabled={saving} onClick={() => cameraInput.current?.click()}>
+              {saving ? "Saving…" : "Take photo"}
+            </button>
+          )
+        }
+      />
 
       {viewing && (
         <MediaViewer
@@ -295,7 +363,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           onClose={() => setViewing(null)}
           onDeleted={() => {
             setViewing(null);
-            setSaved(null);
+            setFlash(null);
             load();
           }}
         />
@@ -305,7 +373,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           itemId={id}
           onSaved={() => {
             setRecording(false);
-            setSaved("Video saved on device.");
+            setFlash({ text: "Video saved." });
             load();
           }}
           onClose={() => setRecording(false)}
@@ -313,6 +381,12 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
       )}
     </main>
   );
+}
+
+/** "2 to review", or nothing once every AI Suggestion is reviewed. */
+function unreviewedCount(suggestions: AiSuggestionView[]): string {
+  const count = suggestions.filter((suggestion) => suggestion.outcome === "unreviewed").length;
+  return count > 0 ? `${count} to review` : "";
 }
 
 function MediaViewer({
