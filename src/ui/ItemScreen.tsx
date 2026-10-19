@@ -6,9 +6,11 @@ import { Band } from "./Band";
 import { Dock } from "./Dock";
 import { DefectEditor, DefectTypePicker, type PickedDefectType } from "./DefectPanels";
 import { countEvidence, lockedNotice, refusalMessage, shortAddress } from "./format";
+import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
 import { MediaImage, MediaThumbnail, useMediaUrl } from "./MediaImage";
 import { useAiChanges } from "./useAiChanges";
+import { useArrivals } from "./useArrivals";
 import { useLocked } from "./useLocked";
 import { VideoRecorder } from "./VideoRecorder";
 
@@ -31,6 +33,9 @@ type Flash = { text: string; undo?: () => void };
 /** How long Undo stays on offer. */
 const FLASH_SECONDS = 6;
 
+/** How long the message takes to slide out; matches the CSS. */
+const TOAST_OUT_MS = 120;
+
 export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate }) {
   const homeCheck = useHomeCheck();
   const [item, setItem] = useState<ItemView | null | undefined>(undefined);
@@ -43,6 +48,9 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   const [recording, setRecording] = useState(false);
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState<Flash | null>(null);
+  /** The message is sliding out. */
+  const [flashLeaving, setFlashLeaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   /** Undo stays while the Inspector is touching or focused on it, however long that takes. */
   const [flashHeld, setFlashHeld] = useState(false);
   const [viewing, setViewing] = useState<MediaEvidence | null>(null);
@@ -62,16 +70,36 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     setEvidence(await homeCheck.listEvidence(id));
     setDefects(await homeCheck.listDefects(id));
     setAiSuggestions(await homeCheck.listAiSuggestions(id));
+    setLoaded(true);
   }, [homeCheck, id]);
+
+  const arrived = useArrivals(
+    [...evidence.map((each) => each.id), ...defects.map((defect) => defect.id), ...aiSuggestions.map((suggestion) => suggestion.id)],
+    loaded,
+  );
+
+  function showFlash(next: Flash) {
+    setFlashLeaving(false);
+    setFlash(next);
+  }
 
   // Also reloads when AI Suggestions arrive while the Item is open.
   useAiChanges(load);
 
   useEffect(() => {
     if (!flash || flashHeld) return;
-    const timer = setTimeout(() => setFlash(null), FLASH_SECONDS * 1000);
+    const timer = setTimeout(() => setFlashLeaving(true), FLASH_SECONDS * 1000);
     return () => clearTimeout(timer);
   }, [flash, flashHeld]);
+
+  useEffect(() => {
+    if (!flashLeaving) return;
+    const timer = setTimeout(() => {
+      setFlash(null);
+      setFlashLeaving(false);
+    }, TOAST_OUT_MS);
+    return () => clearTimeout(timer);
+  }, [flashLeaving]);
 
   async function capture(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
@@ -90,7 +118,11 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     } finally {
       // Free the button even if a save throws, so the Inspector can try again.
       setSaving(false);
-      if (savedCount > 0) setFlash({ text: savedCount === 1 ? "Photo saved." : `${savedCount} photos saved.` });
+      if (savedCount > 0) {
+        showFlash({ text: savedCount === 1 ? "Photo saved." : `${savedCount} photos saved.` });
+        // A short buzz where the phone allows it (Android; iPhone browsers don't).
+        navigator.vibrate?.(10);
+      }
       load();
     }
   }
@@ -104,7 +136,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     const result = await homeCheck.addDefect(id, { defectTypeCode: defectType.code });
     if (result.ok) {
       setDefectPanel(null);
-      setFlash({ text: `Added ${defectType.name}.`, undo: () => undoDefect(result.defect.id, defectType.name) });
+      showFlash({ text: `Added ${defectType.name}.`, undo: () => undoDefect(result.defect.id, defectType.name) });
       load();
     } else if (result.reason === "defect-type-already-recorded") {
       setDefectPanel(alreadyRecorded(result.existingDefectId, defectType));
@@ -117,7 +149,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
 
   async function undoDefect(defectId: string, name: string) {
     const result = await homeCheck.removeDefect(defectId);
-    if (result.ok) setFlash({ text: `Removed ${name}.` });
+    if (result.ok) showFlash({ text: `Removed ${name}.` });
     else {
       setFlash(null);
       setError(refusalMessage[result.reason]);
@@ -169,7 +201,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           <li key={media.id}>
             <button
               type="button"
-              className={`thumbnail ${media.kind}`}
+              className={`thumbnail ${media.kind}${arrived.has(media.id) ? " arrived" : ""}`}
               onClick={() => setViewing(media)}
               aria-label={`Open ${media.kind} ${index + 1} of ${all.length}`}
             >
@@ -184,7 +216,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
             {editable ? (
               <button
                 type="button"
-                className="card note-card"
+                className={`card note-card${arrived.has(note.id) ? " arrived" : ""}`}
                 onClick={() => setNotePanel({ mode: "edit", note })}
                 aria-label={`Edit note: ${note.text}`}
               >
@@ -256,9 +288,10 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
             itemId={id}
             itemName={item.name}
             suggestions={aiSuggestions}
+            arrived={arrived}
             defects={defects}
             onReviewed={(message) => {
-              setFlash({ text: message });
+              showFlash({ text: message });
               load();
             }}
           />
@@ -287,7 +320,11 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           return (
             <li key={defect.id}>
               {editable ? (
-                <button type="button" className="card" onClick={() => setDefectPanel({ mode: "edit", defectId: defect.id })}>
+                <button
+                  type="button"
+                  className={`card${arrived.has(defect.id) ? " arrived" : ""}`}
+                  onClick={() => setDefectPanel({ mode: "edit", defectId: defect.id })}
+                >
                   {summary}
                 </button>
               ) : (
@@ -339,7 +376,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         message={
           flash && (
             <div
-              className="toast"
+              className={flashLeaving ? "toast leaving" : "toast"}
               role="status"
               onFocus={() => setFlashHeld(true)}
               onBlur={() => setFlashHeld(false)}
@@ -363,7 +400,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
               </button>
             )}
             {/* Finished with this Item: back to the Area's Items, in thumb reach. */}
-            <button type="button" className="secondary" onClick={() => navigate({ name: "area", id: item.areaId })}>
+            <button type="button" className="secondary" onClick={() => navigate({ name: "area", id: item.areaId }, { up: true })}>
               Done
             </button>
           </div>
@@ -387,7 +424,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           itemId={id}
           onSaved={() => {
             setRecording(false);
-            setFlash({ text: "Video saved." });
+            showFlash({ text: "Video saved." });
             load();
           }}
           onClose={() => setRecording(false)}
@@ -415,6 +452,7 @@ function MediaViewer({
   onDeleted: () => void;
 }) {
   const homeCheck = useHomeCheck();
+  useBackCloses(onClose);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -489,6 +527,7 @@ function NoteEditor({
   onCancel: () => void;
 }) {
   const homeCheck = useHomeCheck();
+  useBackCloses(onCancel);
   const [text, setText] = useState(note?.text ?? "");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);

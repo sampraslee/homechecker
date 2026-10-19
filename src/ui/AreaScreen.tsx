@@ -4,6 +4,7 @@ import type { Navigate } from "./App";
 import { Band } from "./Band";
 import { Dock } from "./Dock";
 import { countEvidence, inspectionTypeLabel, lockedNotice, refusalMessage, shortAddress } from "./format";
+import { BackCloses, useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
 import { scrollIntoViewGently } from "./scroll";
 import { NameEditor } from "./NameEditor";
@@ -62,7 +63,7 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
 
   async function removeArea() {
     const result = await homeCheck.removeArea(id);
-    if (result.ok) navigate(backToInspection);
+    if (result.ok) navigate(backToInspection, { up: true });
     else setError(refusalMessage[result.reason]);
   }
 
@@ -111,6 +112,7 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
           )
         }
       >
+        {editing && <BackCloses onBack={stopEditing} />}
         {editing && !renaming && (
           <div className="band-actions">
             <button type="button" className="on-band" onClick={() => setRenaming(true)}>
@@ -253,6 +255,7 @@ function ItemPicker({
   onCancel: () => void;
 }) {
   const homeCheck = useHomeCheck();
+  useBackCloses(onCancel);
   const [choices, setChoices] = useState<ItemChoices | null>(null);
   const [shortName, setShortName] = useState("");
   const [otherName, setOtherName] = useState("");

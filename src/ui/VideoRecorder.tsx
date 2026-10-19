@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { VIDEO_TIME_LIMIT_SECONDS } from "../core";
 import { formatDuration, refusalMessage } from "./format";
+import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
 
 type Phase = "starting" | "ready" | "recording" | "saving";
@@ -24,6 +25,7 @@ function cameraProblem(): string | null {
  */
 export function VideoRecorder({ itemId, onSaved, onClose }: { itemId: string; onSaved: () => void; onClose: () => void }) {
   const homeCheck = useHomeCheck();
+  useBackCloses(onClose);
   const preview = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);

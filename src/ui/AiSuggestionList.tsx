@@ -21,12 +21,15 @@ export function AiSuggestionList({
   itemId,
   itemName,
   suggestions,
+  arrived,
   defects,
   onReviewed,
 }: {
   itemId: string;
   itemName: string;
   suggestions: AiSuggestionView[];
+  /** Suggestions that came in while the Item was open, which arrive with a pulse. */
+  arrived: Set<string>;
   /** The Item's Defects, so the picker can mark Defect Types already recorded. */
   defects: DefectView[];
   /** Called with what happened, once a suggestion is reviewed. */
@@ -75,7 +78,7 @@ export function AiSuggestionList({
     <>
       <ul className="cards">
         {suggestions.map((suggestion) => (
-          <li key={suggestion.id} className="card ai-suggestion">
+          <li key={suggestion.id} className={`card ai-suggestion${arrived.has(suggestion.id) ? " arrived" : ""}`}>
             <span className="thumbnail">
               <MediaImage evidenceId={suggestion.evidenceId} version="thumbnail" alt="Photo" />
             </span>

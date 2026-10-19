@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { isMedia, isNote, type DefectCategory, type DefectChoices, type DefectType, type DefectView, type Evidence } from "../core";
 import { refusalMessage } from "./format";
+import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
 import { scrollIntoViewGently } from "./scroll";
 import { MediaThumbnail } from "./MediaImage";
@@ -25,6 +26,7 @@ export function DefectTypePicker({
   onCancel: () => void;
 }) {
   const homeCheck = useHomeCheck();
+  useBackCloses(onCancel);
   const [choices, setChoices] = useState<DefectChoices | null>(null);
   const [category, setCategory] = useState<DefectCategory | null>(null);
   const panel = useRef<HTMLElement>(null);
@@ -115,6 +117,7 @@ export function DefectEditor({
   onCancel: () => void;
 }) {
   const homeCheck = useHomeCheck();
+  useBackCloses(onCancel);
   const [note, setNote] = useState(defect?.note ?? "");
   const [linked, setLinked] = useState<string[]>(defect?.evidenceIds ?? []);
   const [confirmingRemove, setConfirmingRemove] = useState(false);

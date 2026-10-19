@@ -62,7 +62,8 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
   /** Opens the new Inspection, or explains the refusal; returns the address errors, if that's why it was refused. */
   function openOrExplain(result: StartResult): AddressErrors {
     if (result.ok) {
-      navigate({ name: "inspection", id: result.inspection.id });
+      // Back from the new Inspection goes to the list, not to this form.
+      navigate({ name: "inspection", id: result.inspection.id }, { replace: true });
     } else if (result.reason === "invalid-address") {
       return result.errors;
     } else if (result.reason === "inspector-name-required") {

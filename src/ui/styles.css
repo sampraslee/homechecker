@@ -1026,3 +1026,163 @@ body:has(:is(input, textarea, select):focus) .dock {
   color: #fff;
   font-weight: 700;
 }
+
+/* ---- Motion: short, never blocking a tap, and off when the phone asks to reduce motion. ---- */
+
+/* A4: the screen below the band slides in the direction travelled. */
+@keyframes enter-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+}
+
+@keyframes enter-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-1.5rem);
+  }
+}
+
+.arriving.forward .screen > :not(.band, .dock, .viewer) {
+  animation: enter-from-right 200ms ease-out;
+}
+
+.arriving.back .screen > :not(.band, .dock, .viewer) {
+  animation: enter-from-left 200ms ease-out;
+}
+
+/* A1: a new photo grows into the Evidence strip, ringed in teal. */
+@keyframes grow-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes ring-fade {
+  from {
+    box-shadow: 0 0 0 3px var(--teal);
+  }
+  to {
+    box-shadow: 0 0 0 3px transparent;
+  }
+}
+
+.thumbnail.arrived {
+  animation:
+    grow-in 200ms ease-out,
+    ring-fade 1s ease-out 200ms;
+}
+
+/* A2: a new Defect or note eases into place, lit up briefly. */
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+  }
+}
+
+@keyframes light-up {
+  from {
+    background: var(--teal-tint);
+  }
+}
+
+.card.arrived {
+  animation:
+    drop-in 180ms ease-out,
+    light-up 1s ease-out;
+}
+
+/* A5: a new AI Suggestion arrives, its blue marker pulsing once. */
+@keyframes marker-pulse {
+  50% {
+    border-left-color: var(--blue-tint);
+  }
+}
+
+.card.ai-suggestion.arrived {
+  animation:
+    drop-in 180ms ease-out,
+    marker-pulse 900ms ease-in-out 180ms;
+}
+
+/* A3: messages slide up out of the Dock, and back down when they end. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+.toast {
+  animation: toast-in 160ms ease-out;
+}
+
+.toast.leaving {
+  animation: toast-out 120ms ease-in forwards;
+}
+
+/* A6: buttons give a little as they're pressed. */
+button {
+  transition: transform 80ms ease-out;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* A7: completing an Inspection ends on a check mark that draws once. */
+.done-check {
+  display: block;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 0.5rem;
+  fill: none;
+  stroke: var(--done);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.done-check circle {
+  stroke-dasharray: 139;
+  animation: draw 300ms ease-out both;
+}
+
+.done-check path {
+  stroke-dasharray: 32;
+  animation: draw 200ms ease-out 250ms both;
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: var(--length, 139);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.done-check path {
+  --length: 32;
+}
+
+/* Reduce motion: everything above becomes an instant change. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+}

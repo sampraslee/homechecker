@@ -4,6 +4,7 @@ import type { Navigate } from "./App";
 import { Band } from "./Band";
 import { Dock } from "./Dock";
 import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel, lockedNotice, refusalMessage, shortAddress } from "./format";
+import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
 import { scrollIntoViewGently } from "./scroll";
 import { shareOrDownload, TapTooOldError, type ShareOutcome } from "./shareFile";
@@ -272,6 +273,10 @@ function ExportPanel({
         </>
       ) : promptToExport ? (
         <div className="prompt">
+          <svg className="done-check" viewBox="0 0 48 48" aria-hidden="true">
+            <circle cx="24" cy="24" r="22" />
+            <path d="M14 25l7 7 13-15" />
+          </svg>
           <p>Inspection completed. Export it now: until you do, it's only on this phone.</p>
           {exportButton}
         </div>
@@ -295,6 +300,7 @@ function CompletePanel({
   onCancel: () => void;
 }) {
   const homeCheck = useHomeCheck();
+  useBackCloses(onCancel);
   const [error, setError] = useState<string | null>(null);
   const [totals, setTotals] = useState<InspectionTotals | null>(null);
   const [aiWork, setAiWork] = useState<AiWorkLeft | null>(null);
@@ -378,6 +384,7 @@ function AddAreaPanel({
   onCancel: () => void;
 }) {
   const homeCheck = useHomeCheck();
+  useBackCloses(onCancel);
   const [standardAreas, setStandardAreas] = useState<{ id: string; name: string }[]>([]);
   const [customName, setCustomName] = useState("");
   const [error, setError] = useState<string | null>(null);
