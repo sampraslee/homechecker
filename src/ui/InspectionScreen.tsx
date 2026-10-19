@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { formatAddress, type AreaSource, type AreaView, type Inspection } from "../core";
 import type { Navigate } from "./App";
 import { BackBar } from "./BackBar";
-import { formatDateTime, inspectionStatusLabel, inspectionTypeLabel, refusalMessage } from "./format";
+import { formatDateTime, inspectionStatusLabel, inspectionTypeLabel, lockedNotice, refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 
 export function InspectionScreen({ id, navigate }: { id: string; navigate: Navigate }) {
@@ -10,13 +10,20 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
   const [inspection, setInspection] = useState<Inspection | null | undefined>(undefined);
   const [areas, setAreas] = useState<AreaView[]>([]);
   const [adding, setAdding] = useState(false);
+  const [confirmingComplete, setConfirmingComplete] = useState(false);
 
   const loadAreas = useCallback(() => homeCheck.listAreas(id).then(setAreas), [homeCheck, id]);
+  const loadInspection = useCallback(
+    () => homeCheck.getInspection(id).then((found) => setInspection(found ?? null)),
+    [homeCheck, id],
+  );
 
   useEffect(() => {
-    homeCheck.getInspection(id).then((found) => setInspection(found ?? null));
+    loadInspection();
     loadAreas();
-  }, [homeCheck, id, loadAreas]);
+  }, [loadInspection, loadAreas]);
+
+  const locked = inspection?.status === "completed";
 
   return (
     <main className="screen">
@@ -37,7 +44,14 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
             <dd>{inspection.inspectorName}</dd>
             <dt>Started</dt>
             <dd>{formatDateTime(inspection.startedAt)}</dd>
+            {inspection.completedAt && (
+              <>
+                <dt>Completed</dt>
+                <dd>{formatDateTime(inspection.completedAt)}</dd>
+              </>
+            )}
           </dl>
+          {locked && <p className="notice">{lockedNotice}</p>}
 
           <h2>Areas</h2>
           {areas.length === 0 && <p className="muted">No Areas yet.</p>}
@@ -56,7 +70,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
             ))}
           </ul>
 
-          {adding ? (
+          {locked ? null : adding ? (
             <AddAreaPanel
               inspectionId={id}
               onAdded={() => {
@@ -70,9 +84,77 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
               Add Area
             </button>
           )}
+
+          {!locked &&
+            (confirmingComplete ? (
+              <CompletePanel
+                inspectionId={id}
+                areas={areas}
+                onCompleted={() => {
+                  setConfirmingComplete(false);
+                  loadInspection();
+                }}
+                onCancel={() => setConfirmingComplete(false)}
+              />
+            ) : (
+              <button
+                type="button"
+                className="secondary spaced"
+                onClick={() => {
+                  setAdding(false);
+                  setConfirmingComplete(true);
+                }}
+              >
+                Complete Inspection
+              </button>
+            ))}
         </>
       )}
     </main>
+  );
+}
+
+/** The confirmation step before completing; completing can't be undone. */
+function CompletePanel({
+  inspectionId,
+  areas,
+  onCompleted,
+  onCancel,
+}: {
+  inspectionId: string;
+  areas: AreaView[];
+  onCompleted: () => void;
+  onCancel: () => void;
+}) {
+  const homeCheck = useHomeCheck();
+  const [error, setError] = useState<string | null>(null);
+  const itemCount = areas.reduce((total, area) => total + area.itemCount, 0);
+
+  async function complete() {
+    const result = await homeCheck.completeInspection(inspectionId);
+    if (result.ok) onCompleted();
+    else setError(refusalMessage[result.reason]);
+  }
+
+  return (
+    <section className="panel">
+      <h2>Complete this Inspection?</h2>
+      <p>
+        {areas.length} {areas.length === 1 ? "Area" : "Areas"}, {itemCount} {itemCount === 1 ? "Item" : "Items"} recorded.
+      </p>
+      <p className="muted">
+        Once completed, its Areas, Items, Evidence and Defects can't be added to, changed or removed. It can't be reopened.
+      </p>
+      {error && <p className="error">{error}</p>}
+      <div className="button-row">
+        <button type="button" className="secondary" onClick={onCancel}>
+          Keep editing
+        </button>
+        <button type="button" className="primary" onClick={complete}>
+          Complete Inspection
+        </button>
+      </div>
+    </section>
   );
 }
 

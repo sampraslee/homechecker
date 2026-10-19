@@ -20,3 +20,4 @@
 
 - From 04: `DefectSource` is only `"manual"` for now; add `"ai-suggested"` and the AI Suggestion link here. `addDefect` refuses `OT` Defect Types without a note (`noteRequired` on the Category). Decide whether confirming an `OT-UNKNOWN` AI Suggestion needs a note, or is exempt.
 - The duplicate refusal already returns `existingDefectId`, which confirm-onto-existing can reuse.
+- From 06: the lock is a per-operation check in `src/core/homeCheck.ts` (`isLocked(inspectionId)` → `inspection-completed`) inside `addDefect`, `editDefect` and the others. Review outcomes on a Completed Inspection must not go through those public operations. Write the Defect or link through storage directly (or a shared internal helper that skips the lock). `CompletePanel` in `src/ui/InspectionScreen.tsx` is where the AI counts go.

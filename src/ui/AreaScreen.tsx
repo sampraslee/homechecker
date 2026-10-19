@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { Area, CatalogItem, ItemChoices, ItemSource, ItemView } from "../core";
 import type { Navigate } from "./App";
 import { BackBar } from "./BackBar";
-import { refusalMessage } from "./format";
+import { lockedNotice, refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 import { NameEditor } from "./NameEditor";
+import { useLocked } from "./useLocked";
 
 export function AreaScreen({ id, navigate }: { id: string; navigate: Navigate }) {
   const homeCheck = useHomeCheck();
@@ -14,6 +15,9 @@ export function AreaScreen({ id, navigate }: { id: string; navigate: Navigate })
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const locked = useLocked(area?.inspectionId);
+  // Editing controls wait until the lock is known, so they never flash up on a Completed Inspection.
+  const editable = locked === false;
 
   const load = useCallback(async () => {
     setArea((await homeCheck.getArea(id)) ?? null);
@@ -72,16 +76,19 @@ export function AreaScreen({ id, navigate }: { id: string; navigate: Navigate })
       ) : (
         <div className="card-row">
           <h1>{area.name}</h1>
-          <span className="button-row">
-            <button type="button" className="link" onClick={() => setRenaming(true)}>
-              Rename
-            </button>
-            <button type="button" className="link danger" onClick={removeArea}>
-              Remove
-            </button>
-          </span>
+          {editable && (
+            <span className="button-row">
+              <button type="button" className="link" onClick={() => setRenaming(true)}>
+                Rename
+              </button>
+              <button type="button" className="link danger" onClick={removeArea}>
+                Remove
+              </button>
+            </span>
+          )}
         </div>
       )}
+      {locked && <p className="notice">{lockedNotice}</p>}
       {error && <p className="error">{error}</p>}
 
       <h2>Items</h2>
@@ -113,20 +120,22 @@ export function AreaScreen({ id, navigate }: { id: string; navigate: Navigate })
                   </span>
                 )}
               </button>
-              <span className="button-row">
-                <button type="button" className="link" onClick={() => setEditingItemId(item.id)}>
-                  Rename
-                </button>
-                <button type="button" className="link danger" onClick={() => removeItem(item.id)}>
-                  Remove
-                </button>
-              </span>
+              {editable && (
+                <span className="button-row">
+                  <button type="button" className="link" onClick={() => setEditingItemId(item.id)}>
+                    Rename
+                  </button>
+                  <button type="button" className="link danger" onClick={() => removeItem(item.id)}>
+                    Remove
+                  </button>
+                </span>
+              )}
             </li>
           ),
         )}
       </ul>
 
-      {picking ? (
+      {!editable ? null : picking ? (
         <ItemPicker
           areaId={id}
           areaName={area.name}

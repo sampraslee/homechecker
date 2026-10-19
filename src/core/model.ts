@@ -50,6 +50,8 @@ export type Inspection = {
   address: UnitAddress;
   inspectorName: string;
   startedAt: string;
+  /** Set when the Inspection is Completed. */
+  completedAt?: string;
 };
 
 export type Settings = {

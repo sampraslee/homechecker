@@ -3,9 +3,10 @@ import { isMedia, isNote, type DefectView, type Evidence, type ItemView, type Me
 import type { Navigate } from "./App";
 import { BackBar } from "./BackBar";
 import { DefectEditor, DefectTypePicker, type PickedDefectType } from "./DefectPanels";
-import { refusalMessage } from "./format";
+import { lockedNotice, refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 import { MediaImage, MediaThumbnail, useMediaUrl } from "./MediaImage";
+import { useLocked } from "./useLocked";
 import { VideoRecorder } from "./VideoRecorder";
 
 type DefectPanel =
@@ -34,6 +35,9 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   const [viewing, setViewing] = useState<MediaEvidence | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
+  const locked = useLocked(item?.inspectionId);
+  // Editing controls wait until the lock is known, so they never flash up on a Completed Inspection.
+  const editable = locked === false;
 
   const load = useCallback(async () => {
     setItem((await homeCheck.getItem(id)) ?? null);
@@ -91,6 +95,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     <main className="screen">
       <BackBar navigate={navigate} to={{ name: "area", id: item.areaId }} label="Area" />
       <h1>{item.displayName}</h1>
+      {locked && <p className="notice">{lockedNotice}</p>}
 
       <h2>Evidence</h2>
       {evidence.length === 0 && <p className="muted">No photos, videos or notes yet.</p>}
@@ -111,53 +116,61 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
       <ul className="cards">
         {evidence.filter(isNote).map((note) => (
           <li key={note.id}>
-            <button
-              type="button"
-              className="card note-card"
-              onClick={() => setNotePanel({ mode: "edit", note })}
-              aria-label={`Edit note: ${note.text}`}
-            >
-              {note.text}
-            </button>
+            {editable ? (
+              <button
+                type="button"
+                className="card note-card"
+                onClick={() => setNotePanel({ mode: "edit", note })}
+                aria-label={`Edit note: ${note.text}`}
+              >
+                {note.text}
+              </button>
+            ) : (
+              <div className="card note-card">{note.text}</div>
+            )}
           </li>
         ))}
       </ul>
 
-      <input
-        ref={cameraInput}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        hidden
-        onChange={capture}
-      />
-      <button type="button" className="primary spaced" disabled={saving} onClick={() => cameraInput.current?.click()}>
-        {saving ? "Saving…" : "Take photo"}
-      </button>
-      <div className="button-row spaced capture-row">
-        <button
-          type="button"
-          className="secondary"
-          disabled={saving}
-          onClick={() => {
-            setSaved(null);
-            setRecording(true);
-          }}
-        >
-          Record video
-        </button>
-        <button
-          type="button"
-          className="secondary"
-          disabled={notePanel !== null}
-          onClick={() => {
-            setSaved(null);
-            setNotePanel({ mode: "add" });
-          }}
-        >
-          Add note
-        </button>
-      </div>
+      {editable && (
+        <>
+          <input
+            ref={cameraInput}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            hidden
+            onChange={capture}
+          />
+          <button type="button" className="primary spaced" disabled={saving} onClick={() => cameraInput.current?.click()}>
+            {saving ? "Saving…" : "Take photo"}
+          </button>
+          <div className="button-row spaced capture-row">
+            <button
+              type="button"
+              className="secondary"
+              disabled={saving}
+              onClick={() => {
+                setSaved(null);
+                setRecording(true);
+              }}
+            >
+              Record video
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              disabled={notePanel !== null}
+              onClick={() => {
+                setSaved(null);
+                setNotePanel({ mode: "add" });
+              }}
+            >
+              Add note
+            </button>
+          </div>
+        </>
+      )}
       {error && <p className="error">{error}</p>}
       {!saving && saved && (
         <p className="muted" role="status">
@@ -177,9 +190,9 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
       <h2>Defects{defects.length > 0 && ` (${defects.length})`}</h2>
       {defects.length === 0 && <p className="muted">No Defects recorded.</p>}
       <ul className="cards">
-        {defects.map((defect) => (
-          <li key={defect.id}>
-            <button type="button" className="card" onClick={() => setDefectPanel({ mode: "edit", defectId: defect.id })}>
+        {defects.map((defect) => {
+          const summary = (
+            <>
               <span className="card-row">
                 <strong>{defect.defectTypeName}</strong>
                 <span className="muted defect-meta">
@@ -190,12 +203,23 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
                 {defect.defectTypeCode} · {defect.categoryName}
               </span>
               {defect.note && <span>{defect.note}</span>}
-            </button>
-          </li>
-        ))}
+            </>
+          );
+          return (
+            <li key={defect.id}>
+              {editable ? (
+                <button type="button" className="card" onClick={() => setDefectPanel({ mode: "edit", defectId: defect.id })}>
+                  {summary}
+                </button>
+              ) : (
+                <div className="card">{summary}</div>
+              )}
+            </li>
+          );
+        })}
       </ul>
 
-      {defectPanel === null && (
+      {editable && defectPanel === null && (
         <button type="button" className="primary spaced" onClick={() => setDefectPanel({ mode: "pick" })}>
           Add Defect
         </button>
@@ -238,6 +262,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
       {viewing && (
         <MediaViewer
           evidence={viewing}
+          canDelete={editable}
           onClose={() => setViewing(null)}
           onDeleted={() => {
             setViewing(null);
@@ -263,10 +288,12 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
 
 function MediaViewer({
   evidence,
+  canDelete,
   onClose,
   onDeleted,
 }: {
   evidence: MediaEvidence;
+  canDelete: boolean;
   onClose: () => void;
   onDeleted: () => void;
 }) {
@@ -286,7 +313,7 @@ function MediaViewer({
         <button type="button" className="link on-dark" onClick={onClose}>
           Close
         </button>
-        {confirming ? (
+        {!canDelete ? null : confirming ? (
           <span className="button-row">
             <button type="button" className="link on-dark" onClick={() => setConfirming(false)}>
               Keep

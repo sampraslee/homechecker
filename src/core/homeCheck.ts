@@ -34,6 +34,9 @@ export type HomeCheckDeps = {
 };
 
 const inspectorNameRequired = { ok: false, reason: "inspector-name-required" } as const;
+const inspectionNotFound = { ok: false, reason: "inspection-not-found" } as const;
+/** A Completed Inspection's Areas, Items, Evidence and Defects are locked. */
+const inspectionCompleted = { ok: false, reason: "inspection-completed" } as const;
 const areaNotFound = { ok: false, reason: "area-not-found" } as const;
 const itemNotFound = { ok: false, reason: "item-not-found" } as const;
 const itemNameRequired = { ok: false, reason: "item-name-required" } as const;
@@ -63,6 +66,11 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     const processed = { ...evidence, processed: true };
     await storage.putEvidence(processed, versions);
     return processed;
+  }
+
+  /** Whether the Inspection is Completed, so its Areas, Items, Evidence and Defects can't change. */
+  async function isLocked(inspectionId: string): Promise<boolean> {
+    return (await storage.getInspection(inspectionId))?.status === "completed";
   }
 
   async function withDefectCount(item: Item): Promise<ItemView> {
@@ -137,6 +145,16 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       return storage.getInspection(id);
     },
 
+    /** Draft → Completed is the only transition; a Completed Inspection is never reopened. */
+    async completeInspection(id: string) {
+      const inspection = await storage.getInspection(id);
+      if (!inspection) return inspectionNotFound;
+      if (inspection.status === "completed") return inspectionCompleted;
+      const completed: Inspection = { ...inspection, status: "completed", completedAt: environment.now().toISOString() };
+      await storage.putInspection(completed);
+      return { ok: true as const, inspection: completed };
+    },
+
     async listInspections(): Promise<InspectionSummary[]> {
       const inspections = await storage.listInspections();
       return inspections
@@ -155,7 +173,9 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     },
 
     async addArea(inspectionId: string, source: AreaSource) {
-      if (!(await storage.getInspection(inspectionId))) return { ok: false as const, reason: "inspection-not-found" as const };
+      const inspection = await storage.getInspection(inspectionId);
+      if (!inspection) return inspectionNotFound;
+      if (inspection.status === "completed") return inspectionCompleted;
       const existing = await storage.listAreas(inspectionId);
       const takenNames = existing.map((other) => other.name);
 
@@ -186,6 +206,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async renameArea(areaId: string, newName: string) {
       const area = await storage.getArea(areaId);
       if (!area) return areaNotFound;
+      if (await isLocked(area.inspectionId)) return inspectionCompleted;
       const name = newName.trim();
       const others = (await storage.listAreas(area.inspectionId)).filter((other) => other.id !== areaId);
       const problem = areaNameProblem(name, others.map((other) => other.name));
@@ -198,6 +219,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async removeArea(areaId: string) {
       const area = await storage.getArea(areaId);
       if (!area) return areaNotFound;
+      if (await isLocked(area.inspectionId)) return inspectionCompleted;
       if ((await storage.listItems(areaId)).length > 0) return { ok: false as const, reason: "area-has-items" as const };
       await storage.deleteArea(areaId);
       return { ok: true as const };
@@ -215,6 +237,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async addItem(areaId: string, source: ItemSource) {
       const area = await storage.getArea(areaId);
       if (!area) return areaNotFound;
+      if (await isLocked(area.inspectionId)) return inspectionCompleted;
 
       let itemIdentity: Pick<Item, "catalogItemId" | "name" | "shortName">;
       if ("catalogItemId" in source) {
@@ -244,6 +267,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async renameItem(itemId: string, newName: string) {
       const item = await storage.getItem(itemId);
       if (!item) return itemNotFound;
+      if (await isLocked(item.inspectionId)) return inspectionCompleted;
       const trimmed = newName.trim();
       let renamed: Item;
       if (item.catalogItemId) {
@@ -260,6 +284,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async removeItem(itemId: string) {
       const item = await storage.getItem(itemId);
       if (!item) return itemNotFound;
+      if (await isLocked(item.inspectionId)) return inspectionCompleted;
       if ((await storage.listDefects(itemId)).length > 0) return { ok: false as const, reason: "item-has-defects" as const };
       if ((await storage.listEvidence(itemId)).length > 0) return { ok: false as const, reason: "item-has-evidence" as const };
       await storage.deleteItem(itemId);
@@ -291,6 +316,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async addPhoto(itemId: string, original: Blob) {
       const item = await storage.getItem(itemId);
       if (!item) return itemNotFound;
+      if (await isLocked(item.inspectionId)) return inspectionCompleted;
       const evidence: PhotoEvidence = { ...(await newEvidence(item)), kind: "photo", processed: false };
       await storage.putEvidence(evidence, { original });
       return { ok: true as const, evidence: await makeSmallerVersions(evidence, original) };
@@ -300,6 +326,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async addVideo(itemId: string, original: Blob, durationSeconds: number) {
       const item = await storage.getItem(itemId);
       if (!item) return itemNotFound;
+      if (await isLocked(item.inspectionId)) return inspectionCompleted;
       // Written so that a missing or NaN length is refused too.
       if (!(durationSeconds <= VIDEO_TIME_LIMIT_SECONDS + VIDEO_STOP_ALLOWANCE_SECONDS)) return videoTooLong;
       const evidence: VideoEvidence = {
@@ -315,6 +342,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async addNote(itemId: string, text: string) {
       const item = await storage.getItem(itemId);
       if (!item) return itemNotFound;
+      if (await isLocked(item.inspectionId)) return inspectionCompleted;
       const trimmed = text.trim();
       if (!trimmed) return blankNote;
       const evidence: NoteEvidence = { ...(await newEvidence(item)), kind: "note", text: trimmed };
@@ -325,6 +353,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async editNote(evidenceId: string, text: string) {
       const evidence = await storage.getEvidence(evidenceId);
       if (!evidence) return evidenceNotFound;
+      if (await isLocked(evidence.inspectionId)) return inspectionCompleted;
       if (evidence.kind !== "note") return { ok: false as const, reason: "evidence-not-a-note" as const };
       const trimmed = text.trim();
       if (!trimmed) return blankNote;
@@ -351,6 +380,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async deleteEvidence(evidenceId: string) {
       const evidence = await storage.getEvidence(evidenceId);
       if (!evidence) return evidenceNotFound;
+      if (await isLocked(evidence.inspectionId)) return inspectionCompleted;
       for (const defect of await storage.listDefects(evidence.itemId)) {
         if (defect.evidenceIds.includes(evidenceId)) {
           await storage.putDefect({ ...defect, evidenceIds: defect.evidenceIds.filter((id) => id !== evidenceId) });
@@ -384,6 +414,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async addDefect(itemId: string, input: DefectInput) {
       const item = await storage.getItem(itemId);
       if (!item) return itemNotFound;
+      if (await isLocked(item.inspectionId)) return inspectionCompleted;
       if (!findDefectType(referenceData, input.defectTypeCode)) return { ok: false as const, reason: "unknown-defect-type" as const };
       const existing = await storage.listDefects(itemId);
       const sameType = existing.find((other) => other.defectTypeCode === input.defectTypeCode);
@@ -412,6 +443,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async editDefect(defectId: string, changes: DefectChanges) {
       const defect = await storage.getDefect(defectId);
       if (!defect) return defectNotFound;
+      if (await isLocked(defect.inspectionId)) return inspectionCompleted;
       let evidenceIds = defect.evidenceIds;
       if (changes.evidenceIds) {
         const checked = await evidenceOfItem(defect.itemId, changes.evidenceIds);
@@ -427,7 +459,9 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     },
 
     async removeDefect(defectId: string) {
-      if (!(await storage.getDefect(defectId))) return defectNotFound;
+      const defect = await storage.getDefect(defectId);
+      if (!defect) return defectNotFound;
+      if (await isLocked(defect.inspectionId)) return inspectionCompleted;
       await storage.deleteDefect(defectId);
       return { ok: true as const };
     },
