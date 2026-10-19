@@ -1,11 +1,16 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import basicSsl from "@vitejs/plugin-basic-ssl";
 import { VitePWA } from "vite-plugin-pwa";
 
-export default defineConfig({
+export default defineConfig(({ command, isPreview }) => ({
   plugins: [
     react(),
+    // Phones open the dev server by its LAN address, and the camera, microphone and crypto.randomUUID
+    // only work on a secure page. The certificate is self-signed, so each phone accepts a warning once.
+    // Not for the preview: it opens on localhost, which is already secure.
+    command === "serve" && !isPreview && basicSsl({ name: "home-check-dev" }),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "apple-touch-icon-180x180.png", "favicon.ico"],
@@ -32,4 +37,4 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts"],
   },
-});
+}));

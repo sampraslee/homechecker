@@ -14,3 +14,7 @@
 - [ ] On each: export, share the zip to email or Drive, open it on a computer; thumbnails show in Excel and media links open
 - [ ] Persistent-storage result noted for each phone
 - [ ] Problems found are written up as new tickets
+
+## Comments
+
+- The dev server (`npm run dev -- --host`) serves HTTPS with a self-signed certificate (`@vitejs/plugin-basic-ssl`), so phones on the LAN get a secure page: the camera, microphone and `crypto.randomUUID` work. Each phone accepts the certificate warning once. `vite preview` stays on HTTP for localhost. A hosted build still needs a real certificate.
