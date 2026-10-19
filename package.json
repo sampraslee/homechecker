@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && npx wrangler@4 pages deploy dist --project-name home-check --branch main",
+    "release": "npm run build && COPYFILE_DISABLE=1 tar -czf home-check.tar.gz -C dist .",
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -1,21 +1,31 @@
 # Deploying the prototype
 
-The prototype is a static PWA on Cloudflare Pages, in the Rizurf Cloudflare account. The Gemini key goes into the build and ends up inside the app (ADR 0005). It is never committed.
+The prototype is a static PWA served from a company VPS. The Gemini key goes into the build and ends up inside the app (ADR 0005). It is never committed.
 
-## First deploy
+## Build the release
 
-1. Put the deploy key in `.env.production.local` as `VITE_GEMINI_API_KEY=…`. Vite reads that file only for builds, and it is gitignored. The build warns if it is missing; that build works but never gets AI Suggestions.
-2. `npx wrangler login` and sign in to the Rizurf Cloudflare account.
-3. `npm run deploy`. This builds and uploads `dist` to the `home-check` Pages project. On the first run, Wrangler offers to create the project; accept, with `main` as the production branch.
-4. Note the address it prints, e.g. `https://home-check.pages.dev`. Cloudflare provides the HTTPS certificate.
+1. Put the deploy key in `.env.production.local` as `VITE_GEMINI_API_KEY=…`. Vite reads that file only for builds, and it is gitignored. The build warns if the key is missing; that build works but never gets AI Suggestions.
+2. Run `npm run release`. This builds the app and writes `home-check.tar.gz`, which holds the contents of `dist`.
+3. Hand `home-check.tar.gz` to whoever runs the VPS, along with the server setup below.
 
-After that, `npm run deploy` publishes a new version. Phones that installed the app pick it up the next time they open it online (`registerType: "autoUpdate"`).
+## Server setup (whoever runs the VPS)
+
+The app is plain static files. There is no server code, and no rewrites are needed.
+
+1. **Give it its own address over HTTPS**, e.g. `https://home-check.<company domain>`. HTTPS is required: phones only allow the camera, microphone, service worker and installing to the home screen on a secure page. Use the root of a (sub)domain, not a sub-path, because the app expects to live at `/`.
+2. **Unpack the release** into the web root, replacing the old files: `tar -xzf home-check.tar.gz -C /var/www/home-check`.
+3. **Configure the web server** from one of the examples, replacing the address and paths:
+   - `deploy/Caddyfile` for Caddy, which gets the certificate itself.
+   - `deploy/nginx.conf` for nginx, with a certificate from certbot or the company's own.
+4. **Keep the cache headers from the examples.** `/assets/*` has hashed file names, so it can be cached for a year. Everything else, especially `index.html` and `sw.js`, must be `no-cache`. If those files get cached, phones keep running an old version.
+
+Phones that installed the app pick up a new release the next time they open it online (`registerType: "autoUpdate"`).
 
 ## Lock down the Gemini key (Google Cloud console)
 
 Under **APIs & Services → Credentials**, open the key:
 
-- **Application restrictions → Websites:** add `https://home-check.pages.dev/*`, using the address from step 4. Add a custom domain here too if you attach one.
+- **Application restrictions → Websites:** add the app's address with `/*` at the end, e.g. `https://home-check.<company domain>/*`.
 - **API restrictions → Restrict key:** allow only the **Generative Language API**.
 
 Then set a spending cap on the project (ADR 0005), as a spend limit in Google AI Studio's billing settings. A budget under **Billing → Budgets & alerts** only sends alerts and does not stop spending, so it does not meet ADR 0005. If you can't set a hard limit, note that on ticket 14 so the ADR can be revisited.
