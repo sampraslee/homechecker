@@ -3,7 +3,10 @@ import { formatAddress } from "./address";
 import {
   isMedia,
   isNote,
+  type AiSuggestion,
+  type AiSuggestionOutcome,
   type Area,
+  type DefectSource,
   type DefectView,
   type Evidence,
   type Inspection,
@@ -18,7 +21,10 @@ export type ExportContent = {
   inspection: Inspection;
   /** The bundled Defect Dictionary's version. */
   dictionaryVersion: string;
-  areas: { area: Area; items: { item: Item; displayName: string; evidence: Evidence[]; defects: DefectView[] }[] }[];
+  areas: {
+    area: Area;
+    items: { item: Item; displayName: string; evidence: Evidence[]; defects: DefectView[]; aiSuggestions: AiSuggestion[] }[];
+  }[];
   getMedia(evidenceId: string, version: MediaVersion): Promise<Blob | undefined>;
 };
 
@@ -52,6 +58,12 @@ export async function buildExportZip(content: ExportContent): Promise<Uint8Array
     mediaPaths.set(evidence.id, path);
   }
 
+  /** A cell linking to the media's file in `media/`, named by it; nothing if the media has no file. */
+  const mediaLink = (evidenceId: string) => {
+    const path = mediaPaths.get(evidenceId);
+    return path ? { text: path.slice("media/".length), hyperlink: path } : undefined;
+  };
+
   const workbook = new ExcelJS.Workbook();
   /** The columns every Defect row starts with, the same for the whole Inspection. */
   const inspectionColumns = [
@@ -60,14 +72,14 @@ export async function buildExportZip(content: ExportContent): Promise<Uint8Array
     dateFormat.format(new Date(inspection.startedAt)),
     inspection.inspectorName,
   ];
+  const aiSuggestionsById = new Map(
+    content.areas.flatMap(({ items }) => items.flatMap((item) => item.aiSuggestions.map((each) => [each.id, each]))),
+  );
   const defectRows = content.areas.flatMap(({ area, items }) =>
     items.flatMap(({ displayName, evidence, defects }) =>
       defects.map((defect) => {
         const linked = evidence.filter((each) => defect.evidenceIds.includes(each.id));
-        const links = linked.flatMap((each) => {
-          const path = mediaPaths.get(each.id);
-          return path ? [{ text: path.slice("media/".length), hyperlink: path }] : [];
-        });
+        const links = linked.flatMap((each) => mediaLink(each.id) ?? []);
         const notes = linked.filter(isNote).map((each) => each.text);
         const firstPhotoId = linked.find((each) => each.kind === "photo")?.id;
         return {
@@ -81,6 +93,8 @@ export async function buildExportZip(content: ExportContent): Promise<Uint8Array
             defect.defectTypeName,
             defect.note ?? null,
             notes.join("\n") || null,
+            defectSourceLabel[defect.source],
+            (defect.aiSuggestionId && aiSuggestionsById.get(defect.aiSuggestionId)?.confidence) || null,
             null,
             ...links,
           ],
@@ -104,6 +118,8 @@ export async function buildExportZip(content: ExportContent): Promise<Uint8Array
     "Defect Type name",
     "Note",
     "Linked notes",
+    "Source",
+    "AI confidence",
     "Photo",
     ...Array.from({ length: mostLinks }, (_, index) => `Media ${index + 1}`),
   ]);
@@ -122,6 +138,25 @@ export async function buildExportZip(content: ExportContent): Promise<Uint8Array
   }
   defectsSheet.getColumn(PHOTO_COLUMN).width = THUMBNAIL_BOX_PIXELS / PIXELS_PER_CHARACTER + 1;
   styleSheet(defectsSheet, { headerRow: true });
+
+  const aiSuggestionsSheet = workbook.addWorksheet("AI Suggestions");
+  aiSuggestionsSheet.addRow(["Area", "Item", "Photo", "Suggested Defect Type code", "Confidence", "Outcome", "Corrected Defect Type code"]);
+  aiSuggestionsSheet.addRows(
+    content.areas.flatMap(({ area, items }) =>
+      items.flatMap(({ displayName, aiSuggestions }) =>
+        aiSuggestions.map((suggestion) => [
+          area.name,
+          displayName,
+          mediaLink(suggestion.evidenceId) ?? null,
+          suggestion.defectTypeCode,
+          suggestion.confidence,
+          aiOutcomeLabel[suggestion.outcome],
+          suggestion.correctedCode ?? null,
+        ]),
+      ),
+    ),
+  );
+  styleSheet(aiSuggestionsSheet, { headerRow: true });
 
   const inspectionSheet = workbook.addWorksheet("Inspection");
   inspectionSheet.addRows([
@@ -186,8 +221,17 @@ function styleSheet(sheet: Worksheet, { headerRow }: { headerRow: boolean }) {
   });
 }
 
-/** The Defects sheet's 1-based column for the embedded photo, after the twelve text columns before it. */
-const PHOTO_COLUMN = 12;
+const defectSourceLabel: Record<DefectSource, string> = { manual: "Manual", "ai-suggested": "AI-suggested" };
+
+const aiOutcomeLabel: Record<AiSuggestionOutcome, string> = {
+  unreviewed: "Not reviewed",
+  confirmed: "Confirmed",
+  corrected: "Corrected",
+  rejected: "Rejected",
+};
+
+/** The Defects sheet's 1-based column for the embedded photo, after the thirteen text columns before it. */
+const PHOTO_COLUMN = 14;
 /** An embedded thumbnail fits in a square this many pixels a side. */
 const THUMBNAIL_BOX_PIXELS = 120;
 const POINTS_PER_PIXEL = 0.75;

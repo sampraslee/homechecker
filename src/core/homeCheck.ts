@@ -373,6 +373,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
               displayName: itemDisplayName(item),
               evidence: await storage.listEvidence(item.id),
               defects: (await storage.listDefects(item.id)).map(toDefectView),
+              aiSuggestions: await listAiSuggestions(item.id),
             })),
           ),
         })),

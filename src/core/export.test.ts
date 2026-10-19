@@ -116,6 +116,8 @@ describe("exporting an Inspection", () => {
         "Defect Type name",
         "Note",
         "Linked notes",
+        "Source",
+        "AI confidence",
         "Photo",
         "Media 1",
         "Media 2",
@@ -127,11 +129,93 @@ describe("exporting an Inspection", () => {
         "Scratched",
         "Deep",
         "Worse near the handle",
+        "Manual",
+        undefined,
         undefined,
         { text: "01-bedroom-01-wardrobe-left-01.jpg", hyperlink: "media/01-bedroom-01-wardrobe-left-01.jpg" },
         { text: "01-bedroom-01-wardrobe-left-02.mp4", hyperlink: "media/01-bedroom-01-wardrobe-left-02.mp4" },
       ],
-      [...leading, "Cabinet / Furniture Specific", "CF-HINGE", "Hinge Fault"],
+      [...leading, "Cabinet / Furniture Specific", "CF-HINGE", "Hinge Fault", undefined, undefined, "Manual"],
+    ]);
+  });
+
+  test("marks each Defect as manual or AI-suggested, with the AI's confidence for an AI-suggested one", async () => {
+    const { homeCheck, inspectionId, itemId, aiClient } = await createTestHomeCheckWithItem();
+    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE" }));
+    aiClient.answer([{ code: "SF-SCRATCH", confidence: "Medium" }]);
+    expectOk(await homeCheck.addPhoto(itemId, new Blob(["scratched door"], { type: "image/jpeg" })));
+    await homeCheck.processAiQueue();
+    aiClient.answer([{ code: "SF-STAIN", confidence: "Low" }]);
+    expectOk(await homeCheck.addPhoto(itemId, new Blob(["marked door"], { type: "image/jpeg" })));
+    await homeCheck.processAiQueue();
+    aiClient.answer([{ code: "CF-HINGE", confidence: "High" }]);
+    expectOk(await homeCheck.addPhoto(itemId, new Blob(["drooping door"], { type: "image/jpeg" })));
+    await homeCheck.processAiQueue();
+    const [scratch, stain, hinge] = await homeCheck.listAiSuggestions(itemId);
+    expectOk(await homeCheck.confirmAiSuggestion(scratch.id));
+    expectOk(await homeCheck.correctAiSuggestion(stain.id, { defectTypeCode: "GM-CRACK" }));
+    // Confirmed onto the hand-added hinge Defect, which stays manual.
+    expectOk(await homeCheck.confirmAiSuggestion(hinge.id));
+
+    const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip);
+
+    const sourceAndConfidence = rowsOf(workbook, "Defects").map((row) => [row[7], row[11], row[12]]);
+    expect(sourceAndConfidence).toEqual([
+      ["Defect Type code", "Source", "AI confidence"],
+      ["CF-HINGE", "Manual", undefined],
+      ["SF-SCRATCH", "AI-suggested", "Medium"],
+      ["GM-CRACK", "AI-suggested", "Low"],
+    ]);
+  });
+
+  test("has an AI Suggestions sheet listing every suggestion with its photo, confidence and outcome", async () => {
+    const { homeCheck, inspectionId, areaId, itemId, aiClient } = await createTestHomeCheckWithItem();
+    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-STAIN" }));
+    aiClient.answer([
+      { code: "SF-SCRATCH", confidence: "High" },
+      { code: "CF-HINGE", confidence: "Medium" },
+      { code: "SF-STAIN", confidence: "Low" },
+    ]);
+    expectOk(await homeCheck.addPhoto(itemId, new Blob(["wardrobe door"], { type: "image/jpeg" })));
+    await homeCheck.processAiQueue();
+    const window = expectOk(await homeCheck.addItem(areaId, { catalogItemId: "window" })).item;
+    aiClient.answer([{ code: "GM-CRACK", confidence: "Low" }]);
+    expectOk(await homeCheck.addPhoto(window.id, new Blob(["window pane"], { type: "image/jpeg" })));
+    await homeCheck.processAiQueue();
+    const [scratch, hinge, stain] = await homeCheck.listAiSuggestions(itemId);
+    expectOk(await homeCheck.confirmAiSuggestion(scratch.id));
+    expectOk(await homeCheck.correctAiSuggestion(hinge.id, { defectTypeCode: "GM-CRACK" }));
+    expectOk(await homeCheck.rejectAiSuggestion(stain.id));
+
+    const { zip, workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip);
+
+    const wardrobePhoto = { text: "01-bedroom-01-wardrobe-01.jpg", hyperlink: "media/01-bedroom-01-wardrobe-01.jpg" };
+    const windowPhoto = { text: "01-bedroom-02-window-01.jpg", hyperlink: "media/01-bedroom-02-window-01.jpg" };
+    expect(rowsOf(workbook, "AI Suggestions")).toEqual([
+      ["Area", "Item", "Photo", "Suggested Defect Type code", "Confidence", "Outcome", "Corrected Defect Type code"],
+      ["Bedroom", "Wardrobe", wardrobePhoto, "SF-SCRATCH", "High", "Confirmed"],
+      ["Bedroom", "Wardrobe", wardrobePhoto, "CF-HINGE", "Medium", "Corrected", "GM-CRACK"],
+      ["Bedroom", "Wardrobe", wardrobePhoto, "SF-STAIN", "Low", "Rejected"],
+      ["Bedroom", "Window", windowPhoto, "GM-CRACK", "Low", "Not reviewed"],
+    ]);
+    expect(zip.file(wardrobePhoto.hyperlink)).not.toBeNull();
+    expect(zip.file(windowPhoto.hyperlink)).not.toBeNull();
+    const sourceAndConfidence = rowsOf(workbook, "Defects").map((row) => [row[7], row[11], row[12]]);
+    expect(sourceAndConfidence).toEqual([
+      ["Defect Type code", "Source", "AI confidence"],
+      ["SF-STAIN", "Manual", undefined],
+      ["SF-SCRATCH", "AI-suggested", "High"],
+      ["GM-CRACK", "AI-suggested", "Medium"],
+    ]);
+  });
+
+  test("has an AI Suggestions sheet with only its header when the AI suggested nothing", async () => {
+    const { homeCheck, inspectionId } = await createTestHomeCheckWithInspection();
+
+    const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip);
+
+    expect(rowsOf(workbook, "AI Suggestions")).toEqual([
+      ["Area", "Item", "Photo", "Suggested Defect Type code", "Confidence", "Outcome", "Corrected Defect Type code"],
     ]);
   });
 
@@ -151,8 +235,8 @@ describe("exporting an Inspection", () => {
 
     // The window's photo has no thumbnail yet, so its original stands in.
     expect(imagesOf(workbook, "Defects")).toEqual([
-      { row: 2, column: 12, content: "thumbnail of scratched door" },
-      { row: 4, column: 12, content: "cracked pane" },
+      { row: 2, column: 14, content: "thumbnail of scratched door" },
+      { row: 4, column: 14, content: "cracked pane" },
     ]);
   });
 });

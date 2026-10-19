@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] Defects sheet adds source and AI confidence (blank for manual Defects)
-- [ ] AI Suggestions sheet: Area, Item, photo link, suggested code, confidence, outcome (confirmed / corrected / rejected / not reviewed), corrected code
-- [ ] Photo links resolve to files in `media/`
-- [ ] Core tests assert both sheets for a mix of manual, confirmed, corrected, rejected and unreviewed cases
+- [x] Defects sheet adds source and AI confidence (blank for manual Defects)
+- [x] AI Suggestions sheet: Area, Item, photo link, suggested code, confidence, outcome (confirmed / corrected / rejected / not reviewed), corrected code
+- [x] Photo links resolve to files in `media/`
+- [x] Core tests assert both sheets for a mix of manual, confirmed, corrected, rejected and unreviewed cases
