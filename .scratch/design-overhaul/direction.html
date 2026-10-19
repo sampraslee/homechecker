@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Check direction</title>
+<style>
+/* ---- Proposed tokens, based on rizurf.com. These move into src/ui/styles.css :root ---- */
+:root {
+  /* Brand, as on rizurf.com */
+  --teal: #1CA3B8;        /* Rizurf's main colour: marks on dark, the band's edge, behind ink */
+  --teal-deep: #0E6F7D;   /* Buttons, links, focus. 5.9:1 with white (the site's #1CA3B8 is 3.0:1) */
+  --teal-tint: #E6F6F8;
+  --mint: #4FD1C5;        /* End of the site's teal-to-mint gradient, on dark only */
+  --blue: #00A3FF;        /* homefinderpro blue: marks AI Suggestions, behind ink only */
+  --blue-deep: #075985;   /* AI text. 6.6:1 on its tint */
+  --blue-tint: #E0F2FE;
+
+  /* Night: the site's dark hero, used for the band at the top of each screen */
+  --night: #0A101A;
+  --night-raised: #152033;
+
+  /* Neutrals: Tailwind slate, as on the site */
+  --ink: #0F172A;         /* Text. 17.9:1 with white */
+  --ink-muted: #475569;   /* Secondary text. 7.2:1 on page */
+  --on-night: #FFFFFF;
+  --on-night-muted: #CBD5E1; /* 12.8:1 on night */
+  --page: #F8FAFC;
+  --surface: #FFFFFF;
+  --line: #8090A6;        /* Card and input edges. 3.1:1 on page, for glare (the site's slate-200 is 1.2:1) */
+  --line-soft: #E2E8F0;   /* Dividers inside a card only */
+
+  /* Status */
+  --warn: #92400E;   --warn-tint: #FEF3C7;
+  --danger: #B91C1C; --danger-tint: #FEE2E2;
+  --done: #166534;   --done-tint: #DCFCE7;
+
+  /* Type: the system font stack, as on the site. Nothing to download, works offline */
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-sm: 0.875rem;    /* 14 */
+  --text-base: 1.0625rem; /* 17: read at arm's length */
+  --text-md: 1.25rem;     /* 20 */
+  --text-lg: 1.625rem;    /* 26 */
+  --text-xl: 2rem;        /* 32 */
+  --tight: -0.025em;      /* Headline tracking, as on the site */
+
+  /* Space: 4px steps */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+
+  /* Radius, as on the site: small for controls, larger for cards */
+  --r-control: 6px; --r-card: 12px; --r-pill: 999px;
+
+  --tap: 48px;
+}
+
+/* ---- Preview page chrome ---- */
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); color: var(--ink); background: #E2E8F0; font-size: var(--text-base); line-height: 1.45; }
+.sheet { max-width: 1240px; margin: 0 auto; padding: 32px 16px 64px; }
+.sheet > h1 { font-size: var(--text-xl); letter-spacing: var(--tight); font-weight: 800; margin: 0 0 4px; }
+.sheet > p { margin: 0 0 32px; color: var(--ink-muted); max-width: 66ch; }
+.row { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+.col { flex: 1 1 320px; min-width: 0; }
+h2.sec { font-size: var(--text-md); letter-spacing: var(--tight); margin: 0 0 12px; }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 32px; }
+.sw { border-radius: var(--r-card); overflow: hidden; background: var(--surface); border: 1px solid var(--line-soft); font-size: var(--text-sm); }
+.sw b { display: block; height: 56px; }
+.sw span { display: block; padding: 6px 10px; }
+.sw small { color: var(--ink-muted); }
+.scale p { margin: 0 0 8px; }
+.notes { background: var(--surface); border-radius: var(--r-card); padding: 16px 20px; border: 1px solid var(--line-soft); }
+.notes li { margin-bottom: 6px; }
+
+/* ---- Phone frame ---- */
+.phone { width: 375px; height: 812px; flex: none; border-radius: 28px; overflow: hidden; position: relative; background: var(--page); box-shadow: 0 0 0 10px #0F172A; margin: 10px; display: flex; flex-direction: column; }
+.phone-label { font-size: var(--text-sm); color: var(--ink-muted); margin: 16px 10px 0; }
+.scroll { flex: 1; overflow: auto; padding-bottom: var(--s4); }
+
+/* ---- The one bold element: the night band, after the site's hero ---- */
+.band {
+  position: relative;
+  color: var(--on-night);
+  padding: var(--s3) var(--s4) var(--s5);
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(28,163,184,.35), transparent 60%),
+    radial-gradient(80% 80% at 100% 10%, rgba(124,58,237,.22), transparent 60%),
+    linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px) 0 0 / 24px 24px,
+    var(--night);
+}
+.band::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, var(--teal), var(--mint)); }
+.back { display: inline-flex; align-items: center; min-height: 40px; font-weight: 600; color: var(--on-night-muted); text-decoration: none; }
+.back::before { content: "‹"; font-size: 1.5em; line-height: 1; margin-right: 6px; }
+.band .unit { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--mint); margin: 4px 0 0; }
+.band h1 { font-size: var(--text-xl); line-height: 1.1; margin: 2px 0 0; font-weight: 800; letter-spacing: var(--tight); }
+.band .band-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
+.band .edit { font: inherit; font-weight: 600; background: rgba(255,255,255,.08); color: var(--on-night); border: 1px solid rgba(255,255,255,.35); border-radius: var(--r-pill); min-height: 40px; padding: 0 16px; }
+
+/* ---- Content ---- */
+section.block { padding: var(--s5) var(--s4) 0; }
+.block-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--s2); }
+.block-head h2 { font-size: var(--text-md); margin: 0; font-weight: 700; letter-spacing: var(--tight); }
+.count { font-size: var(--text-sm); color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+
+.photos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.photo { aspect-ratio: 1; border-radius: var(--r-control); border: 1px solid var(--line); background: linear-gradient(160deg, #d9d4cb, #a9a39a); position: relative; }
+.photo.v::after { content: "▶"; position: absolute; inset: auto 6px 4px auto; color: #fff; font-size: 12px; }
+.photo.q { outline: 3px solid var(--blue); outline-offset: -3px; }
+.capture { display: flex; gap: 8px; margin-top: var(--s3); }
+.btn { font: inherit; font-weight: 700; min-height: var(--tap); border-radius: var(--r-control); padding: 0 16px; flex: 1; }
+.btn.secondary { background: var(--surface); color: var(--teal-deep); border: 2px solid var(--teal-deep); }
+.note { margin-top: var(--s3); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: var(--s3); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); }
+.list { list-style: none; margin: 0; padding: 0; }
+.list .card { display: flex; align-items: center; gap: 12px; padding: var(--s3) var(--s4); min-height: 64px; margin-bottom: 8px; }
+.list .grow { flex: 1; min-width: 0; }
+.list .title { font-weight: 700; }
+.list .sub { font-size: var(--text-sm); color: var(--ink-muted); }
+.chev { color: var(--teal-deep); font-size: 1.6em; line-height: 1; }
+
+/* AI Suggestion: homefinderpro blue marks it; Confirm is the clear choice */
+.ai { border-left: 6px solid var(--blue); padding: var(--s3) var(--s4); margin-bottom: 8px; }
+.ai-top { display: flex; gap: 12px; align-items: center; }
+.ai .thumb { width: 52px; height: 52px; border-radius: var(--r-control); background: linear-gradient(160deg, #d9d4cb, #a9a39a); flex: none; }
+.ai .why { font-size: var(--text-sm); color: var(--blue-deep); font-weight: 600; }
+.ai-actions { display: flex; gap: 8px; margin-top: var(--s3); align-items: center; }
+.ai-actions .btn { flex: none; }
+.btn.confirm { background: var(--teal-deep); color: #fff; border: 0; flex: 1; }
+.btn.quiet { background: none; border: 0; color: var(--ink-muted); text-decoration: underline; padding: 0 8px; }
+
+.defect .linked { font-size: var(--text-sm); color: var(--ink-muted); }
+
+/* Edit mode */
+.rowact { font: inherit; font-weight: 600; font-size: var(--text-sm); min-height: 40px; padding: 0 10px; border-radius: var(--r-control); background: var(--surface); border: 1px solid var(--line); color: var(--teal-deep); }
+.rowact.danger { color: var(--danger); border-color: var(--danger); }
+.band .rowact { background: rgba(255,255,255,.08); color: var(--on-night); border-color: rgba(255,255,255,.35); }
+.band .rowact.danger { color: #FCA5A5; border-color: #FCA5A5; }
+.area-edit { display: flex; gap: 8px; margin-top: var(--s3); }
+
+/* ---- Flow F: the bottom bar ---- */
+.dock { background: var(--surface); border-top: 1px solid var(--line); padding: var(--s2) var(--s4) calc(var(--s3) + 8px); }
+.status { display: flex; justify-content: space-between; font-size: var(--text-sm); margin-bottom: var(--s2); font-variant-numeric: tabular-nums; }
+.status .ok { color: var(--done); font-weight: 600; }
+.status .warn { color: var(--warn); font-weight: 700; }
+.status .ai-q { color: var(--blue-deep); font-weight: 700; }
+.btn.primary { width: 100%; background: var(--teal-deep); color: #fff; border: 0; min-height: 56px; font-size: var(--text-md); }
+
+/* Undo message (flow B) */
+.toast { margin: var(--s3) var(--s4) 0; background: var(--night-raised); color: #fff; border-radius: var(--r-card); padding: 10px 12px 10px 16px; display: flex; justify-content: space-between; align-items: center; }
+.toast button { font: inherit; font-weight: 800; color: var(--mint); background: none; border: 0; min-height: 40px; padding: 0 8px; }
+
+:focus-visible { outline: 3px solid var(--teal-deep); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <h1>Home Check: visual direction, take 2</h1>
+  <p>This version is rebuilt from rizurf.com: its teal, its slate greys, its system font and its dark hero. The one bold element is a dark band at the top of each screen, with the site's grid, teal glow and teal-to-mint edge. The rest is light, because the app is used in bright rooms. Colours that are too light for text on rizurf.com have deeper versions here.</p>
+
+  <div class="row">
+    <div class="col">
+      <h2 class="sec">Palette</h2>
+      <div class="swatches">
+        <div class="sw"><b style="background:#1CA3B8"></b><span>Teal #1CA3B8<br><small>Rizurf main colour</small></span></div>
+        <div class="sw"><b style="background:#0E6F7D"></b><span>Teal deep #0E6F7D<br><small>Buttons, links, 5.9:1</small></span></div>
+        <div class="sw"><b style="background:#4FD1C5"></b><span>Mint #4FD1C5<br><small>Gradient end, on dark</small></span></div>
+        <div class="sw"><b style="background:#00A3FF"></b><span>Blue #00A3FF<br><small>Marks AI Suggestions</small></span></div>
+        <div class="sw"><b style="background:#075985"></b><span>Blue deep #075985<br><small>AI text, 6.6:1</small></span></div>
+        <div class="sw"><b style="background:#0A101A"></b><span>Night #0A101A<br><small>Top band</small></span></div>
+        <div class="sw"><b style="background:#0F172A"></b><span>Ink #0F172A<br><small>Text, 17.9:1</small></span></div>
+        <div class="sw"><b style="background:#475569"></b><span>Ink muted #475569<br><small>Secondary text, 7.2:1</small></span></div>
+        <div class="sw"><b style="background:#8090A6"></b><span>Line #8090A6<br><small>Card edges, 3.1:1</small></span></div>
+        <div class="sw"><b style="background:#F8FAFC"></b><span>Page #F8FAFC<br><small>Behind white cards</small></span></div>
+        <div class="sw"><b style="background:#FEF3C7"></b><span>Warn #92400E<br><small>on #FEF3C7, 6.4:1</small></span></div>
+        <div class="sw"><b style="background:#FEE2E2"></b><span>Danger #B91C1C<br><small>on #FEE2E2, 5.3:1</small></span></div>
+        <div class="sw"><b style="background:#DCFCE7"></b><span>Done #166534<br><small>on #DCFCE7, 6.5:1</small></span></div>
+      </div>
+
+      <h2 class="sec">Type: the system font, as on rizurf.com</h2>
+      <div class="scale">
+        <p style="font-size:32px;font-weight:800;line-height:1.1;letter-spacing:-0.025em">Basin 32 / 800</p>
+        <p style="font-size:26px;font-weight:700;letter-spacing:-0.025em">Powder Room 26 / 700</p>
+        <p style="font-size:20px;font-weight:700;letter-spacing:-0.025em">AI Suggestions 20 / 700</p>
+        <p style="font-size:17px">Hairline crack near the overflow. 17 / 400, the body size</p>
+        <p style="font-size:14px;color:#475569">2 photos linked 14 / 400</p>
+        <p style="font-size:14px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#0E6F7D">A-12-3, Residensi Harmoni (monospace, Unit line only)</p>
+      </div>
+      <div class="notes">
+        <ul>
+          <li><b>Same font as the website:</b> San Francisco on iPhone, Roboto on Android. There is nothing to download, so it works offline, and it is what the phone already reads best. Headlines are bold with tight spacing, as on the site.</li>
+          <li><b>Monospace in one place only:</b> the Unit line in the top band, as a nod to the site's monospace labels. It keeps 0 and O, and 1 and l, apart in unit numbers.</li>
+          <li><b>Teal for actions, blue for AI.</b> Teal is Rizurf's main colour, so it marks everything the Inspector does. Blue, from homefinderpro, marks only what the AI suggests.</li>
+          <li><b>The site's light greys are too faint for glare.</b> Card and input edges use a darker slate (3.1:1) instead of the site's slate-200 (1.2:1).</li>
+          <li><b>Radius as on the site:</b> 6px for buttons, inputs and photos, 12px for cards, and pills only for buttons in the dark band.</li>
+          <li><b>Tap targets are 48px or more;</b> the main button is 56px. Body text is 17px.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div>
+      <p class="phone-label">Item screen, with flows B, C and F</p>
+      <div class="phone">
+        <div class="scroll">
+          <header class="band">
+            <a class="back" href="#">Powder Room</a>
+            <p class="unit">A-12-3, Residensi Harmoni</p>
+            <h1>Basin</h1>
+          </header>
+
+          <div class="toast" role="status"><span>Added Basin Cracked.</span><button type="button">Undo</button></div>
+
+          <section class="block">
+            <div class="block-head"><h2>Evidence</h2><span class="count">4 photos, 1 video</span></div>
+            <div class="photos">
+              <div class="photo"></div><div class="photo"></div><div class="photo q"></div><div class="photo v"></div>
+            </div>
+            <div class="note">Hairline crack near the overflow</div>
+            <div class="capture">
+              <button class="btn secondary" type="button">Record video</button>
+              <button class="btn secondary" type="button">Add note</button>
+            </div>
+          </section>
+
+          <section class="block">
+            <div class="block-head"><h2>AI Suggestions</h2><span class="count">1 to review</span></div>
+            <div class="card ai">
+              <div class="ai-top">
+                <div class="thumb"></div>
+                <div class="grow">
+                  <div class="title"><b>Basin Loose</b></div>
+                  <div class="why">AI suggestion, high confidence</div>
+                </div>
+              </div>
+              <div class="ai-actions">
+                <button class="btn confirm" type="button">Confirm</button>
+                <button class="btn secondary" type="button">Correct</button>
+                <button class="btn quiet" type="button">Reject</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="block">
+            <div class="block-head"><h2>Defects</h2><span class="count">1</span></div>
+            <ul class="list">
+              <li class="card defect"><div class="grow"><div class="title">Basin Cracked</div><div class="linked">2 photos linked</div></div><span class="chev">›</span></li>
+            </ul>
+            <button class="btn secondary" type="button" style="width:100%">Add Defect</button>
+          </section>
+        </div>
+        <div class="dock">
+          <div class="status"><span class="ok">Saved on this phone</span><span class="ai-q">1 photo waiting for AI</span></div>
+          <button class="btn primary" type="button">Take photo</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="phone-label">Area screen, in Edit mode (flow D)</p>
+      <div class="phone">
+        <div class="scroll">
+          <header class="band">
+            <a class="back" href="#">Move-in</a>
+            <p class="unit">A-12-3, Residensi Harmoni</p>
+            <div class="band-row">
+              <h1>Powder Room</h1>
+              <button class="edit" type="button">Done</button>
+            </div>
+            <div class="area-edit">
+              <button class="rowact" type="button">Rename Area</button>
+              <button class="rowact danger" type="button">Remove Area</button>
+            </div>
+          </header>
+          <section class="block">
+            <div class="block-head"><h2>Items</h2><span class="count">4</span></div>
+            <ul class="list">
+              <li class="card"><div class="grow"><div class="title">Basin</div><div class="sub">4 photos, 1 Defect</div></div><button class="rowact" type="button">Rename</button><button class="rowact danger" type="button">Remove</button></li>
+              <li class="card"><div class="grow"><div class="title">Toilet</div><div class="sub">2 photos</div></div><button class="rowact" type="button">Rename</button><button class="rowact danger" type="button">Remove</button></li>
+              <li class="card"><div class="grow"><div class="title">Mirror</div><div class="sub">Nothing recorded yet</div></div><button class="rowact" type="button">Rename</button><button class="rowact danger" type="button">Remove</button></li>
+              <li class="card"><div class="grow"><div class="title">Exhaust Fan</div><div class="sub">Nothing recorded yet</div></div><button class="rowact" type="button">Rename</button><button class="rowact danger" type="button">Remove</button></li>
+            </ul>
+          </section>
+        </div>
+        <div class="dock">
+          <div class="status"><span class="warn">Not kept on this phone: export soon</span><span></span></div>
+          <button class="btn primary" type="button">Add Item</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
