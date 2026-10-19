@@ -20,6 +20,8 @@ export interface Storage {
   putInspectionWithAreasAndItems(inspection: Inspection, areas: Area[], items: Item[]): Promise<void>;
   getInspection(id: string): Promise<Inspection | undefined>;
   listInspections(): Promise<Inspection[]>;
+  /** Removes the Inspection record only; its Areas and everything in them are deleted first. */
+  deleteInspection(id: string): Promise<void>;
   putArea(area: Area): Promise<void>;
   getArea(id: string): Promise<Area | undefined>;
   listAreas(inspectionId: string): Promise<Area[]>;

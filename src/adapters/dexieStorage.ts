@@ -69,6 +69,9 @@ export function createDexieStorage(name = "home-check", options?: DexieOptions):
     async listInspections() {
       return db.inspections.toArray();
     },
+    async deleteInspection(id) {
+      await db.inspections.delete(id);
+    },
     async putArea(area) {
       await db.areas.put(area);
     },

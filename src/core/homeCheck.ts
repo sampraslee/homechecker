@@ -124,6 +124,18 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     return { ok: true as const, inspection };
   }
 
+  /**
+   * Deletes an Item's Defects, then its Evidence with media, AI queue entries and AI Suggestions, then the
+   * Item: the record last, so an interrupted delete can simply be tried again. Says whether photos went.
+   */
+  async function deleteItemAndContents(itemId: string): Promise<boolean> {
+    for (const defect of await storage.listDefects(itemId)) await storage.deleteDefect(defect.id);
+    const evidence = await storage.listEvidence(itemId);
+    for (const each of evidence) await storage.deleteEvidence(each.id);
+    await storage.deleteItem(itemId);
+    return evidence.some((each) => each.kind === "photo");
+  }
+
   /** Whether the Inspection is Completed, so its Areas, Items, Evidence and Defects can't change. */
   async function isLocked(inspectionId: string): Promise<boolean> {
     return (await storage.getInspection(inspectionId))?.status === "completed";
@@ -412,6 +424,25 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       return storage.getInspection(id);
     },
 
+    /**
+     * Deletes an Inspection from the phone for good, with its Areas, Items, Evidence and Defects; Draft or
+     * Completed. A Move-out linked to it keeps its link, which then reads as deleted.
+     */
+    async deleteInspection(id: string) {
+      if (!(await storage.getInspection(id))) return inspectionNotFound;
+      let photosDeleted = false;
+      for (const area of await storage.listAreas(id)) {
+        for (const item of await storage.listItems(area.id)) {
+          if (await deleteItemAndContents(item.id)) photosDeleted = true;
+        }
+        await storage.deleteArea(area.id);
+      }
+      // The record last, so an interrupted delete still shows and can simply be tried again.
+      await storage.deleteInspection(id);
+      if (photosDeleted) aiChanged();
+      return { ok: true as const };
+    },
+
     /** Draft → Completed is the only transition; a Completed Inspection is never reopened. */
     async completeInspection(id: string) {
       const inspection = await storage.getInspection(id);
@@ -609,15 +640,13 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       const item = await storage.getItem(itemId);
       if (!item) return itemNotFound;
       if (await isLocked(item.inspectionId)) return inspectionCompleted;
-      const defects = await storage.listDefects(itemId);
-      const evidence = await storage.listEvidence(itemId);
-      if (!withContents && defects.length > 0) return { ok: false as const, reason: "item-has-defects" as const };
-      if (!withContents && evidence.length > 0) return { ok: false as const, reason: "item-has-evidence" as const };
-      // Defects first, as they point at the Evidence; the Item last, so an interrupted removal can simply be tried again.
-      for (const defect of defects) await storage.deleteDefect(defect.id);
-      for (const each of evidence) await storage.deleteEvidence(each.id);
-      await storage.deleteItem(itemId);
-      if (evidence.some((each) => each.kind === "photo")) aiChanged();
+      if (!withContents && (await storage.listDefects(itemId)).length > 0) {
+        return { ok: false as const, reason: "item-has-defects" as const };
+      }
+      if (!withContents && (await storage.listEvidence(itemId)).length > 0) {
+        return { ok: false as const, reason: "item-has-evidence" as const };
+      }
+      if (await deleteItemAndContents(itemId)) aiChanged();
       return { ok: true as const };
     },
 

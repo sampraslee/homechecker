@@ -19,7 +19,9 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
   /** Completed on this visit and not exported since, so the Inspector is prompted to export. */
   const [justCompleted, setJustCompleted] = useState(false);
   const [toReview, setToReview] = useState<UnreviewedAiSuggestionView[]>([]);
-  const [linkedMoveIn, setLinkedMoveIn] = useState<Inspection | undefined>(undefined);
+  /** `null`: the linked Move-in was deleted from this phone. */
+  const [linkedMoveIn, setLinkedMoveIn] = useState<Inspection | null | undefined>(undefined);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const loadAreas = useCallback(() => homeCheck.listAreas(id).then(setAreas), [homeCheck, id]);
   const loadInspection = useCallback(
@@ -34,7 +36,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
 
   const linkedMoveInId = inspection?.linkedMoveInId;
   useEffect(() => {
-    if (linkedMoveInId) homeCheck.getInspection(linkedMoveInId).then(setLinkedMoveIn);
+    if (linkedMoveInId) homeCheck.getInspection(linkedMoveInId).then((found) => setLinkedMoveIn(found ?? null));
   }, [homeCheck, linkedMoveInId]);
 
   // Also reloads as AI Suggestions arrive or are reviewed.
@@ -74,7 +76,9 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
             <dd>
               {!linkedMoveInId
                 ? "Not linked"
-                : linkedMoveIn && `${formatDate(linkedMoveIn.startedAt)}, by ${linkedMoveIn.inspectorName}`}
+                : linkedMoveIn === null
+                  ? "Deleted from this phone"
+                  : linkedMoveIn && `${formatDate(linkedMoveIn.startedAt)}, by ${linkedMoveIn.inspectorName}`}
             </dd>
           </>
         )}
@@ -187,11 +191,35 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
           </section>
         ))}
 
+      {/* Rare and permanent, so last on the screen and confirmed. */}
+      {confirmingDelete ? (
+        <DeletePanel
+          inspection={inspection}
+          onDeleted={() => navigate({ name: "list" }, { up: true })}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      ) : (
+        <section className="delete-zone">
+          <button
+            type="button"
+            className="link danger"
+            onClick={() => {
+              setAdding(false);
+              setConfirmingComplete(false);
+              setConfirmingDelete(true);
+            }}
+          >
+            Delete Inspection
+          </button>
+        </section>
+      )}
+
       <Dock
         action={
           !locked &&
           !adding &&
-          !confirmingComplete && (
+          !confirmingComplete &&
+          !confirmingDelete && (
             <button type="button" className="primary" onClick={() => setAdding(true)}>
               Add Area
             </button>
@@ -285,6 +313,60 @@ function ExportPanel({
       )}
       {message && <p className="muted">{message}</p>}
       {error && <p className="error" role="alert">{error}</p>}
+    </section>
+  );
+}
+
+/** The confirmation before deleting an Inspection from the phone for good. */
+function DeletePanel({ inspection, onDeleted, onCancel }: { inspection: Inspection; onDeleted: () => void; onCancel: () => void }) {
+  const homeCheck = useHomeCheck();
+  useBackCloses(onCancel);
+  const [totals, setTotals] = useState<InspectionTotals | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const panel = useRef<HTMLElement>(null);
+  const { lastExportedAt } = inspection;
+
+  useEffect(() => {
+    homeCheck.inspectionTotals(inspection.id).then(setTotals);
+  }, [homeCheck, inspection.id]);
+  useEffect(() => {
+    scrollIntoViewGently(panel.current);
+  }, []);
+
+  async function remove() {
+    const result = await homeCheck.deleteInspection(inspection.id);
+    if (result.ok) onDeleted();
+    else setError(refusalMessage[result.reason]);
+  }
+
+  if (!totals) return null;
+
+  return (
+    <section className="panel confirm-card" ref={panel}>
+      <h2>Delete this Inspection?</h2>
+      <p>
+        This permanently deletes it from this phone, with {totals.areas} {totals.areas === 1 ? "Area" : "Areas"}, {totals.items}{" "}
+        {totals.items === 1 ? "Item" : "Items"}, {totals.evidence} Evidence and {totals.defects}{" "}
+        {totals.defects === 1 ? "Defect" : "Defects"}. It can't be undone.
+      </p>
+      {!lastExportedAt ? (
+        <p className="notice">This Inspection has never been exported, so this phone has the only copy. Export it first if you need it.</p>
+      ) : (
+        <p className="muted">Last exported {formatDateTime(lastExportedAt)}. Anything changed since then is lost.</p>
+      )}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="button-row">
+        <button type="button" className="secondary" onClick={onCancel}>
+          Keep Inspection
+        </button>
+        <button type="button" className="danger-button" onClick={remove}>
+          {lastExportedAt ? "Delete Inspection" : "Delete without exporting"}
+        </button>
+      </div>
     </section>
   );
 }

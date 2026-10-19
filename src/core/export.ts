@@ -173,7 +173,10 @@ export async function buildExportZip(content: ExportContent): Promise<Uint8Array
   if (inspection.type === "move-out") {
     const { linkedMoveIn } = content;
     inspectionSheet.addRows([
-      ["Linked Move-in address", linkedMoveIn ? formatAddress(linkedMoveIn.address) : "Not linked"],
+      [
+        "Linked Move-in address",
+        linkedMoveIn ? formatAddress(linkedMoveIn.address) : inspection.linkedMoveInId ? "Deleted from this phone" : "Not linked",
+      ],
       ["Linked Move-in date", linkedMoveIn ? dateFormat.format(new Date(linkedMoveIn.startedAt)) : null],
     ]);
   }

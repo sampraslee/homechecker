@@ -1186,3 +1186,8 @@ button:active:not(:disabled) {
     transition-duration: 1ms !important;
   }
 }
+
+.delete-zone {
+  margin-top: 1.5rem;
+  text-align: center;
+}

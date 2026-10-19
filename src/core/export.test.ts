@@ -72,6 +72,19 @@ describe("exporting an Inspection", () => {
     ]);
   });
 
+  test("says when a Move-out's linked Move-in was deleted from the phone", async () => {
+    const { homeCheck, inspectionId } = await createTestHomeCheckWithInspection();
+    const moveOut = expectOk(await homeCheck.startMoveOut({ moveInId: inspectionId })).inspection;
+    expectOk(await homeCheck.deleteInspection(inspectionId));
+
+    const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(moveOut.id)).zip);
+
+    expect(rowsOf(workbook, "Inspection").slice(-2)).toEqual([
+      ["Linked Move-in address", "Deleted from this phone"],
+      ["Linked Move-in date"],
+    ]);
+  });
+
   test("says when a Move-out is not linked to a Move-in", async () => {
     const { homeCheck } = await createTestHomeCheckWithInspection();
     const moveOut = expectOk(
