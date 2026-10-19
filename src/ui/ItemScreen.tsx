@@ -104,7 +104,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     const result = await homeCheck.addDefect(id, { defectTypeCode: defectType.code });
     if (result.ok) {
       setDefectPanel(null);
-      setFlash({ text: `Added ${defectType.name}.`, undo: () => undoDefect(result.defect.id) });
+      setFlash({ text: `Added ${defectType.name}.`, undo: () => undoDefect(result.defect.id, defectType.name) });
       load();
     } else if (result.reason === "defect-type-already-recorded") {
       setDefectPanel(alreadyRecorded(result.existingDefectId, defectType));
@@ -115,9 +115,9 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     }
   }
 
-  async function undoDefect(defectId: string) {
+  async function undoDefect(defectId: string, name: string) {
     const result = await homeCheck.removeDefect(defectId);
-    if (result.ok) setFlash({ text: "Defect removed." });
+    if (result.ok) setFlash({ text: `Removed ${name}.` });
     else {
       setFlash(null);
       setError(refusalMessage[result.reason]);
@@ -163,7 +163,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         <h2>Evidence</h2>
         <span className="count">{countEvidence(evidence)}</span>
       </div>
-      {evidence.length === 0 && <p className="muted">{editable ? `Take a photo of the ${item.name} to start.` : "No Evidence."}</p>}
+      {evidence.length === 0 && <p className="muted">{editable ? `Take a photo of the ${item.name} to start.` : "No Evidence recorded."}</p>}
       <ul className="thumbnails">
         {evidence.filter(isMedia).map((media, index, all) => (
           <li key={media.id}>
@@ -251,7 +251,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
             <h2>AI Suggestions</h2>
             <span className="count">{unreviewedCount(aiSuggestions)}</span>
           </div>
-          {aiSuggestions.length === 0 && <p className="muted">None yet. Photos are sent to the AI whenever the phone is online.</p>}
+          {aiSuggestions.length === 0 && <p className="muted">None yet. Photos go to the AI when the phone is online.</p>}
           <AiSuggestionList
             itemId={id}
             itemName={item.name}
@@ -269,7 +269,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         <h2>Defects</h2>
         <span className="count">{defects.length > 0 && defects.length}</span>
       </div>
-      {defects.length === 0 && <p className="muted">No Defects yet.</p>}
+      {defects.length === 0 && <p className="muted">{editable ? "No Defects yet. Add one, or confirm an AI Suggestion." : "No Defects recorded."}</p>}
       <ul className="cards">
         {defects.map((defect) => {
           const linked = countEvidence(evidence.filter((e) => defect.evidenceIds.includes(e.id)));
@@ -279,9 +279,8 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
                 <strong>{defect.defectTypeName}</strong>
                 {defect.source === "ai-suggested" && <span className="ai-why">From AI Suggestion</span>}
               </span>
-              <span className="muted defect-meta">
-                {defect.categoryName}. {linked ? `Linked: ${linked}` : "No Evidence linked"}
-              </span>
+              <span className="muted defect-meta">{defect.categoryName}</span>
+              <span className="muted defect-meta">{linked ? `Linked: ${linked}` : "No Evidence linked"}</span>
               {defect.note && <span>{defect.note}</span>}
             </>
           );
@@ -445,7 +444,7 @@ function MediaViewer({
         {!canDelete ? null : confirming ? (
           <span className="button-row">
             <button type="button" className="link on-dark" onClick={() => setConfirming(false)}>
-              Keep
+              Keep {evidence.kind}
             </button>
             <button type="button" className="link danger-on-dark" onClick={remove}>
               Delete {evidence.kind}
@@ -528,14 +527,17 @@ function NoteEditor({
       </form>
       {note &&
         (confirmingDelete ? (
-          <div className="button-row">
-            <button type="button" className="secondary" onClick={() => setConfirmingDelete(false)}>
-              Keep
-            </button>
-            <button type="button" className="link danger" onClick={remove}>
-              Delete note
-            </button>
-          </div>
+          <>
+            <p>Delete this note? It is unlinked from any Defects.</p>
+            <div className="button-row">
+              <button type="button" className="secondary" onClick={() => setConfirmingDelete(false)}>
+                Keep note
+              </button>
+              <button type="button" className="link danger" onClick={remove}>
+                Delete note
+              </button>
+            </div>
+          </>
         ) : (
           <button type="button" className="link danger" onClick={() => setConfirmingDelete(true)}>
             Delete note

@@ -294,12 +294,12 @@ function ItemPicker({
       )}
       <form className="form" onSubmit={addOther} noValidate>
         <label>
-          Other item (not in the list)
+          Item not in the list
           <input value={otherName} onChange={(event) => setOtherName(event.target.value)} />
           {error && <span className="error" role="alert">{error}</span>}
         </label>
         <button type="submit" className="secondary">
-          Add other item
+          Add this Item
         </button>
       </form>
     </section>

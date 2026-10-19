@@ -34,13 +34,13 @@ export function ErrorNotice() {
 
   return (
     <div className="error-notice" role="alert">
-      <p>Something went wrong and that may not have been saved. Try again. If it keeps happening, send the details below to the Home Check team.</p>
+      <p>That may not have saved. Try again. If it keeps happening, send the details below to the Home Check team.</p>
       <details>
         <summary>Details</summary>
         <code>{details}</code>
       </details>
       <button type="button" className="secondary" onClick={() => setShown(null)}>
-        Dismiss
+        Close
       </button>
     </div>
   );

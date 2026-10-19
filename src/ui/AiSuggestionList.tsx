@@ -49,7 +49,7 @@ export function AiSuggestionList({
       onReviewed(
         result.addedToExisting
           ? `Photo added to the existing ${result.defect.defectTypeName} Defect.`
-          : `Added ${result.defect.defectTypeName} to Defects.`,
+          : `Added ${result.defect.defectTypeName}.`,
       );
     } else if (result.reason === "note-required" && note === undefined) {
       setNote("");
@@ -124,7 +124,7 @@ export function AiSuggestionList({
           </div>
           <form className="form" onSubmit={saveNote} noValidate>
             <label>
-              Note (required: describe what you see)
+              Note (required): describe what you see
               <textarea
                 className="note-input"
                 value={note}

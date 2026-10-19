@@ -55,7 +55,7 @@ export function VideoRecorder({ itemId, onSaved, onClose }: { itemId: string; on
       .catch((reason: unknown) => {
         if (cancelled) return;
         const denied = reason instanceof DOMException && reason.name === "NotAllowedError";
-        setError(denied ? "Allow the camera and microphone for Home Check, then try again." : "Could not open the camera.");
+        setError(denied ? "Allow the camera and microphone for Home Check, then try again." : "Couldn't open the camera. Close any other app using it, then try again.");
       });
     return () => {
       cancelled = true;

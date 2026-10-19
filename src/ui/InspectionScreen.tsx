@@ -205,7 +205,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
 
 const exportOutcomeMessage: Record<ShareOutcome, string> = {
   shared: "Export shared.",
-  cancelled: "Export ready; sharing was cancelled.",
+  cancelled: "Sharing cancelled. Tap Export to share it again.",
   downloaded: "Export downloaded.",
 };
 
@@ -350,8 +350,8 @@ function CompletePanel({
             </p>
           )}
           <p className="muted">
-            Once completed, its Areas, Items, Evidence and Defects can't be added to, changed or removed. It can't be reopened.
-            Photos still waiting are sent to the AI, and AI Suggestions can still be reviewed.
+            Completing locks this Inspection: nothing in it can be added, changed or removed, and it can't be reopened. AI
+            Suggestions can still be reviewed.
           </p>
         </>
       )}
@@ -422,12 +422,12 @@ function AddAreaPanel({
       </div>
       <form className="form" onSubmit={addCustom} noValidate>
         <label>
-          Or a custom name
+          Area not in the list
           <input value={customName} onChange={(event) => setCustomName(event.target.value)} />
           {error && <span className="error" role="alert">{error}</span>}
         </label>
         <button type="submit" className="secondary">
-          Add custom Area
+          Add this Area
         </button>
       </form>
     </section>

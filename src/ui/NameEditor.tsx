@@ -29,7 +29,7 @@ export function NameEditor({
       </label>
       <div className="button-row">
         <button type="submit" className="primary">
-          Save
+          Save name
         </button>
         <button type="button" className="secondary" onClick={onCancel}>
           Cancel

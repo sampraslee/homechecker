@@ -82,7 +82,7 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
 
       {hasName === false && (
         <section className="prompt">
-          <p>Set your name first. Every Inspection is stamped with who carried it out.</p>
+          <p>Enter your name first. Each Inspection records who carried it out.</p>
           <InspectorNameForm onSaved={() => setHasName(true)} />
         </section>
       )}
@@ -241,7 +241,7 @@ function AddressForm({ onSubmit }: { onSubmit: (address: UnitAddressInput) => Pr
       <label>
         State
         <select value={address.state} onChange={(event) => setField("state", event.target.value)} aria-invalid={Boolean(errors.state)}>
-          <option value="">Choose…</option>
+          <option value="">Choose a state</option>
           {MALAYSIAN_STATES.map((state) => (
             <option key={state} value={state}>
               {state}

@@ -167,7 +167,7 @@ export function DefectEditor({
 
       <form className="form" onSubmit={save} noValidate>
         <label>
-          {(defect ?? defectType)?.noteRequired ? "Note (required: describe what you see)" : "Note (optional)"}
+          {(defect ?? defectType)?.noteRequired ? "Note (required): describe what you see" : "Note (optional)"}
           <textarea
             className="note-input"
             value={note}
@@ -224,14 +224,17 @@ export function DefectEditor({
 
       {defect &&
         (confirmingRemove ? (
-          <div className="button-row">
-            <button type="button" className="secondary" onClick={() => setConfirmingRemove(false)}>
-              Keep
-            </button>
-            <button type="button" className="link danger" onClick={remove}>
-              Remove Defect
-            </button>
-          </div>
+          <>
+            <p>Remove this Defect? Its linked Evidence stays on the Item.</p>
+            <div className="button-row">
+              <button type="button" className="secondary" onClick={() => setConfirmingRemove(false)}>
+                Keep Defect
+              </button>
+              <button type="button" className="link danger" onClick={remove}>
+                Remove Defect
+              </button>
+            </div>
+          </>
         ) : (
           <button type="button" className="link danger" onClick={() => setConfirmingRemove(true)}>
             Remove Defect
