@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { StorageDurability } from "../core";
 import { useHomeCheck } from "./homeCheckContext";
 import { useAiChanges } from "./useAiChanges";
+
+/** The most of the screen's height the Dock may cover. */
+const MAX_SCREEN_SHARE = 1 / 3;
 
 /**
  * The bottom of every screen, in thumb reach: a passing message, whether Inspections are safe on
@@ -11,6 +14,29 @@ export function Dock({ message, action }: { message?: ReactNode; action?: ReactN
   const homeCheck = useHomeCheck();
   const [waiting, setWaiting] = useState(0);
   const [durability, setDurability] = useState<StorageDurability | null>(null);
+  const dock = useRef<HTMLElement>(null);
+  /** With very large text the Dock would cover too much of the screen, so it joins the end of the page instead. */
+  const [inFlow, setInFlow] = useState(false);
+
+  // The page keeps this much room at the bottom, so nothing focused or scrolled to ends up behind the Dock.
+  useEffect(() => {
+    const element = dock.current;
+    if (!element) return;
+    const root = document.documentElement;
+    const measure = () => {
+      const tooTall = element.offsetHeight > window.innerHeight * MAX_SCREEN_SHARE;
+      setInFlow(tooTall);
+      root.style.setProperty("--dock-height", tooTall ? "0px" : `${element.offsetHeight}px`);
+    };
+    measure();
+    // Text size, a message or a wrapped status line can all change the Dock's height.
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--dock-height");
+    };
+  }, []);
 
   useAiChanges(
     useCallback(() => {
@@ -22,7 +48,7 @@ export function Dock({ message, action }: { message?: ReactNode; action?: ReactN
   }, [homeCheck]);
 
   return (
-    <footer className="dock">
+    <footer className={inFlow ? "dock in-flow" : "dock"} ref={dock}>
       <div className="dock-inner">
         {message}
         <p className="status-line" role="status">

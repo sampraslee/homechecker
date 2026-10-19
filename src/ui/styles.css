@@ -44,6 +44,11 @@
   box-sizing: border-box;
 }
 
+/* Scrolling to a focused field stops above the Dock (WCAG 2.4.11). */
+html {
+  scroll-padding-bottom: calc(var(--dock-height, 8rem) + 0.5rem);
+}
+
 body {
   margin: 0;
   background: var(--page);
@@ -59,8 +64,8 @@ h1 {
 .screen {
   max-width: 40rem;
   margin: 0 auto;
-  /* The bottom clears the dock. */
-  padding: calc(env(safe-area-inset-top) + 0.75rem) 1rem calc(env(safe-area-inset-bottom) + 7.5rem);
+  /* The bottom clears the Dock, which measures itself. */
+  padding: calc(env(safe-area-inset-top) + 0.75rem) 1rem calc(var(--dock-height, 8rem) + 1rem);
 }
 
 button {
@@ -732,6 +737,11 @@ button:disabled {
   margin: 0 auto;
 }
 
+.dock.in-flow {
+  position: static;
+  margin: 1.5rem -1rem 0;
+}
+
 /* The keyboard needs the room while the Inspector types. */
 body:has(:is(input, textarea, select):focus) .dock {
   display: none;
@@ -745,6 +755,7 @@ body:has(:is(input, textarea, select):focus) .dock {
 .status-line {
   margin: 0;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 1rem;
   font-size: 0.85rem;
@@ -819,11 +830,18 @@ body:has(:is(input, textarea, select):focus) .dock {
   font-weight: 600;
 }
 
+/* Wraps rather than pushing the button off screen when text is enlarged (WCAG 1.4.10). */
 .band-title {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-end;
   gap: 0.75rem;
+}
+
+.band-title h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* Buttons in the band, after the pill buttons on rizurf.com's dark hero. */

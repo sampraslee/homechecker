@@ -43,6 +43,8 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   const [recording, setRecording] = useState(false);
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState<Flash | null>(null);
+  /** Undo stays while the Inspector is touching or focused on it, however long that takes. */
+  const [flashHeld, setFlashHeld] = useState(false);
   const [viewing, setViewing] = useState<MediaEvidence | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
@@ -66,10 +68,10 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   useAiChanges(load);
 
   useEffect(() => {
-    if (!flash) return;
+    if (!flash || flashHeld) return;
     const timer = setTimeout(() => setFlash(null), FLASH_SECONDS * 1000);
     return () => clearTimeout(timer);
-  }, [flash]);
+  }, [flash, flashHeld]);
 
   async function capture(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
@@ -163,13 +165,13 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
       </div>
       {evidence.length === 0 && <p className="muted">{editable ? `Take a photo of the ${item.name} to start.` : "No Evidence."}</p>}
       <ul className="thumbnails">
-        {evidence.filter(isMedia).map((media) => (
+        {evidence.filter(isMedia).map((media, index, all) => (
           <li key={media.id}>
             <button
               type="button"
               className={`thumbnail ${media.kind}`}
               onClick={() => setViewing(media)}
-              aria-label={`Open ${media.kind}`}
+              aria-label={`Open ${media.kind} ${index + 1} of ${all.length}`}
             >
               <MediaThumbnail evidence={media} />
             </button>
@@ -231,7 +233,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           </div>
         </>
       )}
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
       {notePanel && (
         <NoteEditor
           key={notePanel.mode === "edit" ? notePanel.note.id : "new"}
@@ -337,7 +339,14 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
       <Dock
         message={
           flash && (
-            <div className="toast" role="status">
+            <div
+              className="toast"
+              role="status"
+              onFocus={() => setFlashHeld(true)}
+              onBlur={() => setFlashHeld(false)}
+              onPointerEnter={() => setFlashHeld(true)}
+              onPointerLeave={() => setFlashHeld(false)}
+            >
               <span>{flash.text}</span>
               {flash.undo && (
                 <button type="button" onClick={flash.undo}>
@@ -403,6 +412,23 @@ function MediaViewer({
   const homeCheck = useHomeCheck();
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
+
+  // Focus moves into the viewer and returns to the thumbnail on close; Escape closes it.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    closeButton.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close.current();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      opener?.focus();
+    };
+  }, []);
 
   async function remove() {
     const result = await homeCheck.deleteEvidence(evidence.id);
@@ -411,9 +437,9 @@ function MediaViewer({
   }
 
   return (
-    <div className="viewer" role="dialog" aria-label={evidence.kind === "photo" ? "Photo" : "Video"}>
+    <div className="viewer" role="dialog" aria-modal="true" aria-label={evidence.kind === "photo" ? "Photo" : "Video"}>
       <div className="viewer-bar">
-        <button type="button" className="link on-dark" onClick={onClose}>
+        <button type="button" className="link on-dark" onClick={onClose} ref={closeButton}>
           Close
         </button>
         {!canDelete ? null : confirming ? (
@@ -431,7 +457,7 @@ function MediaViewer({
           </button>
         )}
       </div>
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
       {evidence.kind === "photo" ? (
         <MediaImage evidenceId={evidence.id} version="original" alt="Photo" className="viewer-image" />
       ) : (
@@ -495,7 +521,7 @@ function NoteEditor({
             autoFocus
           />
         </label>
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
         <button type="submit" className="primary">
           Save note
         </button>

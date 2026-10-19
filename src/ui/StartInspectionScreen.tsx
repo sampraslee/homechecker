@@ -104,7 +104,7 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
               </button>
             ))}
           </div>
-          {refusal && <p className="error">{refusal}</p>}
+          {refusal && <p className="error" role="alert">{refusal}</p>}
 
           {type === "move-in" && (
             <AddressForm key="move-in" onSubmit={async (address) => openOrExplain(await homeCheck.startMoveIn(address))} />
@@ -170,6 +170,12 @@ function AddressForm({ onSubmit }: { onSubmit: (address: UnitAddressInput) => Pr
   const [suggesting, setSuggesting] = useState<{ field: AddressField; suggestions: UnitAddress[] } | null>(null);
   /** Counts lookups, so a slower one for an earlier keystroke can't replace a newer one's. */
   const latestLookup = useRef(0);
+  const form = useRef<HTMLFormElement>(null);
+
+  // After a refused start, take the Inspector to the first field to fix (WCAG 3.3.1).
+  useEffect(() => {
+    form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [errors]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -205,7 +211,7 @@ function AddressForm({ onSubmit }: { onSubmit: (address: UnitAddressInput) => Pr
   }
 
   return (
-    <form id={ADDRESS_FORM_ID} className="form spaced" onSubmit={submit} noValidate>
+    <form id={ADDRESS_FORM_ID} ref={form} className="form spaced" onSubmit={submit} noValidate>
       {textFields.map(({ field, label, inputMode }) => (
         <Fragment key={field}>
           <label>

@@ -25,7 +25,7 @@ export function NameEditor({
       <label>
         {label}
         <input value={name} onChange={(event) => setName(event.target.value)} autoFocus />
-        {error && <span className="error">{error}</span>}
+        {error && <span className="error" role="alert">{error}</span>}
       </label>
       <div className="button-row">
         <button type="submit" className="primary">

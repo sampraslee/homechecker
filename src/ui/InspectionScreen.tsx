@@ -5,6 +5,7 @@ import { Band } from "./Band";
 import { Dock } from "./Dock";
 import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel, lockedNotice, refusalMessage, shortAddress } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
+import { scrollIntoViewGently } from "./scroll";
 import { shareOrDownload, TapTooOldError, type ShareOutcome } from "./shareFile";
 import { useAiChanges } from "./useAiChanges";
 
@@ -280,7 +281,7 @@ function ExportPanel({
         exportButton
       )}
       {message && <p className="muted">{message}</p>}
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
     </section>
   );
 }
@@ -305,7 +306,7 @@ function CompletePanel({
     homeCheck.inspectionTotals(inspectionId).then(setTotals);
   }, [homeCheck, inspectionId]);
   useEffect(() => {
-    panel.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollIntoViewGently(panel.current);
   }, []);
   useAiChanges(useCallback(() => homeCheck.aiWorkLeft(inspectionId).then(setAiWork), [homeCheck, inspectionId]));
 
@@ -354,7 +355,7 @@ function CompletePanel({
           </p>
         </>
       )}
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
       <div className="button-row">
         <button type="button" className="secondary" onClick={onCancel}>
           {totals.areas === 0 ? "Back" : "Keep editing"}
@@ -386,7 +387,7 @@ function AddAreaPanel({
 
   // The panel opens below the Areas, often off screen.
   useEffect(() => {
-    panel.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollIntoViewGently(panel.current);
   }, []);
 
   useEffect(() => {
@@ -423,7 +424,7 @@ function AddAreaPanel({
         <label>
           Or a custom name
           <input value={customName} onChange={(event) => setCustomName(event.target.value)} />
-          {error && <span className="error">{error}</span>}
+          {error && <span className="error" role="alert">{error}</span>}
         </label>
         <button type="submit" className="secondary">
           Add custom Area

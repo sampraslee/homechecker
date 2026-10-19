@@ -133,7 +133,7 @@ export function AiSuggestionList({
                 autoFocus
               />
             </label>
-            {error?.suggestionId === panel.suggestion.id && <p className="error">{error.message}</p>}
+            {error?.suggestionId === panel.suggestion.id && <p className="error" role="alert">{error.message}</p>}
             <button type="submit" className="primary">
               Add Defect
             </button>

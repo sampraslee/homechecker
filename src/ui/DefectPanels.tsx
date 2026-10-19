@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { isMedia, isNote, type DefectCategory, type DefectChoices, type DefectType, type DefectView, type Evidence } from "../core";
 import { refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
+import { scrollIntoViewGently } from "./scroll";
 import { MediaThumbnail } from "./MediaImage";
 
 export type PickedDefectType = DefectType & { noteRequired: boolean };
@@ -30,7 +31,7 @@ export function DefectTypePicker({
 
   // The picker opens below the Item's Defects, often off screen: bring each step into view.
   useEffect(() => {
-    panel.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollIntoViewGently(panel.current);
   }, [category]);
 
   useEffect(() => {
@@ -215,7 +216,7 @@ export function DefectEditor({
           )}
         </div>
 
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
         <button type="submit" className="primary">
           {defect ? "Save Defect" : "Add Defect"}
         </button>

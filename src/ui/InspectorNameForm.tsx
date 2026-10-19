@@ -23,7 +23,7 @@ export function InspectorNameForm({ initialName = "", onSaved }: { initialName?:
       <label>
         Your name
         <input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" />
-        {error && <span className="error">{error}</span>}
+        {error && <span className="error" role="alert">{error}</span>}
       </label>
       <button type="submit" className="primary">
         Save name

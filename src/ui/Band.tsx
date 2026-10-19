@@ -23,7 +23,7 @@ export function Band({
   return (
     <header className="band">
       {back && (
-        <button type="button" className="back" onClick={() => navigate(back.to)}>
+        <button type="button" className="back" aria-label={`Back to ${back.label}`} onClick={() => navigate(back.to)}>
           {back.label}
         </button>
       )}

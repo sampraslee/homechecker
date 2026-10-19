@@ -5,6 +5,7 @@ import { Band } from "./Band";
 import { Dock } from "./Dock";
 import { countEvidence, inspectionTypeLabel, lockedNotice, refusalMessage, shortAddress } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
+import { scrollIntoViewGently } from "./scroll";
 import { NameEditor } from "./NameEditor";
 import { useLocked } from "./useLocked";
 
@@ -89,7 +90,6 @@ export function AreaScreen({ id, navigate }: { id: string; navigate: Navigate })
             <button
               type="button"
               className="on-band"
-              aria-pressed={editing}
               onClick={() => {
                 if (editing) stopEditing();
                 else {
@@ -130,7 +130,7 @@ export function AreaScreen({ id, navigate }: { id: string; navigate: Navigate })
           }}
         />
       )}
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
 
       <div className="section-head">
         <h2>Items</h2>
@@ -238,7 +238,7 @@ function ItemPicker({
 
   // The picker opens below the Area's Items, often off screen.
   useEffect(() => {
-    panel.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollIntoViewGently(panel.current);
   }, []);
 
   useEffect(() => {
@@ -296,7 +296,7 @@ function ItemPicker({
         <label>
           Other item (not in the list)
           <input value={otherName} onChange={(event) => setOtherName(event.target.value)} />
-          {error && <span className="error">{error}</span>}
+          {error && <span className="error" role="alert">{error}</span>}
         </label>
         <button type="submit" className="secondary">
           Add other item
