@@ -66,11 +66,17 @@ export type Inspection = {
 /** A linked Move-out starts from a Move-in on this phone; an unlinked one from a typed address. */
 export type MoveOutSource = { moveInId: string } | { address: UnitAddressInput };
 
+/** Whether the browser keeps this app's storage when space runs low. */
+export type StorageDurability = "granted" | "refused";
+
 export type Settings = {
   inspectorName: string | null;
+  /** Null until first checked. */
+  storageDurability: StorageDurability | null;
 };
 
-export type InspectionSummary = Pick<Inspection, "id" | "type" | "status" | "startedAt"> & {
+/** Unset `lastExportedAt` flags an Inspection never exported, so only on this phone. */
+export type InspectionSummary = Pick<Inspection, "id" | "type" | "status" | "startedAt" | "lastExportedAt"> & {
   addressLine: string;
 };
 

@@ -26,6 +26,9 @@ const homeCheck = createHomeCheck({
 // photos to the AI now, whenever the phone comes online and after each capture.
 homeCheck.finishMediaProcessing().finally(() => homeCheck.startAiQueue());
 
+// Settings show whether the browser keeps the app's storage.
+homeCheck.checkStorageDurability();
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <HomeCheckProvider value={homeCheck}>

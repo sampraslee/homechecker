@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { InspectionSummary } from "../core";
 import type { Navigate } from "./App";
-import { formatDate, inspectionStatusLabel, inspectionTypeLabel } from "./format";
+import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 
 export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
@@ -36,7 +36,14 @@ export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
                 <span className={`badge ${inspection.status}`}>{inspectionStatusLabel[inspection.status]}</span>
               </span>
               <span>{inspection.addressLine}</span>
-              <span className="muted">{formatDate(inspection.startedAt)}</span>
+              <span className="card-row">
+                <span className="muted">{formatDate(inspection.startedAt)}</span>
+                {inspection.lastExportedAt ? (
+                  <span className="muted">Exported {formatDateTime(inspection.lastExportedAt)}</span>
+                ) : (
+                  <span className="badge unexported">Never exported</span>
+                )}
+              </span>
             </button>
           </li>
         ))}

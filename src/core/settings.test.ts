@@ -5,7 +5,7 @@ describe("Inspector name", () => {
   test("is unset on a new phone", async () => {
     const { homeCheck } = createTestHomeCheck();
 
-    expect(await homeCheck.getSettings()).toEqual({ inspectorName: null });
+    expect((await homeCheck.getSettings()).inspectorName).toBe(null);
   });
 
   test("is remembered once set, trimmed", async () => {
@@ -14,7 +14,7 @@ describe("Inspector name", () => {
     const result = await homeCheck.setInspectorName("  Aisyah binti Rahman ");
 
     expect(result).toEqual({ ok: true, inspectorName: "Aisyah binti Rahman" });
-    expect(await homeCheck.getSettings()).toEqual({ inspectorName: "Aisyah binti Rahman" });
+    expect((await homeCheck.getSettings()).inspectorName).toBe("Aisyah binti Rahman");
   });
 
   test("cannot be blank", async () => {
@@ -24,6 +24,6 @@ describe("Inspector name", () => {
     const result = await homeCheck.setInspectorName("   ");
 
     expect(result).toEqual({ ok: false, reason: "inspector-name-required" });
-    expect(await homeCheck.getSettings()).toEqual({ inspectorName: "Aisyah" });
+    expect((await homeCheck.getSettings()).inspectorName).toBe("Aisyah");
   });
 });

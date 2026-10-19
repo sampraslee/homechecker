@@ -65,6 +65,10 @@ export interface Environment {
   isOnline(): boolean;
   /** Calls `listener` whenever online state changes; returns an unsubscribe function. */
   onOnlineChange(listener: (online: boolean) => void): () => void;
+  /** Asks the browser to keep this app's storage when space runs low; may prompt the Inspector. Resolves to whether it will. */
+  requestPersistentStorage(): Promise<boolean>;
+  /** Whether the browser keeps this app's storage, without asking. */
+  isStoragePersisted(): Promise<boolean>;
 }
 
 /** What the AI client is asked about one photo. */

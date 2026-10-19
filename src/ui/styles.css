@@ -11,6 +11,7 @@
   --done-bg: #dcf3e4;
   --done-text: #19633a;
   --info-bg: #e6eef5;
+  --error-bg: #fde8e6;
   color-scheme: light;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--text);
@@ -118,6 +119,12 @@ button {
 .badge.completed {
   background: var(--done-bg);
   color: var(--done-text);
+}
+
+/** Only on this phone: losing the phone loses it. */
+.badge.unexported {
+  background: var(--error-bg);
+  color: var(--error);
 }
 
 .form {
@@ -349,7 +356,7 @@ button:disabled {
 
 .badge.defects {
   margin-left: 0.5rem;
-  background: #fde8e6;
+  background: var(--error-bg);
   color: var(--error);
 }
 

@@ -48,7 +48,7 @@ export function createDexieStorage(name = "home-check", options?: DexieOptions):
   return {
     async getSettings() {
       const row = await db.settings.get("settings");
-      return { inspectorName: row?.inspectorName ?? null };
+      return { inspectorName: row?.inspectorName ?? null, storageDurability: row?.storageDurability ?? null };
     },
     async saveSettings(settings) {
       await db.settings.put({ ...settings, key: "settings" });

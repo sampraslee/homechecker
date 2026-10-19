@@ -13,6 +13,8 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
   const [areas, setAreas] = useState<AreaView[]>([]);
   const [adding, setAdding] = useState(false);
   const [confirmingComplete, setConfirmingComplete] = useState(false);
+  /** Completed on this visit and not exported since, so the Inspector is prompted to export. */
+  const [justCompleted, setJustCompleted] = useState(false);
   const [toReview, setToReview] = useState<UnreviewedAiSuggestionView[]>([]);
   const [linkedMoveIn, setLinkedMoveIn] = useState<Inspection | undefined>(undefined);
 
@@ -137,6 +139,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
                 areas={areas}
                 onCompleted={() => {
                   setConfirmingComplete(false);
+                  setJustCompleted(true);
                   loadInspection();
                 }}
                 onCancel={() => setConfirmingComplete(false)}
@@ -154,7 +157,14 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
               </button>
             ))}
 
-          <ExportPanel inspectionId={id} onExported={setInspection} />
+          <ExportPanel
+            inspectionId={id}
+            promptToExport={justCompleted}
+            onExported={(exported) => {
+              setJustCompleted(false);
+              setInspection(exported);
+            }}
+          />
         </>
       )}
     </main>
@@ -168,7 +178,16 @@ const exportOutcomeMessage: Record<ShareOutcome, string> = {
 };
 
 /** Builds the zip and hands it to the share menu. Works on Draft and Completed Inspections. */
-function ExportPanel({ inspectionId, onExported }: { inspectionId: string; onExported: (inspection: Inspection) => void }) {
+function ExportPanel({
+  inspectionId,
+  promptToExport,
+  onExported,
+}: {
+  inspectionId: string;
+  /** Just Completed: urge an export now, as it's only on this phone until then. */
+  promptToExport: boolean;
+  onExported: (inspection: Inspection) => void;
+}) {
   const homeCheck = useHomeCheck();
   const [exporting, setExporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -206,6 +225,12 @@ function ExportPanel({ inspectionId, onExported }: { inspectionId: string; onExp
     }
   }
 
+  const exportButton = (
+    <button type="button" className={promptToExport ? "primary" : "secondary"} onClick={exportNow} disabled={exporting}>
+      {exporting ? "Exporting…" : promptToExport ? "Export now" : "Export"}
+    </button>
+  );
+
   return (
     <section className="spaced">
       {ready ? (
@@ -215,10 +240,13 @@ function ExportPanel({ inspectionId, onExported }: { inspectionId: string; onExp
             Share export
           </button>
         </>
+      ) : promptToExport ? (
+        <div className="prompt">
+          <p>Inspection completed. Export it now: until you do, it's only on this phone.</p>
+          {exportButton}
+        </div>
       ) : (
-        <button type="button" className="secondary" onClick={exportNow} disabled={exporting}>
-          {exporting ? "Exporting…" : "Export"}
-        </button>
+        exportButton
       )}
       {message && <p className="muted">{message}</p>}
       {error && <p className="error">{error}</p>}

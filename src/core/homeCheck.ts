@@ -29,6 +29,7 @@ import type {
   NoteEvidence,
   MediaVersion,
   PhotoEvidence,
+  StorageDurability,
   UnitAddress,
   UnitAddressInput,
   UnreviewedAiSuggestionView,
@@ -336,6 +337,22 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
   return {
     async getSettings() {
       return storage.getSettings();
+    },
+
+    /**
+     * Data lives only on this phone (ADR 0004), so asks the browser to keep it, once, on first launch; later launches
+     * only look, catching a grant made since (as after installing the app). The result shows in settings.
+     */
+    async checkStorageDurability(): Promise<StorageDurability> {
+      const settings = await storage.getSettings();
+      const persisted =
+        settings.storageDurability === null
+          ? await environment.requestPersistentStorage()
+          : await environment.isStoragePersisted();
+      const storageDurability: StorageDurability = persisted ? "granted" : "refused";
+      // Read again so a name saved while the browser was asking isn't overwritten.
+      await storage.saveSettings({ ...(await storage.getSettings()), storageDurability });
+      return storageDurability;
     },
 
     async setInspectorName(name: string) {
@@ -847,7 +864,14 @@ export type RefusalReason = Extract<OperationResult, { ok: false }>["reason"];
 
 /** Summaries for the Inspection list and Move-in picker, sorted newest first. */
 function summarise(inspections: Inspection[]): InspectionSummary[] {
-  return newestFirst(inspections).map(({ id, type, status, startedAt, address }) => ({ id, type, status, addressLine: formatAddress(address), startedAt }));
+  return newestFirst(inspections).map(({ id, type, status, startedAt, lastExportedAt, address }) => ({
+    id,
+    type,
+    status,
+    addressLine: formatAddress(address),
+    startedAt,
+    ...(lastExportedAt && { lastExportedAt }),
+  }));
 }
 
 function newestFirst(inspections: Inspection[]): Inspection[] {

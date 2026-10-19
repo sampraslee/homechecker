@@ -13,4 +13,7 @@ export const browserEnvironment: Environment = {
       window.removeEventListener("offline", offline);
     };
   },
+  // Missing over plain HTTP and in older browsers: storage can't be kept then.
+  requestPersistentStorage: async () => (await navigator.storage?.persist?.()) ?? false,
+  isStoragePersisted: async () => (await navigator.storage?.persisted?.()) ?? false,
 };

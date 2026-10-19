@@ -8,12 +8,20 @@ import { testReferenceData } from "./referenceData";
 export type FakeEnvironment = Environment & {
   setNow(date: Date): void;
   setOnline(online: boolean): void;
+  /** How many times persistent storage was requested. */
+  readonly persistentStorageRequests: number;
+  /** The browser grants persistent storage, now and when asked; the default. */
+  grantPersistentStorage(): void;
+  /** The browser won't keep storage, as Safari or a not-installed app may. */
+  refusePersistentStorage(): void;
 };
 
 export function createFakeEnvironment(start = new Date("2026-01-05T09:00:00.000Z")): FakeEnvironment {
   let now = start;
   let online = true;
   const listeners = new Set<(online: boolean) => void>();
+  let persistent = true;
+  let persistentStorageRequests = 0;
 
   return {
     now: () => now,
@@ -28,6 +36,22 @@ export function createFakeEnvironment(start = new Date("2026-01-05T09:00:00.000Z
     setOnline(next) {
       online = next;
       listeners.forEach((listener) => listener(next));
+    },
+    async requestPersistentStorage() {
+      persistentStorageRequests++;
+      return persistent;
+    },
+    async isStoragePersisted() {
+      return persistent;
+    },
+    get persistentStorageRequests() {
+      return persistentStorageRequests;
+    },
+    grantPersistentStorage() {
+      persistent = true;
+    },
+    refusePersistentStorage() {
+      persistent = false;
     },
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { createTestHomeCheck } from "../testing/homeCheck";
+import { createTestHomeCheck, createTestHomeCheckWithInspection, expectOk } from "../testing/homeCheck";
 
 const address = {
   unitNumber: "A-12-3",
@@ -151,5 +151,27 @@ describe("Unit address validation", () => {
       city: "Puchong",
       state: "Selangor",
     });
+  });
+});
+
+describe("the Inspection list", () => {
+  test("flags an Inspection that has never been exported", async () => {
+    const { homeCheck } = await createTestHomeCheckWithInspection();
+
+    const [summary] = await homeCheck.listInspections();
+
+    expect(summary.lastExportedAt).toBeUndefined();
+  });
+
+  test("shows when an Inspection was last exported", async () => {
+    const { homeCheck, environment, inspectionId } = await createTestHomeCheckWithInspection();
+    environment.setNow(new Date("2026-01-05T10:30:00.000Z"));
+    expectOk(await homeCheck.exportInspection(inspectionId));
+    environment.setNow(new Date("2026-01-06T08:00:00.000Z"));
+    expectOk(await homeCheck.exportInspection(inspectionId));
+
+    const [summary] = await homeCheck.listInspections();
+
+    expect(summary.lastExportedAt).toBe("2026-01-06T08:00:00.000Z");
   });
 });

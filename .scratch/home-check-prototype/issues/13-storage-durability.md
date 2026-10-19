@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] On first launch, request persistent storage; settings show granted or refused, with advice to export often if refused
-- [ ] After completing an Inspection, prompt to export it now
-- [ ] Inspection list flags Inspections never exported, and shows last-exported time otherwise
-- [ ] Core tests cover the "never exported" flag via the Environment and Storage fakes
+- [x] On first launch, request persistent storage; settings show granted or refused, with advice to export often if refused
+- [x] After completing an Inspection, prompt to export it now
+- [x] Inspection list flags Inspections never exported, and shows last-exported time otherwise
+- [x] Core tests cover the "never exported" flag via the Environment and Storage fakes
