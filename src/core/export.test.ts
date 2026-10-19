@@ -157,6 +157,81 @@ describe("exporting an Inspection", () => {
   });
 });
 
+describe("the look of an export's workbook", () => {
+  async function exportedWorkbook() {
+    const { homeCheck, inspectionId, itemId } = await createTestHomeCheckWithItem();
+    const photo = expectOk(await homeCheck.addPhoto(itemId, new Blob(["scratched door"], { type: "image/jpeg" }))).evidence;
+    expectOk(
+      await homeCheck.addDefect(itemId, {
+        defectTypeCode: "SF-SCRATCH",
+        note: "Long scratches across both doors, deepest near the handle, paint gone down to the board in two places",
+        evidenceIds: [photo.id],
+      }),
+    );
+    return (await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip)).workbook;
+  }
+
+  function sheet(workbook: ExcelJS.Workbook, name: string) {
+    const found = workbook.getWorksheet(name);
+    if (!found) throw new Error(`no ${name} sheet`);
+    return found;
+  }
+
+  test("sets every cell in Inter", async () => {
+    const workbook = await exportedWorkbook();
+
+    const fonts = new Set<string | undefined>();
+    workbook.eachSheet((each) => each.eachRow((row) => row.eachCell((cell) => fonts.add(cell.font?.name))));
+
+    expect([...fonts]).toEqual(["Inter"]);
+  });
+
+  test("gives the Defects header row bold, centred text on #34d3f7, 36 pixels high", async () => {
+    const header = sheet(await exportedWorkbook(), "Defects").getRow(1);
+
+    // 36 pixels is 27 points, Excel's unit for row height.
+    expect(header.height).toBe(27);
+    header.eachCell((cell) => {
+      expect(cell.font).toMatchObject({ name: "Inter", bold: true });
+      expect(cell.alignment).toMatchObject({ horizontal: "center", vertical: "middle", wrapText: true });
+      expect(cell.fill).toMatchObject({ type: "pattern", pattern: "solid", fgColor: { argb: "FF34D3F7" } });
+    });
+  });
+
+  test("wraps the other cells' text and aligns it to the top", async () => {
+    const workbook = await exportedWorkbook();
+
+    for (const [name, firstDataRow] of [["Defects", 2], ["Inspection", 1]] as const) {
+      sheet(workbook, name).eachRow((row, rowNumber) => {
+        if (rowNumber < firstDataRow) return;
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          expect(cell.alignment, `${name}!${cell.address}`).toMatchObject({ vertical: "top", wrapText: true });
+          expect(cell.font?.bold, `${name}!${cell.address}`).toBeFalsy();
+        });
+      });
+    }
+  });
+
+  test("fits each column to its data, up to a limit past which long text wraps", async () => {
+    const defects = sheet(await exportedWorkbook(), "Defects");
+    const width = (header: string) => {
+      let found: number | undefined;
+      defects.getRow(1).eachCell((cell, column) => {
+        if (cell.value === header) found = defects.getColumn(column).width;
+      });
+      return found;
+    };
+
+    // "Inspection type" (15 characters) is its longest text; the address (42) is the Unit address column's.
+    expect(width("Inspection type")).toBeGreaterThanOrEqual(15);
+    expect(width("Inspection type")).toBeLessThan(21);
+    expect(width("Unit address")).toBeGreaterThanOrEqual(42);
+    expect(width("Unit address")).toBeLessThan(52);
+    // The 100-character note is capped, and wraps instead.
+    expect(width("Note")).toBe(60);
+  });
+});
+
 /** Every hyperlink in every sheet of the workbook. */
 function hyperlinksOf(workbook: ExcelJS.Workbook): string[] {
   const links: string[] = [];

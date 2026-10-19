@@ -1,3 +1,4 @@
+import type { Worksheet } from "exceljs";
 import { formatAddress } from "./address";
 import {
   isMedia,
@@ -120,9 +121,9 @@ export async function buildExportZip(content: ExportContent): Promise<Uint8Array
     });
   }
   defectsSheet.getColumn(PHOTO_COLUMN).width = THUMBNAIL_BOX_PIXELS / PIXELS_PER_CHARACTER + 1;
+  styleSheet(defectsSheet, { headerRow: true });
 
   const inspectionSheet = workbook.addWorksheet("Inspection");
-  inspectionSheet.columns = [{ width: 28 }, { width: 60 }];
   inspectionSheet.addRows([
     ["Inspection type", inspectionTypeLabel[inspection.type]],
     ["Unit address", formatAddress(inspection.address)],
@@ -132,6 +133,8 @@ export async function buildExportZip(content: ExportContent): Promise<Uint8Array
     ["Duration", inspection.completedAt ? formatInspectionDuration(inspection.startedAt, inspection.completedAt) : null],
     ["Defect Dictionary version", content.dictionaryVersion],
   ]);
+  // Label and value pairs, so no header row.
+  styleSheet(inspectionSheet, { headerRow: false });
 
   zip.file("inspection.xlsx", await workbook.xlsx.writeBuffer());
   return zip.generateAsync({ type: "uint8array" });
@@ -144,6 +147,43 @@ export function exportFileName(inspection: Inspection): string {
   const { unitNumber, street } = inspection.address;
   const date = isoDateFormat.format(new Date(inspection.startedAt));
   return `${["home-check", inspection.type, slug(unitNumber), slug(street), date].filter(Boolean).join("-")}.zip`;
+}
+
+const FONT_NAME = "Inter";
+const HEADER_FILL_ARGB = "FF34D3F7";
+const HEADER_HEIGHT_PIXELS = 36;
+/** Columns fit their longest text up to this many characters wide; longer text wraps. */
+const MAX_COLUMN_WIDTH = 60;
+/** Inter runs wider than Excel's default font, which column widths are measured in. */
+const INTER_WIDTH_FACTOR = 1.1;
+const COLUMN_PADDING = 2;
+
+/**
+ * Sets every cell in Inter, wrapping, aligned to the top, and fits each column to its longest line of text
+ * (never narrower than a width already set, such as the Photo column's). A header row is bold, centred both
+ * ways, on the header colour and 36 pixels high.
+ */
+function styleSheet(sheet: Worksheet, { headerRow }: { headerRow: boolean }) {
+  const longest: number[] = [];
+  sheet.eachRow((row, rowNumber) => {
+    const isHeader = headerRow && rowNumber === 1;
+    if (isHeader) row.height = HEADER_HEIGHT_PIXELS * POINTS_PER_PIXEL;
+    for (let column = 1; column <= sheet.columnCount; column++) {
+      const cell = row.getCell(column);
+      cell.font = { name: FONT_NAME, bold: isHeader };
+      cell.alignment = isHeader
+        ? { horizontal: "center", vertical: "middle", wrapText: true }
+        : { vertical: "top", wrapText: true };
+      if (isHeader) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: HEADER_FILL_ARGB } };
+      const lineLength = Math.max(0, ...cell.text.split("\n").map((line) => line.length));
+      longest[column] = Math.max(longest[column] ?? 0, lineLength);
+    }
+  });
+  longest.forEach((length, column) => {
+    const fit = Math.min(MAX_COLUMN_WIDTH, Math.ceil(length * INTER_WIDTH_FACTOR) + COLUMN_PADDING);
+    const sheetColumn = sheet.getColumn(column);
+    sheetColumn.width = Math.max(sheetColumn.width ?? 0, fit);
+  });
 }
 
 /** The Defects sheet's 1-based column for the embedded photo, after the twelve text columns before it. */
