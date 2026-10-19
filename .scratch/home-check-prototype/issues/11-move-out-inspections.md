@@ -6,13 +6,13 @@
 
 **Status:** ready-for-agent
 
-- [ ] Start Inspection offers Move-in or Move-out
-- [ ] Move-out picker lists Move-in Inspections on this phone (address and date)
-- [ ] Linked Move-out copies address, Area names and Items (catalog entry, short name, "Other item" name) — nothing else
-- [ ] Unlinked Move-out takes a typed address with the same validation as Move-in
-- [ ] Move-out records its linked Move-in (if any)
-- [ ] Export Inspection sheet includes linked Move-in address and date
-- [ ] Core tests cover copying (structure yes, Defects and Evidence no), unlinked start and the export field
+- [x] Start Inspection offers Move-in or Move-out
+- [x] Move-out picker lists Move-in Inspections on this phone (address and date)
+- [x] Linked Move-out copies address, Area names and Items (catalog entry, short name, "Other item" name) — nothing else
+- [x] Unlinked Move-out takes a typed address with the same validation as Move-in
+- [x] Move-out records its linked Move-in (if any)
+- [x] Export Inspection sheet includes linked Move-in address and date
+- [x] Core tests cover copying (structure yes, Defects and Evidence no), unlinked start and the export field
 
 ## Comments
 
