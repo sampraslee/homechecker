@@ -21,5 +21,5 @@
 - Times in the workbook are in Malaysia time (Asia/Kuala_Lumpur), whichever phone exports.
 - A "Linked notes" column holds the text of note Evidence linked to the Defect, so it isn't lost from the export.
 - The last-exported time is recorded when the zip is built, before the share menu opens; a cancelled share still counts.
-- Safari refuses the share menu after the zip takes a while to build; the screen then offers a "Share export" button for a fresh tap. Chrome on Android may not share `.zip` files at all and falls back to a download — check on the real phones (ticket 14).
+- Safari refuses the share menu after the zip takes a while to build; the screen then offers a "Share export" button for a fresh tap. Chrome on Android (checked on a Galaxy A02, Android 11, Chrome 155) says `canShare` yes for the zip, then refuses `share` with "NotAllowedError: Permission denied" even on a fresh tap, so a refusal while the tap is still recent, or on the second tap, downloads instead. Not confirmed whether Chrome refused the `.zip` type or the dev server's self-signed certificate; recheck once hosted (ticket 14).
 - ExcelJS and JSZip load only when exporting (own chunk, precached for offline use).

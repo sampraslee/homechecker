@@ -4,7 +4,7 @@ import type { Navigate } from "./App";
 import { BackBar } from "./BackBar";
 import { formatDateTime, inspectionStatusLabel, inspectionTypeLabel, lockedNotice, refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
-import { isNotAllowed, shareOrDownload, type ShareOutcome } from "./shareFile";
+import { shareOrDownload, TapTooOldError, type ShareOutcome } from "./shareFile";
 import { useAiChanges } from "./useAiChanges";
 
 export function InspectionScreen({ id, navigate }: { id: string; navigate: Navigate }) {
@@ -157,15 +157,16 @@ function ExportPanel({ inspectionId, onExported }: { inspectionId: string; onExp
   const [exporting, setExporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  /** A built zip the share menu refused to open for, as the tap was too long ago; a new tap shares it. */
+  /** A built zip the share menu refused to open for, as the tap was too long ago; a new tap shares or downloads it. */
   const [ready, setReady] = useState<File | null>(null);
 
-  async function share(file: File) {
+  async function share(file: File, secondTap: boolean) {
     try {
-      setMessage(exportOutcomeMessage[await shareOrDownload(file)]);
+      const outcome = await shareOrDownload(file, { secondTap });
+      setMessage(exportOutcomeMessage[outcome]);
       setReady(null);
     } catch (shareError) {
-      if (!isNotAllowed(shareError)) throw shareError;
+      if (!(shareError instanceof TapTooOldError)) throw shareError;
       setReady(file);
     }
   }
@@ -183,7 +184,7 @@ function ExportPanel({ inspectionId, onExported }: { inspectionId: string; onExp
         return;
       }
       onExported(result.inspection);
-      await share(new File([result.zip as Uint8Array<ArrayBuffer>], result.fileName, { type: "application/zip" }));
+      await share(new File([result.zip as Uint8Array<ArrayBuffer>], result.fileName, { type: "application/zip" }), false);
     } finally {
       setExporting(false);
     }
@@ -194,7 +195,7 @@ function ExportPanel({ inspectionId, onExported }: { inspectionId: string; onExp
       {ready ? (
         <>
           <p className="muted">The export is ready. Tap to open the share menu.</p>
-          <button type="button" className="primary" onClick={() => share(ready)}>
+          <button type="button" className="primary" onClick={() => share(ready, true)}>
             Share export
           </button>
         </>

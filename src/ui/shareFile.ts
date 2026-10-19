@@ -1,19 +1,33 @@
 /** How handing a file over ended: the share menu took it, the Inspector closed the menu, or it was downloaded. */
 export type ShareOutcome = "shared" | "cancelled" | "downloaded";
 
+/** Thrown when the share menu refused only because the tap that asked was too long ago, so a new tap may work. */
+export class TapTooOldError extends Error {
+  constructor() {
+    super("The share menu needs a fresh tap");
+    this.name = "TapTooOldError";
+  }
+}
+
 /**
- * Opens the phone's share menu with the file, or downloads it where files can't be shared.
- * Rejects with NotAllowedError when the tap that asked is too long ago to open the menu (Safari), so it can be asked again.
+ * Opens the phone's share menu with the file, or downloads it where it can't be shared.
+ *
+ * Browsers refuse with NotAllowedError both when the tap is too long ago (Safari, after the zip took a while to
+ * build) and when they won't share the file at all (Chrome on Android shares only some file types, not .zip, yet
+ * `canShare` says yes). Only the first can be fixed by tapping again: when the tap was still recent, or this is
+ * already a second tap (`secondTap`), it downloads instead. Otherwise rejects with TapTooOldError.
  */
-export async function shareOrDownload(file: File): Promise<ShareOutcome> {
+export async function shareOrDownload(file: File, { secondTap }: { secondTap: boolean }): Promise<ShareOutcome> {
   if (navigator.canShare?.({ files: [file] })) {
+    // Read before sharing, which uses the tap up.
+    const tapStillRecent = navigator.userActivation?.isActive ?? false;
     try {
       await navigator.share({ files: [file], title: file.name });
       return "shared";
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return "cancelled";
-      if (isNotAllowed(error)) throw error;
-      // Any other failure: fall back to a download.
+      if (isNotAllowed(error) && !tapStillRecent && !secondTap) throw new TapTooOldError();
+      // Refused for good, or failed some other way: download instead.
     }
   }
   download(file);
@@ -32,6 +46,6 @@ function download(file: File) {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-export function isNotAllowed(error: unknown): boolean {
+function isNotAllowed(error: unknown): boolean {
   return error instanceof DOMException && error.name === "NotAllowedError";
 }
