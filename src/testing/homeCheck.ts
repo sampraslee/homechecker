@@ -1,7 +1,7 @@
 import { IDBFactory, IDBKeyRange } from "fake-indexeddb";
 import { createDexieStorage } from "../adapters/dexieStorage";
 import { createHomeCheck, type HomeCheck } from "../core/homeCheck";
-import type { Environment, ImageProcessor } from "../core/ports";
+import type { AiAnswer, AiClient, AiRequest, Environment, ImageProcessor } from "../core/ports";
 import type { ReferenceData } from "../core/referenceData";
 import { testReferenceData } from "./referenceData";
 
@@ -32,11 +32,19 @@ export function createFakeEnvironment(start = new Date("2026-01-05T09:00:00.000Z
   };
 }
 
-export type StubImageProcessor = ImageProcessor & { failNext(): void };
+export type StubImageProcessor = ImageProcessor & {
+  failNext(): void;
+  /** How many times a photo's smaller versions were made, successfully or not. */
+  readonly photosProcessed: number;
+  /** Holds the next photo's smaller versions back until the returned function is called. */
+  holdNext(): () => void;
+};
 
 /** Labels each version with the original's text, e.g. "evidence copy of <original>". */
 export function createStubImageProcessor(): StubImageProcessor {
   let failNext = false;
+  let photosProcessed = 0;
+  let held: Promise<void> | null = null;
   function failIfAsked() {
     if (failNext) {
       failNext = false;
@@ -44,8 +52,15 @@ export function createStubImageProcessor(): StubImageProcessor {
     }
   }
   return {
+    get photosProcessed() {
+      return photosProcessed;
+    },
     async processPhoto(original) {
+      photosProcessed++;
       failIfAsked();
+      const hold = held;
+      held = null;
+      if (hold) await hold;
       const text = await original.text();
       return {
         evidenceCopy: new Blob([`evidence copy of ${text}`], { type: "image/jpeg" }),
@@ -59,6 +74,70 @@ export function createStubImageProcessor(): StubImageProcessor {
     failNext() {
       failNext = true;
     },
+    holdNext() {
+      let release!: () => void;
+      held = new Promise((resolve) => (release = resolve));
+      return release;
+    },
+  };
+}
+
+export type FakeAiClient = AiClient & {
+  /** Every request made, in order. */
+  requests: AiRequest[];
+  /** The most requests that were ever in flight together. */
+  readonly mostAtOnce: number;
+  /** What every later request answers, until changed. */
+  answer(answers: AiAnswer[]): void;
+  /** Makes the next `times` requests fail, as on a dropped connection. */
+  failNext(times?: number): void;
+  /** Holds the next request's answer back until the returned function is called. */
+  holdNext(): () => void;
+};
+
+/** Answers every request with one High-confidence `SF-SCRATCH` until told otherwise. */
+export function createFakeAiClient(): FakeAiClient {
+  let answers: AiAnswer[] = [{ code: "SF-SCRATCH", confidence: "High" }];
+  let failuresLeft = 0;
+  const requests: AiRequest[] = [];
+  let held: Promise<void> | null = null;
+  let inFlight = 0;
+  let mostAtOnce = 0;
+  return {
+    requests,
+    get mostAtOnce() {
+      return mostAtOnce;
+    },
+    async suggestDefectTypes(request) {
+      requests.push(request);
+      inFlight++;
+      mostAtOnce = Math.max(mostAtOnce, inFlight);
+      try {
+        // Answer on a later turn, as a real request would, so overlapping requests would show.
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        const hold = held;
+        held = null;
+        if (hold) await hold;
+        if (failuresLeft > 0) {
+          failuresLeft--;
+          throw new Error("network request failed");
+        }
+        return answers;
+      } finally {
+        inFlight--;
+      }
+    },
+    answer(next) {
+      answers = next;
+    },
+    failNext(times = 1) {
+      failuresLeft = times;
+    },
+    holdNext() {
+      let release!: () => void;
+      held = new Promise((resolve) => (release = resolve));
+      return release;
+    },
   };
 }
 
@@ -66,6 +145,7 @@ export function createStubImageProcessor(): StubImageProcessor {
 export function createTestHomeCheck(referenceData: ReferenceData = testReferenceData) {
   const environment = createFakeEnvironment();
   const imageProcessor = createStubImageProcessor();
+  const aiClient = createFakeAiClient();
   const indexedDB = new IDBFactory();
   /** A fresh core on a new connection to the same database, as after closing and reopening the app. */
   const reopen = () =>
@@ -74,8 +154,9 @@ export function createTestHomeCheck(referenceData: ReferenceData = testReference
       environment,
       referenceData,
       imageProcessor,
+      aiClient,
     });
-  return { homeCheck: reopen(), environment, imageProcessor, reopen };
+  return { homeCheck: reopen(), environment, imageProcessor, aiClient, reopen };
 }
 
 /** A Home Check core with one Draft Move-in Inspection already started. */

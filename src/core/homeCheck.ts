@@ -1,6 +1,10 @@
 import { formatAddress, validateAddress } from "./address";
 import { newId } from "./ids";
 import type {
+  AiConfidence,
+  AiQueueEntry,
+  AiSuggestion,
+  AiSuggestionView,
   Area,
   AreaSource,
   AreaView,
@@ -22,15 +26,24 @@ import type {
   UnitAddressInput,
   VideoEvidence,
 } from "./model";
-import { VIDEO_TIME_LIMIT_SECONDS } from "./model";
-import type { Environment, ImageProcessor, Storage } from "./ports";
-import { checkReferenceData, findCatalogItem, findDefectType, findStandardArea, type ReferenceData } from "./referenceData";
+import { AI_CONFIDENCES, MAX_AI_SUGGESTIONS_PER_PHOTO, VIDEO_TIME_LIMIT_SECONDS } from "./model";
+import type { AiAnswer, AiClient, Environment, ImageProcessor, Storage } from "./ports";
+import {
+  checkReferenceData,
+  defectTypeCodes,
+  findCatalogItem,
+  findCategory,
+  findDefectType,
+  findStandardArea,
+  type ReferenceData,
+} from "./referenceData";
 
 export type HomeCheckDeps = {
   storage: Storage;
   environment: Environment;
   referenceData: ReferenceData;
   imageProcessor: ImageProcessor;
+  aiClient: AiClient;
 };
 
 const inspectorNameRequired = { ok: false, reason: "inspector-name-required" } as const;
@@ -51,11 +64,23 @@ const evidenceNotFound = { ok: false, reason: "evidence-not-found" } as const;
 /** Recording stops itself at the limit, but the stop lands a moment late; up to this much over still counts as the limit. */
 const VIDEO_STOP_ALLOWANCE_SECONDS = 1;
 
-export function createHomeCheck({ storage, environment, referenceData, imageProcessor }: HomeCheckDeps) {
+export function createHomeCheck({ storage, environment, referenceData, imageProcessor, aiClient }: HomeCheckDeps) {
   checkReferenceData(referenceData);
+  const allowedCodes = defectTypeCodes(referenceData);
+
+  /** Smaller versions being made right now, by photo or video, so capture and the AI queue never make them twice at once. */
+  const smallerVersionsUnderWay = new Map<string, Promise<MediaEvidence>>();
 
   /** Adds a photo's Evidence copy and thumbnail, or a video's thumbnail; on failure leaves it unprocessed with its original intact. */
-  async function makeSmallerVersions<E extends MediaEvidence>(evidence: E, original: Blob): Promise<E> {
+  function makeSmallerVersions<E extends MediaEvidence>(evidence: E, original: Blob): Promise<E> {
+    const underWay = smallerVersionsUnderWay.get(evidence.id);
+    if (underWay) return underWay as Promise<E>;
+    const making = makeSmallerVersionsNow(evidence, original).finally(() => smallerVersionsUnderWay.delete(evidence.id));
+    smallerVersionsUnderWay.set(evidence.id, making);
+    return making;
+  }
+
+  async function makeSmallerVersionsNow<E extends MediaEvidence>(evidence: E, original: Blob): Promise<E> {
     let versions;
     try {
       versions =
@@ -109,6 +134,109 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     const ofItem = new Set((await storage.listEvidence(itemId)).map((evidence) => evidence.id));
     const unique = [...new Set(evidenceIds)];
     return unique.every((id) => ofItem.has(id)) ? unique : null;
+  }
+
+  const aiChangeListeners = new Set<() => void>();
+  function aiChanged() {
+    aiChangeListeners.forEach((listener) => listener());
+  }
+
+  /** Set while the queue runs by itself: on app open, on coming online and after each capture. */
+  let aiQueueStarted = false;
+  let aiQueueRun: Promise<void> | null = null;
+  let aiQueueRunAgain = false;
+
+  /** One run at a time, so photos go one at a time; a trigger during a run makes it go round again. */
+  function processAiQueue(): Promise<void> {
+    if (aiQueueRun) {
+      aiQueueRunAgain = true;
+      return aiQueueRun;
+    }
+    aiQueueRun = (async () => {
+      try {
+        do {
+          aiQueueRunAgain = false;
+          for (const entry of await storage.listAiQueue()) {
+            if (!environment.isOnline()) return;
+            await sendToAi(entry);
+          }
+        } while (aiQueueRunAgain);
+      } finally {
+        aiQueueRun = null;
+      }
+    })();
+    return aiQueueRun;
+  }
+
+  function toAiSuggestionView(suggestion: AiSuggestion): AiSuggestionView {
+    const dictionaryEntry = findDefectType(referenceData, suggestion.defectTypeCode);
+    return {
+      ...suggestion,
+      defectTypeName: dictionaryEntry?.defectType.name ?? suggestion.defectTypeCode,
+      categoryName: dictionaryEntry?.category.name ?? "Not in the bundled Defect Dictionary",
+    };
+  }
+
+  /** Sends one queued photo to the AI. A failure leaves it queued with one more attempt counted. */
+  async function sendToAi(entry: AiQueueEntry): Promise<void> {
+    let photo = await storage.getEvidence(entry.evidenceId);
+    if (photo?.kind !== "photo") {
+      // Nothing to send; clear the entry so it isn't counted as waiting.
+      await storage.finishAiRequest(entry.evidenceId, []);
+      return;
+    }
+    if (!photo.processed) {
+      // Never send the full-size original: make the Evidence copy first, or wait for the next trigger.
+      const original = await storage.getMedia(photo.id, "original");
+      if (original) photo = await makeSmallerVersions(photo, original);
+      if (!photo.processed) return;
+    }
+    const item = await storage.getItem(photo.itemId);
+    const area = item && (await storage.getArea(item.areaId));
+    const evidenceCopy = await storage.getMedia(photo.id, "evidenceCopy");
+    if (!area || !evidenceCopy) return;
+    const relevant = (item.catalogItemId && findCatalogItem(referenceData, item.catalogItemId)?.relevantCategories) || [];
+    let answers: AiAnswer[];
+    try {
+      answers = await aiClient.suggestDefectTypes({
+        evidenceCopy,
+        areaName: area.name,
+        itemName: itemDisplayName(item),
+        // checkReferenceData guarantees every relevant Category is in the Dictionary.
+        relevantCategories: relevant.map((code) => ({ code, name: findCategory(referenceData, code)!.name })),
+        allowedCodes,
+      });
+    } catch {
+      await storage.recordFailedAiAttempt(entry.evidenceId, environment.now().toISOString());
+      return;
+    }
+    const suggestedAt = environment.now().toISOString();
+    const { id: evidenceId, inspectionId, itemId } = photo;
+    const suggestions: AiSuggestion[] = validAnswers(answers).map((answer, index) => ({
+      id: newId(),
+      inspectionId,
+      itemId,
+      evidenceId,
+      defectTypeCode: answer.code,
+      dictionaryVersion: referenceData.defectDictionary.version,
+      confidence: answer.confidence,
+      outcome: "unreviewed",
+      suggestedAt,
+      rank: index + 1,
+    }));
+    await storage.finishAiRequest(evidenceId, suggestions);
+    aiChanged();
+  }
+
+  /** Keeps only Dictionary codes with a known confidence, each once, at most three. */
+  function validAnswers(answers: AiAnswer[]): ValidAiAnswer[] {
+    const valid: ValidAiAnswer[] = [];
+    for (const { code, confidence } of answers) {
+      if (!allowedCodes.includes(code) || !AI_CONFIDENCES.includes(confidence as AiConfidence)) continue;
+      if (valid.some((other) => other.code === code)) continue;
+      valid.push({ code, confidence: confidence as AiConfidence });
+    }
+    return valid.slice(0, MAX_AI_SUGGESTIONS_PER_PHOTO);
   }
 
   return {
@@ -318,8 +446,17 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       if (!item) return itemNotFound;
       if (await isLocked(item.inspectionId)) return inspectionCompleted;
       const evidence: PhotoEvidence = { ...(await newEvidence(item)), kind: "photo", processed: false };
-      await storage.putEvidence(evidence, { original });
-      return { ok: true as const, evidence: await makeSmallerVersions(evidence, original) };
+      const queued: AiQueueEntry = {
+        evidenceId: evidence.id,
+        inspectionId: evidence.inspectionId,
+        queuedAt: evidence.capturedAt,
+        attempts: 0,
+      };
+      await storage.putEvidence(evidence, { original }, queued);
+      aiChanged();
+      const photo = await makeSmallerVersions(evidence, original);
+      if (aiQueueStarted) void processAiQueue();
+      return { ok: true as const, evidence: photo };
     },
 
     /** Keeps the original exactly as recorded (never compressed), saved before its thumbnail is made. */
@@ -387,6 +524,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
         }
       }
       await storage.deleteEvidence(evidenceId);
+      if (evidence.kind === "photo") aiChanged();
       return { ok: true as const };
     },
 
@@ -474,6 +612,48 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async listDefects(itemId: string): Promise<DefectView[]> {
       return (await storage.listDefects(itemId)).map(toDefectView);
     },
+
+    /** Sends queued photos to the AI one at a time, while online. Works on Completed Inspections too. */
+    processAiQueue,
+
+    /** Processes the AI queue now, then whenever the phone comes online and after each photo is taken. Returns a stop function. */
+    startAiQueue() {
+      aiQueueStarted = true;
+      void processAiQueue();
+      const unsubscribe = environment.onOnlineChange((online) => {
+        if (online) void processAiQueue();
+      });
+      return () => {
+        aiQueueStarted = false;
+        unsubscribe();
+      };
+    },
+
+    /** Calls `listener` when a photo joins or leaves the AI queue or AI Suggestions arrive; returns an unsubscribe function. */
+    onAiChange(listener: () => void) {
+      aiChangeListeners.add(listener);
+      return () => {
+        aiChangeListeners.delete(listener);
+      };
+    },
+
+    /** Photos across every Inspection still waiting for AI, oldest first, with their failed attempts. */
+    async listWaitingForAi() {
+      return storage.listAiQueue();
+    },
+
+    async countWaitingForAi() {
+      return (await storage.listAiQueue()).length;
+    },
+
+    /** The Item's AI Suggestions, photo by photo in capture order, each photo's in the AI's ranking. */
+    async listAiSuggestions(itemId: string): Promise<AiSuggestionView[]> {
+      const suggestions = await storage.listAiSuggestions(itemId);
+      const photoOrder = new Map((await storage.listEvidence(itemId)).map((evidence) => [evidence.id, evidence.position]));
+      return suggestions
+        .sort((a, b) => (photoOrder.get(a.evidenceId) ?? 0) - (photoOrder.get(b.evidenceId) ?? 0) || a.rank - b.rank)
+        .map(toAiSuggestionView);
+    },
   };
 }
 
@@ -488,8 +668,15 @@ function nextPosition(siblings: { position: number }[]): number {
   return Math.max(0, ...siblings.map((sibling) => sibling.position)) + 1;
 }
 
+/** An AI answer whose code is in the bundled Dictionary and whose confidence is known. */
+type ValidAiAnswer = { code: string; confidence: AiConfidence };
+
 function toItemView(item: Item, defectCount: number): ItemView {
-  return { ...item, displayName: item.shortName ? `${item.name} – ${item.shortName}` : item.name, defectCount };
+  return { ...item, displayName: itemDisplayName(item), defectCount };
+}
+
+function itemDisplayName(item: Item): string {
+  return item.shortName ? `${item.name} – ${item.shortName}` : item.name;
 }
 
 /** `base`, or `base 2`, `base 3`… whichever is first not already taken. */

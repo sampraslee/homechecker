@@ -43,6 +43,15 @@ export function findCatalogItem({ itemCatalog }: ReferenceData, id: string): Cat
   return itemCatalog.items.find((item) => item.id === id);
 }
 
+export function findCategory({ defectDictionary }: ReferenceData, code: string): DefectCategory | undefined {
+  return defectDictionary.categories.find((category) => category.code === code);
+}
+
+/** Every Defect Type code in the Dictionary, in Dictionary order. */
+export function defectTypeCodes({ defectDictionary }: ReferenceData): string[] {
+  return defectDictionary.categories.flatMap((category) => category.defectTypes.map((defectType) => defectType.code));
+}
+
 /** The Defect Type with this code, and the Category it belongs to. */
 export function findDefectType(
   { defectDictionary }: ReferenceData,

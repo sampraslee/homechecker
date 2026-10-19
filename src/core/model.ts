@@ -176,3 +176,43 @@ export type DefectChanges = { note?: string; evidenceIds?: string[] };
 
 /** Defect Categories for an Item: its relevant ones first, then the rest. */
 export type DefectChoices = { shownFirst: DefectCategory[]; others: DefectCategory[] };
+
+export const AI_CONFIDENCES = ["High", "Medium", "Low"] as const;
+
+export type AiConfidence = (typeof AI_CONFIDENCES)[number];
+
+/** At most this many AI Suggestions are kept per photo. */
+export const MAX_AI_SUGGESTIONS_PER_PHOTO = 3;
+
+/** A photo waiting to be sent to the AI. Every photo is queued exactly once, at capture. */
+export type AiQueueEntry = {
+  evidenceId: string;
+  inspectionId: string;
+  queuedAt: string;
+  /** Failed requests so far; the photo stays queued and is retried on the next trigger. */
+  attempts: number;
+  lastAttemptAt?: string;
+};
+
+/** Where review of an AI Suggestion stands. Reviewing (confirm, correct, reject) will add the other outcomes. */
+export type AiSuggestionOutcome = "unreviewed";
+
+/** A Defect Type the AI proposed for a photo. Kept apart from Defects and never overwritten by a later AI run. */
+export type AiSuggestion = {
+  id: string;
+  inspectionId: string;
+  itemId: string;
+  /** The photo it was suggested for. */
+  evidenceId: string;
+  defectTypeCode: string;
+  dictionaryVersion: string;
+  confidence: AiConfidence;
+  outcome: AiSuggestionOutcome;
+  /** When the AI answered. */
+  suggestedAt: string;
+  /** Order among the photo's suggestions, as the AI ranked them. */
+  rank: number;
+};
+
+/** An AI Suggestion with the names of its Defect Type and Category from the bundled Dictionary. */
+export type AiSuggestionView = AiSuggestion & { defectTypeName: string; categoryName: string };

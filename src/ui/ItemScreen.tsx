@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { isMedia, isNote, type DefectView, type Evidence, type ItemView, type MediaEvidence, type NoteEvidence } from "../core";
+import { isMedia, isNote, type AiSuggestionView, type DefectView, type Evidence, type ItemView, type MediaEvidence, type NoteEvidence } from "../core";
 import type { Navigate } from "./App";
 import { BackBar } from "./BackBar";
 import { DefectEditor, DefectTypePicker, type PickedDefectType } from "./DefectPanels";
 import { lockedNotice, refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 import { MediaImage, MediaThumbnail, useMediaUrl } from "./MediaImage";
+import { useAiChanges } from "./useAiChanges";
 import { useLocked } from "./useLocked";
 import { VideoRecorder } from "./VideoRecorder";
 
@@ -27,6 +28,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   const [item, setItem] = useState<ItemView | null | undefined>(undefined);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [defects, setDefects] = useState<DefectView[]>([]);
+  const [aiSuggestions, setAiSuggestions] = useState<AiSuggestionView[]>([]);
   const [defectPanel, setDefectPanel] = useState<DefectPanel | null>(null);
   const [notePanel, setNotePanel] = useState<NotePanel | null>(null);
   const [recording, setRecording] = useState(false);
@@ -43,11 +45,11 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     setItem((await homeCheck.getItem(id)) ?? null);
     setEvidence(await homeCheck.listEvidence(id));
     setDefects(await homeCheck.listDefects(id));
+    setAiSuggestions(await homeCheck.listAiSuggestions(id));
   }, [homeCheck, id]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Also reloads when AI Suggestions arrive while the Item is open.
+  useAiChanges(load);
 
   async function capture(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
@@ -257,6 +259,34 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           onSaved={closeDefectPanel}
           onCancel={() => setDefectPanel(null)}
         />
+      )}
+
+      {(aiSuggestions.length > 0 || evidence.some((e) => e.kind === "photo")) && (
+        <>
+          <h2>AI Suggestions{aiSuggestions.length > 0 && ` (${aiSuggestions.length})`}</h2>
+          {aiSuggestions.length === 0 && <p className="muted">None yet. Photos are sent to the AI whenever the phone is online.</p>}
+          <ul className="cards">
+            {aiSuggestions.map((suggestion) => (
+              <li key={suggestion.id} className="card ai-suggestion">
+                <span className="thumbnail">
+                  <MediaImage evidenceId={suggestion.evidenceId} version="thumbnail" alt="Photo" />
+                </span>
+                <span>
+                  <span className="card-row">
+                    <strong>{suggestion.defectTypeName}</strong>
+                    <span className="badge confidence">{suggestion.confidence}</span>
+                  </span>
+                  <span className="card-row">
+                    <span className="muted defect-meta">
+                      {suggestion.defectTypeCode} · {suggestion.categoryName}
+                    </span>
+                    <span className="badge unreviewed">Not reviewed</span>
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       {viewing && (

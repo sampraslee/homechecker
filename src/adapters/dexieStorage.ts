@@ -1,5 +1,5 @@
 import Dexie, { type DexieOptions, type EntityTable } from "dexie";
-import { isMedia, type Area, type Defect, type Evidence, type Inspection, type Item, type MediaVersion, type Settings } from "../core/model";
+import { isMedia, type AiQueueEntry, type AiSuggestion, type Area, type Defect, type Evidence, type Inspection, type Item, type MediaVersion, type Settings } from "../core/model";
 import type { Storage } from "../core/ports";
 
 type SettingsRow = Settings & { key: "settings" };
@@ -14,6 +14,8 @@ class HomeCheckDb extends Dexie {
   evidence!: EntityTable<Evidence, "id">;
   media!: Dexie.Table<MediaRow, [string, MediaVersion]>;
   defects!: EntityTable<Defect, "id">;
+  aiQueue!: EntityTable<AiQueueEntry, "evidenceId">;
+  aiSuggestions!: EntityTable<AiSuggestion, "id">;
 
   constructor(name: string, options?: DexieOptions) {
     super(name, options);
@@ -31,6 +33,10 @@ class HomeCheckDb extends Dexie {
     });
     this.version(4).stores({
       defects: "id, itemId",
+    });
+    this.version(5).stores({
+      aiQueue: "evidenceId, queuedAt",
+      aiSuggestions: "id, itemId, evidenceId",
     });
   }
 }
@@ -80,12 +86,13 @@ export function createDexieStorage(name = "home-check", options?: DexieOptions):
     async deleteItem(id) {
       await db.items.delete(id);
     },
-    async putEvidence(evidence, media) {
-      await db.transaction("rw", db.evidence, db.media, async () => {
+    async putEvidence(evidence, media, aiQueueEntry) {
+      await db.transaction("rw", db.evidence, db.media, db.aiQueue, async () => {
         await db.evidence.put(evidence);
         for (const [version, blob] of Object.entries(media) as [MediaVersion, Blob][]) {
           await db.media.put({ evidenceId: evidence.id, version, blob });
         }
+        if (aiQueueEntry) await db.aiQueue.put(aiQueueEntry);
       });
     },
     async getEvidence(id) {
@@ -102,8 +109,10 @@ export function createDexieStorage(name = "home-check", options?: DexieOptions):
       return (await db.media.get([evidenceId, version]))?.blob;
     },
     async deleteEvidence(id) {
-      await db.transaction("rw", db.evidence, db.media, async () => {
+      await db.transaction("rw", [db.evidence, db.media, db.aiQueue, db.aiSuggestions], async () => {
         await db.media.where({ evidenceId: id }).delete();
+        await db.aiQueue.delete(id);
+        await db.aiSuggestions.where({ evidenceId: id }).delete();
         await db.evidence.delete(id);
       });
     },
@@ -118,6 +127,25 @@ export function createDexieStorage(name = "home-check", options?: DexieOptions):
     },
     async deleteDefect(id) {
       await db.defects.delete(id);
+    },
+    async listAiQueue() {
+      return db.aiQueue.orderBy("queuedAt").toArray();
+    },
+    async recordFailedAiAttempt(evidenceId, attemptedAt) {
+      await db.aiQueue.where({ evidenceId }).modify((entry) => {
+        entry.attempts += 1;
+        entry.lastAttemptAt = attemptedAt;
+      });
+    },
+    async finishAiRequest(evidenceId, suggestions) {
+      await db.transaction("rw", db.aiQueue, db.aiSuggestions, async () => {
+        if (!(await db.aiQueue.get(evidenceId))) return;
+        await db.aiSuggestions.bulkAdd(suggestions);
+        await db.aiQueue.delete(evidenceId);
+      });
+    },
+    async listAiSuggestions(itemId) {
+      return db.aiSuggestions.where({ itemId }).toArray();
     },
   };
 }
