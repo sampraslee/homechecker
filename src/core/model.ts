@@ -41,6 +41,11 @@ export type AddressErrors = Partial<Record<AddressField, string>>;
 
 export type InspectionType = "move-in" | "move-out";
 
+export const inspectionTypeLabel: Record<InspectionType, string> = {
+  "move-in": "Move-in",
+  "move-out": "Move-out",
+};
+
 export type InspectionStatus = "draft" | "completed";
 
 export type Inspection = {
@@ -52,6 +57,8 @@ export type Inspection = {
   startedAt: string;
   /** Set when the Inspection is Completed. */
   completedAt?: string;
+  /** When the Inspection was last exported, Draft or Completed; unset if never. */
+  lastExportedAt?: string;
 };
 
 export type Settings = {

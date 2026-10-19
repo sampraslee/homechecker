@@ -4,6 +4,7 @@ import type { Navigate } from "./App";
 import { BackBar } from "./BackBar";
 import { formatDateTime, inspectionStatusLabel, inspectionTypeLabel, lockedNotice, refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
+import { isNotAllowed, shareOrDownload, type ShareOutcome } from "./shareFile";
 import { useAiChanges } from "./useAiChanges";
 
 export function InspectionScreen({ id, navigate }: { id: string; navigate: Navigate }) {
@@ -55,6 +56,8 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
                 <dd>{formatDateTime(inspection.completedAt)}</dd>
               </>
             )}
+            <dt>Last exported</dt>
+            <dd>{inspection.lastExportedAt ? formatDateTime(inspection.lastExportedAt) : "Never"}</dd>
           </dl>
           {locked && <p className="notice">{lockedNotice}</p>}
 
@@ -134,9 +137,75 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
                 Complete Inspection
               </button>
             ))}
+
+          <ExportPanel inspectionId={id} onExported={setInspection} />
         </>
       )}
     </main>
+  );
+}
+
+const exportOutcomeMessage: Record<ShareOutcome, string> = {
+  shared: "Export shared.",
+  cancelled: "Export ready; sharing was cancelled.",
+  downloaded: "Export downloaded.",
+};
+
+/** Builds the zip and hands it to the share menu. Works on Draft and Completed Inspections. */
+function ExportPanel({ inspectionId, onExported }: { inspectionId: string; onExported: (inspection: Inspection) => void }) {
+  const homeCheck = useHomeCheck();
+  const [exporting, setExporting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  /** A built zip the share menu refused to open for, as the tap was too long ago; a new tap shares it. */
+  const [ready, setReady] = useState<File | null>(null);
+
+  async function share(file: File) {
+    try {
+      setMessage(exportOutcomeMessage[await shareOrDownload(file)]);
+      setReady(null);
+    } catch (shareError) {
+      if (!isNotAllowed(shareError)) throw shareError;
+      setReady(file);
+    }
+  }
+
+  async function exportNow() {
+    setExporting(true);
+    setMessage(null);
+    setError(null);
+    setReady(null);
+    // Anything thrown surfaces in the ErrorNotice, as on every screen.
+    try {
+      const result = await homeCheck.exportInspection(inspectionId);
+      if (!result.ok) {
+        setError(refusalMessage[result.reason]);
+        return;
+      }
+      onExported(result.inspection);
+      await share(new File([result.zip as Uint8Array<ArrayBuffer>], result.fileName, { type: "application/zip" }));
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  return (
+    <section className="spaced">
+      {ready ? (
+        <>
+          <p className="muted">The export is ready. Tap to open the share menu.</p>
+          <button type="button" className="primary" onClick={() => share(ready)}>
+            Share export
+          </button>
+        </>
+      ) : (
+        <button type="button" className="secondary" onClick={exportNow} disabled={exporting}>
+          {exporting ? "Exporting…" : "Export"}
+        </button>
+      )}
+      {message && <p className="muted">{message}</p>}
+      {error && <p className="error">{error}</p>}
+    </section>
   );
 }
 

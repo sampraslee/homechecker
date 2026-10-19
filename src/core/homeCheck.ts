@@ -1,4 +1,5 @@
 import { formatAddress, validateAddress } from "./address";
+import { buildExportZip, exportFileName } from "./export";
 import { newId } from "./ids";
 import type {
   AiConfidence,
@@ -357,6 +358,37 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       const completed: Inspection = { ...inspection, status: "completed", completedAt: environment.now().toISOString() };
       await storage.putInspection(completed);
       return { ok: true as const, inspection: completed };
+    },
+
+    /** The Inspection as a zip of `inspection.xlsx` and its media, Draft or Completed. Records when it was exported. */
+    async exportInspection(id: string) {
+      const inspection = await storage.getInspection(id);
+      if (!inspection) return inspectionNotFound;
+      const areas = await Promise.all(
+        (await storage.listAreas(id)).map(async (area) => ({
+          area,
+          items: await Promise.all(
+            (await storage.listItems(area.id)).map(async (item) => ({
+              item,
+              displayName: itemDisplayName(item),
+              evidence: await storage.listEvidence(item.id),
+              defects: (await storage.listDefects(item.id)).map(toDefectView),
+            })),
+          ),
+        })),
+      );
+      const zip = await buildExportZip({
+        inspection,
+        dictionaryVersion: referenceData.defectDictionary.version,
+        areas,
+        getMedia: (evidenceId, version) => storage.getMedia(evidenceId, version),
+      });
+      // Read again so a change made while the zip was built (completing, say) isn't overwritten. Not a change
+      // to the record, so a Completed Inspection takes it too.
+      const latest = (await storage.getInspection(id)) ?? inspection;
+      const exported: Inspection = { ...latest, lastExportedAt: environment.now().toISOString() };
+      await storage.putInspection(exported);
+      return { ok: true as const, zip, fileName: exportFileName(exported), inspection: exported };
     },
 
     async listInspections(): Promise<InspectionSummary[]> {

@@ -1,9 +1,6 @@
-import { VIDEO_TIME_LIMIT_SECONDS, type AiSuggestionView, type InspectionStatus, type InspectionType, type RefusalReason } from "../core";
+import { VIDEO_TIME_LIMIT_SECONDS, type AiSuggestionView, type InspectionStatus, type RefusalReason } from "../core";
 
-export const inspectionTypeLabel: Record<InspectionType, string> = {
-  "move-in": "Move-in",
-  "move-out": "Move-out",
-};
+export { inspectionTypeLabel } from "../core";
 
 export const inspectionStatusLabel: Record<InspectionStatus, string> = {
   draft: "Draft",
