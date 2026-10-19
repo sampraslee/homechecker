@@ -597,3 +597,27 @@ button:disabled {
   background: var(--brand);
   color: #fff;
 }
+
+.suggestions {
+  list-style: none;
+  padding: 0;
+  margin: -0.5rem 0 0;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.suggestions li + li {
+  border-top: 1px solid var(--border);
+}
+
+.suggestions button {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}

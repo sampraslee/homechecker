@@ -52,3 +52,38 @@ export function formatAddress(address: UnitAddress): string {
     .filter(Boolean)
     .join(", ");
 }
+
+/**
+ * The earlier addresses, newest first, whose unit number, building, street or postcode has a word starting with what's
+ * typed. An address entered more than once, however spelt in case or spacing, appears once, as most recently entered.
+ */
+export function matchingAddresses(addresses: UnitAddress[], typed: string): UnitAddress[] {
+  const wanted = normalise(typed);
+  if (!wanted) return [];
+  const seen = new Set<string>();
+  return addresses.filter((address) => {
+    const matches = SUGGESTING_ADDRESS_FIELDS.some((field) => {
+      const words = normalise(address[field] ?? "");
+      return words.startsWith(wanted) || words.includes(` ${wanted}`);
+    });
+    const key = sameUnitKey(address);
+    if (!matches || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** The fields earlier addresses are matched on as the Inspector types. */
+export const SUGGESTING_ADDRESS_FIELDS = ["unitNumber", "buildingName", "street", "postcode"] as const satisfies readonly (keyof UnitAddress)[];
+
+/** Equal for two addresses of the same Unit that differ only in case or spacing. */
+function sameUnitKey(address: UnitAddress): string {
+  return [address.unitNumber, address.buildingName, address.street, address.locality, address.postcode, address.city, address.state]
+    .map((field) => normalise(field ?? ""))
+    .join("\n");
+}
+
+/** Lowercase, with runs of spaces as one, so "Jalan  Ampang" and "jalan ampang" read alike. */
+function normalise(text: string): string {
+  return text.trim().replace(/\s+/g, " ").toLowerCase();
+}

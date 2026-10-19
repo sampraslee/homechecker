@@ -1,11 +1,14 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import {
+  formatAddress,
   MALAYSIAN_STATES,
+  SUGGESTING_ADDRESS_FIELDS,
   type AddressErrors,
   type AddressField,
   type HomeCheck,
   type InspectionSummary,
   type InspectionType,
+  type UnitAddress,
   type UnitAddressInput,
 } from "../core";
 import type { Navigate } from "./App";
@@ -32,6 +35,9 @@ const textFields: { field: Exclude<AddressField, "state">; label: string; inputM
   { field: "postcode", label: "Postcode", inputMode: "numeric" },
   { field: "city", label: "City" },
 ];
+
+/** Enough to pick from on a phone screen without pushing the rest of the form away. */
+const MAX_SHOWN_SUGGESTIONS = 4;
 
 type StartResult = Awaited<ReturnType<HomeCheck["startMoveIn"]> | ReturnType<HomeCheck["startMoveOut"]>>;
 
@@ -141,36 +147,80 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
   );
 }
 
-/** The Unit's address in Malaysian fields. `onSubmit` returns the errors to show. */
+/** The Unit's address in Malaysian fields, with earlier addresses on this phone suggested as it's typed. `onSubmit` returns the errors to show. */
 function AddressForm({ onSubmit }: { onSubmit: (address: UnitAddressInput) => Promise<AddressErrors> }) {
+  const homeCheck = useHomeCheck();
   const [address, setAddress] = useState(emptyAddress);
   const [errors, setErrors] = useState<AddressErrors>({});
+  /** The field being typed in, and the earlier addresses matching it. */
+  const [suggesting, setSuggesting] = useState<{ field: AddressField; suggestions: UnitAddress[] } | null>(null);
+  /** Counts lookups, so a slower one for an earlier keystroke can't replace a newer one's. */
+  const latestLookup = useRef(0);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setErrors(await onSubmit(address));
   }
 
-  const update = (field: AddressField) => (value: string) => setAddress((current) => ({ ...current, [field]: value }));
+  function setField(field: AddressField, value: string) {
+    setAddress((current) => ({ ...current, [field]: value }));
+  }
+
+  /** Sets the field, and looks up earlier addresses matching it. */
+  function typeInto(field: AddressField, value: string) {
+    setField(field, value);
+    const lookup = ++latestLookup.current;
+    if (!(SUGGESTING_ADDRESS_FIELDS as readonly AddressField[]).includes(field)) {
+      setSuggesting(null);
+      return;
+    }
+    homeCheck
+      .suggestAddresses(value)
+      // Suggestions only help; if they can't be looked up, the Inspector types the address in full.
+      .catch(() => [])
+      .then((suggestions) => {
+        if (lookup === latestLookup.current) setSuggesting({ field, suggestions });
+      });
+  }
+
+  function pick(suggestion: UnitAddress) {
+    latestLookup.current++;
+    setAddress({ ...emptyAddress, ...suggestion });
+    setErrors({});
+    setSuggesting(null);
+  }
 
   return (
     <form className="form" onSubmit={submit} noValidate>
       {textFields.map(({ field, label, inputMode }) => (
-        <label key={field}>
-          {label}
-          <input
-            value={address[field] ?? ""}
-            onChange={(event) => update(field)(event.target.value)}
-            inputMode={inputMode}
-            maxLength={field === "postcode" ? 5 : undefined}
-            aria-invalid={Boolean(errors[field])}
-          />
-          {errors[field] && <span className="error">{errors[field]}</span>}
-        </label>
+        <Fragment key={field}>
+          <label>
+            {label}
+            <input
+              value={address[field] ?? ""}
+              onChange={(event) => typeInto(field, event.target.value)}
+              inputMode={inputMode}
+              maxLength={field === "postcode" ? 5 : undefined}
+              aria-invalid={Boolean(errors[field])}
+            />
+            {errors[field] && <span className="error">{errors[field]}</span>}
+          </label>
+          {suggesting?.field === field && suggesting.suggestions.length > 0 && (
+            <ul className="suggestions" aria-label="Addresses entered before on this phone">
+              {suggesting.suggestions.slice(0, MAX_SHOWN_SUGGESTIONS).map((suggestion) => (
+                <li key={formatAddress(suggestion)}>
+                  <button type="button" onClick={() => pick(suggestion)}>
+                    {formatAddress(suggestion)}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Fragment>
       ))}
       <label>
         State
-        <select value={address.state} onChange={(event) => update("state")(event.target.value)} aria-invalid={Boolean(errors.state)}>
+        <select value={address.state} onChange={(event) => setField("state", event.target.value)} aria-invalid={Boolean(errors.state)}>
           <option value="">Choose…</option>
           {MALAYSIAN_STATES.map((state) => (
             <option key={state} value={state}>

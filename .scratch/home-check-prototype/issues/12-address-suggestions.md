@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] Core operation returns distinct previously entered addresses matching what's typed (unit number, building, street or postcode)
-- [ ] Picking a suggestion fills all address fields; the Inspector can still edit them
-- [ ] Works offline; only data on this phone is used
-- [ ] Core tests cover matching and de-duplication
+- [x] Core operation returns distinct previously entered addresses matching what's typed (unit number, building, street or postcode)
+- [x] Picking a suggestion fills all address fields; the Inspector can still edit them
+- [x] Works offline; only data on this phone is used
+- [x] Core tests cover matching and de-duplication

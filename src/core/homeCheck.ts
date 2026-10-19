@@ -1,4 +1,4 @@
-import { formatAddress, validateAddress } from "./address";
+import { formatAddress, matchingAddresses, validateAddress } from "./address";
 import { buildExportZip, exportFileName } from "./export";
 import { newId } from "./ids";
 import type {
@@ -443,6 +443,11 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       return summarise((await storage.listInspections()).filter((inspection) => inspection.type === "move-in"));
     },
 
+    /** Addresses entered in earlier Inspections on this phone that match what's typed, so the same Unit keeps one spelling. */
+    async suggestAddresses(typed: string): Promise<UnitAddress[]> {
+      return matchingAddresses(newestFirst(await storage.listInspections()).map((inspection) => inspection.address), typed);
+    },
+
     async listStandardAreas() {
       return referenceData.standardAreas.areas.map(({ id, name }) => ({ id, name }));
     },
@@ -842,9 +847,11 @@ export type RefusalReason = Extract<OperationResult, { ok: false }>["reason"];
 
 /** Summaries for the Inspection list and Move-in picker, sorted newest first. */
 function summarise(inspections: Inspection[]): InspectionSummary[] {
-  return inspections
-    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-    .map(({ id, type, status, startedAt, address }) => ({ id, type, status, addressLine: formatAddress(address), startedAt }));
+  return newestFirst(inspections).map(({ id, type, status, startedAt, address }) => ({ id, type, status, addressLine: formatAddress(address), startedAt }));
+}
+
+function newestFirst(inspections: Inspection[]): Inspection[] {
+  return inspections.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }
 
 function nextPosition(siblings: { position: number }[]): number {
