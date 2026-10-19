@@ -1,0 +1,355 @@
+import { describe, expect, test } from "vitest";
+import type { HomeCheck } from "./homeCheck";
+import type { AiAnswer } from "./ports";
+import { createTestHomeCheckWithItem, expectOk } from "../testing/homeCheck";
+
+/** A second Draft Move-in on the same phone, for another Unit. */
+async function anotherInspection(homeCheck: HomeCheck) {
+  const started = await homeCheck.startMoveIn({
+    unitNumber: "9",
+    street: "Jalan Kenari 3",
+    postcode: "47100",
+    city: "Puchong",
+    state: "Selangor",
+  });
+  return expectOk(started).inspection;
+}
+
+/** A Wardrobe with one photo, whose AI Suggestions are `answers`. */
+async function photoWithSuggestions(answers: AiAnswer[] = [{ code: "SF-SCRATCH", confidence: "High" }]) {
+  const setup = await createTestHomeCheckWithItem();
+  const { homeCheck, itemId, aiClient } = setup;
+  aiClient.answer(answers);
+  const photo = expectOk(await homeCheck.addPhoto(itemId, new Blob(["wardrobe door"], { type: "image/jpeg" }))).evidence;
+  await homeCheck.processAiQueue();
+  const suggestions = await homeCheck.listAiSuggestions(itemId);
+  return { ...setup, photoId: photo.id, suggestions };
+}
+
+describe("confirming an AI Suggestion", () => {
+  test("makes it a Defect on the Item, marked AI-suggested, with the photo as Evidence", async () => {
+    const { homeCheck, itemId, photoId, suggestions, environment } = await photoWithSuggestions();
+    environment.setNow(new Date("2026-01-05T09:10:00.000Z"));
+
+    const confirmed = await homeCheck.confirmAiSuggestion(suggestions[0].id);
+
+    expect(confirmed.ok).toBe(true);
+    expect(await homeCheck.listDefects(itemId)).toMatchObject([
+      {
+        defectTypeCode: "SF-SCRATCH",
+        dictionaryVersion: "test-dictionary-1",
+        source: "ai-suggested",
+        aiSuggestionId: suggestions[0].id,
+        evidenceIds: [photoId],
+      },
+    ]);
+    expect(await homeCheck.listAiSuggestions(itemId)).toMatchObject([
+      { outcome: "confirmed", reviewedAt: "2026-01-05T09:10:00.000Z" },
+    ]);
+  });
+});
+
+describe("confirming an AI Suggestion for a Defect Type the Item already has", () => {
+  test("links the photo to the existing Defect and adds no new one", async () => {
+    const { homeCheck, itemId, photoId, suggestions } = await photoWithSuggestions();
+    const note = expectOk(await homeCheck.addNote(itemId, "scratches by the handle")).evidence;
+    const existing = expectOk(
+      await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", note: "by the handle", evidenceIds: [note.id] }),
+    ).defect;
+
+    const confirmed = expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id));
+
+    expect(confirmed.defect.id).toBe(existing.id);
+    expect(await homeCheck.listDefects(itemId)).toEqual([
+      { ...existing, evidenceIds: [note.id, photoId] },
+    ]);
+    expect(await homeCheck.listAiSuggestions(itemId)).toMatchObject([{ outcome: "confirmed" }]);
+  });
+
+  test("leaves the Defect as it is when the photo is already linked", async () => {
+    const { homeCheck, itemId, photoId, suggestions } = await photoWithSuggestions();
+    const existing = expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [photoId] })).defect;
+
+    await homeCheck.confirmAiSuggestion(suggestions[0].id);
+
+    expect(await homeCheck.listDefects(itemId)).toEqual([existing]);
+  });
+});
+
+describe("rejecting an AI Suggestion", () => {
+  test("records it as rejected and adds no Defect", async () => {
+    const { homeCheck, itemId, suggestions, environment } = await photoWithSuggestions();
+    environment.setNow(new Date("2026-01-05T09:12:00.000Z"));
+
+    const rejected = await homeCheck.rejectAiSuggestion(suggestions[0].id);
+
+    expect(rejected.ok).toBe(true);
+    expect(await homeCheck.listDefects(itemId)).toEqual([]);
+    expect(await homeCheck.listAiSuggestions(itemId)).toMatchObject([
+      { outcome: "rejected", reviewedAt: "2026-01-05T09:12:00.000Z" },
+    ]);
+  });
+});
+
+describe("correcting an AI Suggestion", () => {
+  test("records the chosen Defect Type as an AI-suggested Defect, and the suggestion as corrected to it", async () => {
+    const { homeCheck, itemId, photoId, suggestions, environment } = await photoWithSuggestions();
+    environment.setNow(new Date("2026-01-05T09:11:00.000Z"));
+
+    const corrected = await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "CF-HINGE" });
+
+    expect(corrected.ok).toBe(true);
+    expect(await homeCheck.listDefects(itemId)).toMatchObject([
+      { defectTypeCode: "CF-HINGE", source: "ai-suggested", aiSuggestionId: suggestions[0].id, evidenceIds: [photoId] },
+    ]);
+    expect(await homeCheck.listAiSuggestions(itemId)).toMatchObject([
+      {
+        defectTypeCode: "SF-SCRATCH",
+        outcome: "corrected",
+        correctedCode: "CF-HINGE",
+        correctedDefectTypeName: "Hinge Fault",
+        reviewedAt: "2026-01-05T09:11:00.000Z",
+      },
+    ]);
+  });
+
+  test("to a Defect Type the Item already has links the photo to that Defect", async () => {
+    const { homeCheck, itemId, photoId, suggestions } = await photoWithSuggestions();
+    const existing = expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE" })).defect;
+
+    const corrected = expectOk(await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "CF-HINGE" }));
+
+    expect(corrected.defect.id).toBe(existing.id);
+    expect(await homeCheck.listDefects(itemId)).toEqual([{ ...existing, evidenceIds: [photoId] }]);
+  });
+
+  test("to a code not in the Dictionary is refused and leaves the suggestion unreviewed", async () => {
+    const { homeCheck, itemId, suggestions } = await photoWithSuggestions();
+
+    const corrected = await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "SF-SMUDGE" });
+
+    expect(corrected).toEqual({ ok: false, reason: "unknown-defect-type" });
+    expect(await homeCheck.listAiSuggestions(itemId)).toMatchObject([{ outcome: "unreviewed" }]);
+    expect(await homeCheck.listDefects(itemId)).toEqual([]);
+  });
+});
+
+describe("once an AI Suggestion is reviewed", () => {
+  test("it can't be confirmed, corrected or rejected again", async () => {
+    const { homeCheck, itemId, suggestions } = await photoWithSuggestions();
+    const [suggestion] = suggestions;
+    await homeCheck.rejectAiSuggestion(suggestion.id);
+
+    const refusals = [
+      await homeCheck.confirmAiSuggestion(suggestion.id),
+      await homeCheck.correctAiSuggestion(suggestion.id, { defectTypeCode: "CF-HINGE" }),
+      await homeCheck.rejectAiSuggestion(suggestion.id),
+    ];
+
+    expect(refusals).toEqual(Array(3).fill({ ok: false, reason: "ai-suggestion-already-reviewed" }));
+    expect(await homeCheck.listDefects(itemId)).toEqual([]);
+    expect(await homeCheck.listAiSuggestions(itemId)).toMatchObject([{ outcome: "rejected" }]);
+  });
+
+  test("reviewing the photo's other suggestions never changes the Defect it made", async () => {
+    const { homeCheck, itemId, suggestions } = await photoWithSuggestions([
+      { code: "CF-HINGE", confidence: "High" },
+      { code: "HF-HINGE-LOOSE", confidence: "Medium" },
+      { code: "SF-SCRATCH", confidence: "Low" },
+    ]);
+    const [hinge, looseHinge, scratch] = suggestions;
+    const made = expectOk(await homeCheck.confirmAiSuggestion(hinge.id)).defect;
+
+    await homeCheck.rejectAiSuggestion(looseHinge.id);
+    await homeCheck.correctAiSuggestion(scratch.id, { defectTypeCode: "SF-STAIN" });
+
+    const [first, second] = await homeCheck.listDefects(itemId);
+    expect(first).toEqual(made);
+    expect(second).toMatchObject({ defectTypeCode: "SF-STAIN", aiSuggestionId: scratch.id });
+  });
+});
+
+describe("Other / Unknown AI Suggestions", () => {
+  test("confirming Unable to Determine needs a note, as adding it by hand does", async () => {
+    const { homeCheck, itemId, suggestions } = await photoWithSuggestions([{ code: "OT-UNKNOWN", confidence: "Low" }]);
+
+    const withoutNote = await homeCheck.confirmAiSuggestion(suggestions[0].id);
+    const withNote = await homeCheck.confirmAiSuggestion(suggestions[0].id, { note: "  dark patch behind door  " });
+
+    expect(withoutNote).toEqual({ ok: false, reason: "note-required" });
+    expect(withNote.ok).toBe(true);
+    expect(await homeCheck.listDefects(itemId)).toMatchObject([{ defectTypeCode: "OT-UNKNOWN", note: "dark patch behind door" }]);
+  });
+
+  test("correcting to Other Defect needs a note", async () => {
+    const { homeCheck, suggestions } = await photoWithSuggestions();
+
+    const corrected = await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "OT-OTHER" });
+
+    expect(corrected).toEqual({ ok: false, reason: "note-required" });
+  });
+
+  test("needs no note when the Item already has that Defect, which keeps its own note", async () => {
+    const { homeCheck, itemId, photoId, suggestions } = await photoWithSuggestions([{ code: "OT-UNKNOWN", confidence: "Low" }]);
+    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "OT-UNKNOWN", note: "odd smell" }));
+
+    const confirmed = await homeCheck.confirmAiSuggestion(suggestions[0].id);
+
+    expect(confirmed.ok).toBe(true);
+    expect(await homeCheck.listDefects(itemId)).toMatchObject([{ note: "odd smell", evidenceIds: [photoId] }]);
+  });
+
+  test("a note given for an ordinary Defect Type is kept on the new Defect", async () => {
+    const { homeCheck, itemId, suggestions } = await photoWithSuggestions();
+
+    await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "CF-HINGE", note: "top hinge" });
+
+    expect(await homeCheck.listDefects(itemId)).toMatchObject([{ defectTypeCode: "CF-HINGE", note: "top hinge" }]);
+  });
+});
+
+describe("on a Completed Inspection", () => {
+  test("refuses a new Defect by hand but accepts confirming a late AI Suggestion", async () => {
+    const { homeCheck, inspectionId, itemId, photoId, suggestions } = await photoWithSuggestions();
+    await homeCheck.completeInspection(inspectionId);
+
+    const byHand = await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE", evidenceIds: [photoId] });
+    const confirmed = await homeCheck.confirmAiSuggestion(suggestions[0].id);
+
+    expect(byHand).toEqual({ ok: false, reason: "inspection-completed" });
+    expect(confirmed.ok).toBe(true);
+    expect(await homeCheck.listDefects(itemId)).toMatchObject([{ defectTypeCode: "SF-SCRATCH", source: "ai-suggested" }]);
+  });
+
+  test("a photo still waiting for AI when completed gets suggestions that can be corrected onto an existing Defect", async () => {
+    const { homeCheck, inspectionId, itemId } = await createTestHomeCheckWithItem();
+    const photo = expectOk(await homeCheck.addPhoto(itemId, new Blob(["door"], { type: "image/jpeg" }))).evidence;
+    const existing = expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE" })).defect;
+    await homeCheck.completeInspection(inspectionId);
+    await homeCheck.processAiQueue();
+    const [late] = await homeCheck.listAiSuggestions(itemId);
+
+    const corrected = await homeCheck.correctAiSuggestion(late.id, { defectTypeCode: "CF-HINGE" });
+
+    expect(corrected.ok).toBe(true);
+    expect(await homeCheck.listDefects(itemId)).toEqual([{ ...existing, evidenceIds: [photo.id] }]);
+  });
+
+  test("accepts rejecting, and every other edit stays locked", async () => {
+    const { homeCheck, inspectionId, itemId, suggestions } = await photoWithSuggestions([
+      { code: "CF-HINGE", confidence: "High" },
+      { code: "SF-SCRATCH", confidence: "Low" },
+    ]);
+    await homeCheck.completeInspection(inspectionId);
+
+    const rejected = await homeCheck.rejectAiSuggestion(suggestions[1].id);
+    const defect = expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id)).defect;
+    const edit = await homeCheck.editDefect(defect.id, { note: "changed later" });
+    const removal = await homeCheck.removeDefect(defect.id);
+
+    expect(rejected.ok).toBe(true);
+    expect({ edit, removal }).toEqual({
+      edit: { ok: false, reason: "inspection-completed" },
+      removal: { ok: false, reason: "inspection-completed" },
+    });
+    expect(await homeCheck.listDefects(itemId)).toEqual([defect]);
+  });
+});
+
+describe("AI Suggestions still to review", () => {
+  test("are listed for the Inspection, Item by Item in Area order, with where each one is", async () => {
+    const { homeCheck, inspectionId, itemId, aiClient } = await createTestHomeCheckWithItem();
+    const bathroom = expectOk(await homeCheck.addArea(inspectionId, { standardAreaId: "bathroom" })).area;
+    const toilet = expectOk(await homeCheck.addItem(bathroom.id, { catalogItemId: "toilet" })).item;
+    aiClient.answer([{ code: "SN-TOILET-LOOSE", confidence: "Medium" }]);
+    await homeCheck.addPhoto(toilet.id, new Blob(["toilet"], { type: "image/jpeg" }));
+    await homeCheck.processAiQueue();
+    aiClient.answer([
+      { code: "CF-HINGE", confidence: "High" },
+      { code: "SF-SCRATCH", confidence: "Low" },
+    ]);
+    await homeCheck.addPhoto(itemId, new Blob(["wardrobe"], { type: "image/jpeg" }));
+    await homeCheck.processAiQueue();
+    const [hinge] = await homeCheck.listAiSuggestions(itemId);
+    await homeCheck.rejectAiSuggestion(hinge.id);
+
+    const unreviewed = await homeCheck.listUnreviewedAiSuggestions(inspectionId);
+
+    expect(unreviewed.map((s) => [s.areaName, s.itemName, s.defectTypeName])).toEqual([
+      ["Bedroom", "Wardrobe", "Scratched"],
+      ["Bathroom", "Toilet", "Toilet Bowl Loose"],
+    ]);
+    expect(unreviewed[0]).toMatchObject({ itemId, outcome: "unreviewed" });
+  });
+
+  test("leave out other Inspections' suggestions", async () => {
+    const { homeCheck, itemId } = await photoWithSuggestions();
+    const other = await anotherInspection(homeCheck);
+
+    expect(await homeCheck.listUnreviewedAiSuggestions(other.id)).toEqual([]);
+    expect(await homeCheck.listAiSuggestions(itemId)).toHaveLength(1);
+  });
+});
+
+describe("the check before completing", () => {
+  test("counts this Inspection's photos waiting for AI and its unreviewed AI Suggestions", async () => {
+    const { homeCheck, inspectionId, itemId, environment } = await photoWithSuggestions([
+      { code: "CF-HINGE", confidence: "High" },
+      { code: "SF-SCRATCH", confidence: "Low" },
+    ]);
+    const [hinge] = await homeCheck.listAiSuggestions(itemId);
+    await homeCheck.confirmAiSuggestion(hinge.id);
+    environment.setOnline(false);
+    await homeCheck.addPhoto(itemId, new Blob(["second"], { type: "image/jpeg" }));
+    await homeCheck.addPhoto(itemId, new Blob(["third"], { type: "image/jpeg" }));
+    const other = await anotherInspection(homeCheck);
+    const otherArea = expectOk(await homeCheck.addArea(other.id, { standardAreaId: "bedroom" })).area;
+    const otherItem = expectOk(await homeCheck.addItem(otherArea.id, { catalogItemId: "window" })).item;
+    await homeCheck.addPhoto(otherItem.id, new Blob(["other unit"], { type: "image/jpeg" }));
+
+    expect(await homeCheck.aiWorkLeft(inspectionId)).toEqual({ waitingForAi: 2, unreviewedAiSuggestions: 1 });
+  });
+});
+
+describe("listeners for AI changes", () => {
+  test("are told when an AI Suggestion is reviewed", async () => {
+    const { homeCheck, suggestions } = await photoWithSuggestions([
+      { code: "CF-HINGE", confidence: "High" },
+      { code: "SF-SCRATCH", confidence: "Low" },
+    ]);
+    let changes = 0;
+    homeCheck.onAiChange(() => changes++);
+
+    await homeCheck.confirmAiSuggestion(suggestions[0].id);
+    await homeCheck.rejectAiSuggestion(suggestions[1].id);
+
+    expect(changes).toBe(2);
+  });
+});
+
+describe("correcting an AI Suggestion to the Defect Type it already suggested", () => {
+  test("counts as confirming it", async () => {
+    const { homeCheck, itemId, suggestions } = await photoWithSuggestions();
+
+    await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "SF-SCRATCH" });
+
+    const [reviewed] = await homeCheck.listAiSuggestions(itemId);
+    expect(reviewed.outcome).toBe("confirmed");
+    expect(reviewed.correctedCode).toBeUndefined();
+  });
+});
+
+describe("what a review reports", () => {
+  test("whether it made a new Defect or added the photo to one the Item already had", async () => {
+    const { homeCheck, itemId, suggestions } = await photoWithSuggestions([
+      { code: "CF-HINGE", confidence: "High" },
+      { code: "SF-SCRATCH", confidence: "Low" },
+    ]);
+    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH" }));
+
+    const made = expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id));
+    const linked = expectOk(await homeCheck.confirmAiSuggestion(suggestions[1].id));
+
+    expect({ made: made.addedToExisting, linked: linked.addedToExisting }).toEqual({ made: false, linked: true });
+  });
+});

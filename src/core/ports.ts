@@ -46,6 +46,9 @@ export interface Storage {
   /** Saves a photo's AI Suggestions and takes it off the AI queue, atomically; does nothing if it's no longer queued (deleted meanwhile). */
   finishAiRequest(evidenceId: string, suggestions: AiSuggestion[]): Promise<void>;
   listAiSuggestions(itemId: string): Promise<AiSuggestion[]>;
+  getAiSuggestion(id: string): Promise<AiSuggestion | undefined>;
+  /** Saves a reviewed AI Suggestion together with the Defect it made or added its photo to, if any, atomically. */
+  saveAiReview(suggestion: AiSuggestion, defect?: Defect): Promise<void>;
 }
 
 /** Makes the smaller versions of a photo, and a video's thumbnail. Production: canvas and a video element. */

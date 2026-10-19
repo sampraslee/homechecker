@@ -147,5 +147,14 @@ export function createDexieStorage(name = "home-check", options?: DexieOptions):
     async listAiSuggestions(itemId) {
       return db.aiSuggestions.where({ itemId }).toArray();
     },
+    async getAiSuggestion(id) {
+      return db.aiSuggestions.get(id);
+    },
+    async saveAiReview(suggestion, defect) {
+      await db.transaction("rw", db.aiSuggestions, db.defects, async () => {
+        await db.aiSuggestions.put(suggestion);
+        if (defect) await db.defects.put(defect);
+      });
+    },
   };
 }

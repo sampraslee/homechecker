@@ -147,8 +147,8 @@ export function isNote(evidence: Evidence): evidence is NoteEvidence {
   return evidence.kind === "note";
 }
 
-/** Where a Defect came from. Defects confirmed from AI Suggestions will add "ai-suggested". */
-export type DefectSource = "manual";
+/** Where a Defect came from: added by hand, or from an AI Suggestion the Inspector confirmed or corrected. */
+export type DefectSource = "manual" | "ai-suggested";
 
 export type Defect = {
   id: string;
@@ -158,6 +158,8 @@ export type Defect = {
   /** The Defect Dictionary version the code comes from, so the record stays readable after the Dictionary changes. */
   dictionaryVersion: string;
   source: DefectSource;
+  /** The AI Suggestion an "ai-suggested" Defect was made from. */
+  aiSuggestionId?: string;
   note?: string;
   /** Evidence of the same Item that supports this Defect. */
   evidenceIds: string[];
@@ -194,8 +196,8 @@ export type AiQueueEntry = {
   lastAttemptAt?: string;
 };
 
-/** Where review of an AI Suggestion stands. Reviewing (confirm, correct, reject) will add the other outcomes. */
-export type AiSuggestionOutcome = "unreviewed";
+/** Where review of an AI Suggestion stands. Once reviewed it never changes. */
+export type AiSuggestionOutcome = "unreviewed" | "confirmed" | "corrected" | "rejected";
 
 /** A Defect Type the AI proposed for a photo. Kept apart from Defects and never overwritten by a later AI run. */
 export type AiSuggestion = {
@@ -208,11 +210,27 @@ export type AiSuggestion = {
   dictionaryVersion: string;
   confidence: AiConfidence;
   outcome: AiSuggestionOutcome;
+  /** The Defect Type the Inspector chose instead, when the outcome is "corrected". */
+  correctedCode?: string;
   /** When the AI answered. */
   suggestedAt: string;
+  /** When the Inspector confirmed, corrected or rejected it. */
+  reviewedAt?: string;
   /** Order among the photo's suggestions, as the AI ranked them. */
   rank: number;
 };
 
-/** An AI Suggestion with the names of its Defect Type and Category from the bundled Dictionary. */
-export type AiSuggestionView = AiSuggestion & { defectTypeName: string; categoryName: string };
+/** An AI Suggestion with the names of its Defect Type and Category, and of any corrected Defect Type, from the bundled Dictionary. */
+export type AiSuggestionView = AiSuggestion & { defectTypeName: string; categoryName: string; correctedDefectTypeName?: string };
+
+/** An AI Suggestion still to review, with the names of the Area and Item it's on. */
+export type UnreviewedAiSuggestionView = AiSuggestionView & { areaName: string; itemName: string };
+
+/** An Inspection's AI work still to come or to review, shown before completing. */
+export type AiWorkLeft = { waitingForAi: number; unreviewedAiSuggestions: number };
+
+/** What the Inspector adds when confirming an AI Suggestion: a note for a new Defect, needed for Other / Unknown. */
+export type AiConfirmInput = { note?: string };
+
+/** The Defect Type the Inspector chose in place of the AI's, and a note for a new Defect. */
+export type AiCorrectionInput = AiConfirmInput & { defectTypeCode: string };

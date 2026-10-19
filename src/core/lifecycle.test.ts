@@ -1,11 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { HomeCheck } from "./homeCheck";
-import { createTestHomeCheckWithInspection, createTestHomeCheckWithItem } from "../testing/homeCheck";
-
-function expectOk<R extends { ok: boolean }>(result: R): Extract<R, { ok: true }> {
-  if (!result.ok) throw new Error(`refused: ${JSON.stringify(result)}`);
-  return result as Extract<R, { ok: true }>;
-}
+import { createTestHomeCheckWithInspection, createTestHomeCheckWithItem, expectOk } from "../testing/homeCheck";
 
 /**
  * A Completed Inspection with an empty Area and an empty Item (each removable while a Draft),

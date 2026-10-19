@@ -10,12 +10,14 @@ export type PickedDefectType = DefectType & { noteRequired: boolean };
 export function DefectTypePicker({
   itemId,
   itemName,
+  title = "Add Defect",
   recordedCodes,
   onPicked,
   onCancel,
 }: {
   itemId: string;
   itemName: string;
+  title?: string;
   /** Defect Types this Item already has, marked so the Inspector can see them. */
   recordedCodes: string[];
   onPicked: (defectType: PickedDefectType) => void;
@@ -44,7 +46,7 @@ export function DefectTypePicker({
   return (
     <section className="panel">
       <div className="card-row">
-        <h2>{category ? category.name : "Add Defect"}</h2>
+        <h2>{category ? category.name : title}</h2>
         <button type="button" className="link" onClick={category ? () => setCategory(null) : onCancel}>
           {category ? "‹ Categories" : "Cancel"}
         </button>

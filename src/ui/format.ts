@@ -1,4 +1,4 @@
-import { VIDEO_TIME_LIMIT_SECONDS, type InspectionStatus, type InspectionType, type RefusalReason } from "../core";
+import { VIDEO_TIME_LIMIT_SECONDS, type AiSuggestionView, type InspectionStatus, type InspectionType, type RefusalReason } from "../core";
 
 export const inspectionTypeLabel: Record<InspectionType, string> = {
   "move-in": "Move-in",
@@ -9,6 +9,20 @@ export const inspectionStatusLabel: Record<InspectionStatus, string> = {
   draft: "Draft",
   completed: "Completed",
 };
+
+/** Where review of an AI Suggestion stands, e.g. "Corrected to Hinge Fault". */
+export function aiOutcomeLabel(suggestion: AiSuggestionView): string {
+  switch (suggestion.outcome) {
+    case "unreviewed":
+      return "Not reviewed";
+    case "confirmed":
+      return "Confirmed";
+    case "corrected":
+      return `Corrected to ${suggestion.correctedDefectTypeName}`;
+    case "rejected":
+      return "Rejected";
+  }
+}
 
 /** Shown on a Completed Inspection's screens in place of the editing controls. */
 export const lockedNotice = "This Inspection is Completed, so it can't be changed.";
@@ -52,4 +66,6 @@ export const refusalMessage: Record<RefusalReason, string> = {
   "video-too-long": `Videos can be at most ${VIDEO_TIME_LIMIT_SECONDS} seconds`,
   "blank-note": "Write something in the note",
   "evidence-not-a-note": "Only a note's text can be edited",
+  "ai-suggestion-not-found": "This AI Suggestion is not on this phone",
+  "ai-suggestion-already-reviewed": "This AI Suggestion has already been reviewed",
 };

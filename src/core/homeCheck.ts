@@ -2,9 +2,12 @@ import { formatAddress, validateAddress } from "./address";
 import { newId } from "./ids";
 import type {
   AiConfidence,
+  AiConfirmInput,
+  AiCorrectionInput,
   AiQueueEntry,
   AiSuggestion,
   AiSuggestionView,
+  AiWorkLeft,
   Area,
   AreaSource,
   AreaView,
@@ -24,6 +27,7 @@ import type {
   MediaVersion,
   PhotoEvidence,
   UnitAddressInput,
+  UnreviewedAiSuggestionView,
   VideoEvidence,
 } from "./model";
 import { AI_CONFIDENCES, MAX_AI_SUGGESTIONS_PER_PHOTO, VIDEO_TIME_LIMIT_SECONDS } from "./model";
@@ -60,6 +64,10 @@ const videoTooLong = { ok: false, reason: "video-too-long" } as const;
 /** An empty Evidence note; not to be confused with `note-required`, a Defect that needs a note. */
 const blankNote = { ok: false, reason: "blank-note" } as const;
 const evidenceNotFound = { ok: false, reason: "evidence-not-found" } as const;
+const unknownDefectType = { ok: false, reason: "unknown-defect-type" } as const;
+const aiSuggestionNotFound = { ok: false, reason: "ai-suggestion-not-found" } as const;
+/** An AI Suggestion's outcome is final once reviewed. */
+const aiSuggestionAlreadyReviewed = { ok: false, reason: "ai-suggestion-already-reviewed" } as const;
 
 /** Recording stops itself at the limit, but the stop lands a moment late; up to this much over still counts as the limit. */
 const VIDEO_STOP_ALLOWANCE_SECONDS = 1;
@@ -170,11 +178,79 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
 
   function toAiSuggestionView(suggestion: AiSuggestion): AiSuggestionView {
     const dictionaryEntry = findDefectType(referenceData, suggestion.defectTypeCode);
+    const { correctedCode } = suggestion;
     return {
       ...suggestion,
       defectTypeName: dictionaryEntry?.defectType.name ?? suggestion.defectTypeCode,
       categoryName: dictionaryEntry?.category.name ?? "Not in the bundled Defect Dictionary",
+      ...(correctedCode && {
+        correctedDefectTypeName: findDefectType(referenceData, correctedCode)?.defectType.name ?? correctedCode,
+      }),
     };
+  }
+
+  /** The AI Suggestion, if it's still waiting for the Inspector's review. */
+  async function findUnreviewed(suggestionId: string) {
+    const suggestion = await storage.getAiSuggestion(suggestionId);
+    if (!suggestion) return aiSuggestionNotFound;
+    if (suggestion.outcome !== "unreviewed") return aiSuggestionAlreadyReviewed;
+    return { ok: true as const, suggestion };
+  }
+
+  /**
+   * Records `defectTypeCode` on the suggestion's Item with its photo as Evidence: a new AI-suggested Defect,
+   * or the photo added to the Defect of that type the Item already has. `note` is only for a new Defect.
+   * The suggestion counts as confirmed if `defectTypeCode` is its own, and as corrected otherwise.
+   * Skips the Completed lock: late AI Suggestions may still add Defects.
+   */
+  async function acceptAiSuggestion(suggestion: AiSuggestion, defectTypeCode: string, note: string | undefined) {
+    if (!findDefectType(referenceData, defectTypeCode)) return unknownDefectType;
+    const existing = await storage.listDefects(suggestion.itemId);
+    const sameType = existing.find((other) => other.defectTypeCode === defectTypeCode);
+    const trimmedNote = note?.trim();
+    if (!sameType && needsNote(defectTypeCode) && !trimmedNote) return noteRequired;
+    const defect: Defect = sameType
+      ? withEvidence(sameType, suggestion.evidenceId)
+      : {
+          id: newId(),
+          inspectionId: suggestion.inspectionId,
+          itemId: suggestion.itemId,
+          defectTypeCode,
+          dictionaryVersion: referenceData.defectDictionary.version,
+          source: "ai-suggested",
+          aiSuggestionId: suggestion.id,
+          ...(trimmedNote && { note: trimmedNote }),
+          evidenceIds: [suggestion.evidenceId],
+          position: nextPosition(existing),
+        };
+    const outcome: Pick<AiSuggestion, "outcome" | "correctedCode"> =
+      defectTypeCode === suggestion.defectTypeCode
+        ? { outcome: "confirmed" }
+        : { outcome: "corrected", correctedCode: defectTypeCode };
+    await storage.saveAiReview({ ...suggestion, ...outcome, reviewedAt: environment.now().toISOString() }, defect);
+    aiChanged();
+    return { ok: true as const, defect: toDefectView(defect), addedToExisting: !!sameType };
+  }
+
+  async function listAiSuggestions(itemId: string): Promise<AiSuggestionView[]> {
+    const suggestions = await storage.listAiSuggestions(itemId);
+    const photoOrder = new Map((await storage.listEvidence(itemId)).map((evidence) => [evidence.id, evidence.position]));
+    return suggestions
+      .sort((a, b) => (photoOrder.get(a.evidenceId) ?? 0) - (photoOrder.get(b.evidenceId) ?? 0) || a.rank - b.rank)
+      .map(toAiSuggestionView);
+  }
+
+  async function listUnreviewedAiSuggestions(inspectionId: string): Promise<UnreviewedAiSuggestionView[]> {
+    const unreviewed: UnreviewedAiSuggestionView[] = [];
+    for (const area of await storage.listAreas(inspectionId)) {
+      for (const item of await storage.listItems(area.id)) {
+        for (const suggestion of await listAiSuggestions(item.id)) {
+          if (suggestion.outcome !== "unreviewed") continue;
+          unreviewed.push({ ...suggestion, areaName: area.name, itemName: itemDisplayName(item) });
+        }
+      }
+    }
+    return unreviewed;
   }
 
   /** Sends one queued photo to the AI. A failure leaves it queued with one more attempt counted. */
@@ -553,7 +629,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       const item = await storage.getItem(itemId);
       if (!item) return itemNotFound;
       if (await isLocked(item.inspectionId)) return inspectionCompleted;
-      if (!findDefectType(referenceData, input.defectTypeCode)) return { ok: false as const, reason: "unknown-defect-type" as const };
+      if (!findDefectType(referenceData, input.defectTypeCode)) return unknownDefectType;
       const existing = await storage.listDefects(itemId);
       const sameType = existing.find((other) => other.defectTypeCode === input.defectTypeCode);
       if (sameType) {
@@ -629,7 +705,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       };
     },
 
-    /** Calls `listener` when a photo joins or leaves the AI queue or AI Suggestions arrive; returns an unsubscribe function. */
+    /** Calls `listener` when a photo joins or leaves the AI queue, or AI Suggestions arrive or are reviewed; returns an unsubscribe function. */
     onAiChange(listener: () => void) {
       aiChangeListeners.add(listener);
       return () => {
@@ -647,12 +723,41 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     },
 
     /** The Item's AI Suggestions, photo by photo in capture order, each photo's in the AI's ranking. */
-    async listAiSuggestions(itemId: string): Promise<AiSuggestionView[]> {
-      const suggestions = await storage.listAiSuggestions(itemId);
-      const photoOrder = new Map((await storage.listEvidence(itemId)).map((evidence) => [evidence.id, evidence.position]));
-      return suggestions
-        .sort((a, b) => (photoOrder.get(a.evidenceId) ?? 0) - (photoOrder.get(b.evidenceId) ?? 0) || a.rank - b.rank)
-        .map(toAiSuggestionView);
+    listAiSuggestions,
+
+    /** The Inspection's AI Suggestions not yet confirmed, corrected or rejected, Area by Area and Item by Item. */
+    listUnreviewedAiSuggestions,
+
+    /** What the Inspector is told before completing: AI work on this Inspection still to come or to review. */
+    async aiWorkLeft(inspectionId: string): Promise<AiWorkLeft> {
+      const queue = await storage.listAiQueue();
+      return {
+        waitingForAi: queue.filter((entry) => entry.inspectionId === inspectionId).length,
+        unreviewedAiSuggestions: (await listUnreviewedAiSuggestions(inspectionId)).length,
+      };
+    },
+
+    /** Makes the AI Suggestion a Defect on its Item, with its photo as Evidence. A new Other / Unknown Defect needs a note. */
+    async confirmAiSuggestion(suggestionId: string, confirmation: AiConfirmInput = {}) {
+      const found = await findUnreviewed(suggestionId);
+      if (!found.ok) return found;
+      return acceptAiSuggestion(found.suggestion, found.suggestion.defectTypeCode, confirmation.note);
+    },
+
+    /** Records the Defect Type the Inspector chose in place of the AI's, with the photo as Evidence. Choosing the AI's own counts as confirming. */
+    async correctAiSuggestion(suggestionId: string, correction: AiCorrectionInput) {
+      const found = await findUnreviewed(suggestionId);
+      if (!found.ok) return found;
+      return acceptAiSuggestion(found.suggestion, correction.defectTypeCode, correction.note);
+    },
+
+    /** Records that the AI Suggestion is wrong; no Defect is made. */
+    async rejectAiSuggestion(suggestionId: string) {
+      const found = await findUnreviewed(suggestionId);
+      if (!found.ok) return found;
+      await storage.saveAiReview({ ...found.suggestion, outcome: "rejected", reviewedAt: environment.now().toISOString() });
+      aiChanged();
+      return { ok: true as const };
     },
   };
 }
@@ -670,6 +775,11 @@ function nextPosition(siblings: { position: number }[]): number {
 
 /** An AI answer whose code is in the bundled Dictionary and whose confidence is known. */
 type ValidAiAnswer = { code: string; confidence: AiConfidence };
+
+/** The Defect with the Evidence linked too, if it isn't already. */
+function withEvidence(defect: Defect, evidenceId: string): Defect {
+  return defect.evidenceIds.includes(evidenceId) ? defect : { ...defect, evidenceIds: [...defect.evidenceIds, evidenceId] };
+}
 
 function toItemView(item: Item, defectCount: number): ItemView {
   return { ...item, displayName: itemDisplayName(item), defectCount };

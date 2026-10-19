@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { formatAddress, type AreaSource, type AreaView, type Inspection } from "../core";
+import { formatAddress, type AiWorkLeft, type AreaSource, type AreaView, type Inspection, type UnreviewedAiSuggestionView } from "../core";
 import type { Navigate } from "./App";
 import { BackBar } from "./BackBar";
 import { formatDateTime, inspectionStatusLabel, inspectionTypeLabel, lockedNotice, refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
+import { useAiChanges } from "./useAiChanges";
 
 export function InspectionScreen({ id, navigate }: { id: string; navigate: Navigate }) {
   const homeCheck = useHomeCheck();
@@ -11,6 +12,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
   const [areas, setAreas] = useState<AreaView[]>([]);
   const [adding, setAdding] = useState(false);
   const [confirmingComplete, setConfirmingComplete] = useState(false);
+  const [toReview, setToReview] = useState<UnreviewedAiSuggestionView[]>([]);
 
   const loadAreas = useCallback(() => homeCheck.listAreas(id).then(setAreas), [homeCheck, id]);
   const loadInspection = useCallback(
@@ -22,6 +24,9 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
     loadInspection();
     loadAreas();
   }, [loadInspection, loadAreas]);
+
+  // Also reloads as AI Suggestions arrive or are reviewed.
+  useAiChanges(useCallback(() => homeCheck.listUnreviewedAiSuggestions(id).then(setToReview), [homeCheck, id]));
 
   const locked = inspection?.status === "completed";
 
@@ -69,6 +74,27 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
               </li>
             ))}
           </ul>
+
+          {toReview.length > 0 && (
+            <>
+              <h2>AI Suggestions to review ({toReview.length})</h2>
+              <ul className="cards">
+                {toReview.map((suggestion) => (
+                  <li key={suggestion.id}>
+                    <button type="button" className="card" onClick={() => navigate({ name: "item", id: suggestion.itemId })}>
+                      <span className="card-row">
+                        <strong>{suggestion.defectTypeName}</strong>
+                        <span className="badge confidence">{suggestion.confidence}</span>
+                      </span>
+                      <span className="muted defect-meta">
+                        {suggestion.areaName} · {suggestion.itemName}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
 
           {locked ? null : adding ? (
             <AddAreaPanel
@@ -128,7 +154,10 @@ function CompletePanel({
 }) {
   const homeCheck = useHomeCheck();
   const [error, setError] = useState<string | null>(null);
+  const [aiWork, setAiWork] = useState<AiWorkLeft | null>(null);
   const itemCount = areas.reduce((total, area) => total + area.itemCount, 0);
+
+  useAiChanges(useCallback(() => homeCheck.aiWorkLeft(inspectionId).then(setAiWork), [homeCheck, inspectionId]));
 
   async function complete() {
     const result = await homeCheck.completeInspection(inspectionId);
@@ -142,8 +171,16 @@ function CompletePanel({
       <p>
         {areas.length} {areas.length === 1 ? "Area" : "Areas"}, {itemCount} {itemCount === 1 ? "Item" : "Items"} recorded.
       </p>
+      {aiWork && (
+        <p>
+          Photos waiting for AI: {aiWork.waitingForAi}
+          <br />
+          AI Suggestions not reviewed: {aiWork.unreviewedAiSuggestions}
+        </p>
+      )}
       <p className="muted">
         Once completed, its Areas, Items, Evidence and Defects can't be added to, changed or removed. It can't be reopened.
+        Photos still waiting are sent to the AI, and AI Suggestions can still be reviewed.
       </p>
       {error && <p className="error">{error}</p>}
       <div className="button-row">

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { isMedia, isNote, type AiSuggestionView, type DefectView, type Evidence, type ItemView, type MediaEvidence, type NoteEvidence } from "../core";
 import type { Navigate } from "./App";
+import { AiSuggestionList } from "./AiSuggestionList";
 import { BackBar } from "./BackBar";
 import { DefectEditor, DefectTypePicker, type PickedDefectType } from "./DefectPanels";
 import { lockedNotice, refusalMessage } from "./format";
@@ -34,6 +35,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   const [recording, setRecording] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
+  const [reviewed, setReviewed] = useState<string | null>(null);
   const [viewing, setViewing] = useState<MediaEvidence | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
@@ -196,7 +198,10 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           const summary = (
             <>
               <span className="card-row">
-                <strong>{defect.defectTypeName}</strong>
+                <strong>
+                  {defect.defectTypeName}
+                  {defect.source === "ai-suggested" && <span className="badge ai-suggested">AI-suggested</span>}
+                </strong>
                 <span className="muted defect-meta">
                   {defect.evidenceIds.length} linked
                 </span>
@@ -265,27 +270,21 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         <>
           <h2>AI Suggestions{aiSuggestions.length > 0 && ` (${aiSuggestions.length})`}</h2>
           {aiSuggestions.length === 0 && <p className="muted">None yet. Photos are sent to the AI whenever the phone is online.</p>}
-          <ul className="cards">
-            {aiSuggestions.map((suggestion) => (
-              <li key={suggestion.id} className="card ai-suggestion">
-                <span className="thumbnail">
-                  <MediaImage evidenceId={suggestion.evidenceId} version="thumbnail" alt="Photo" />
-                </span>
-                <span>
-                  <span className="card-row">
-                    <strong>{suggestion.defectTypeName}</strong>
-                    <span className="badge confidence">{suggestion.confidence}</span>
-                  </span>
-                  <span className="card-row">
-                    <span className="muted defect-meta">
-                      {suggestion.defectTypeCode} · {suggestion.categoryName}
-                    </span>
-                    <span className="badge unreviewed">Not reviewed</span>
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
+          <AiSuggestionList
+            itemId={id}
+            itemName={item.name}
+            suggestions={aiSuggestions}
+            defects={defects}
+            onReviewed={(message) => {
+              setReviewed(message);
+              load();
+            }}
+          />
+          {reviewed && (
+            <p className="muted" role="status">
+              {reviewed}
+            </p>
+          )}
         </>
       )}
 

@@ -141,6 +141,12 @@ export function createFakeAiClient(): FakeAiClient {
   };
 }
 
+/** The result of a core operation that must succeed; fails the test with the refusal otherwise. */
+export function expectOk<R extends { ok: boolean }>(result: R): Extract<R, { ok: true }> {
+  if (!result.ok) throw new Error(`refused: ${JSON.stringify(result)}`);
+  return result as Extract<R, { ok: true }>;
+}
+
 /** A Home Check core on a fresh fake-indexeddb database. */
 export function createTestHomeCheck(referenceData: ReferenceData = testReferenceData) {
   const environment = createFakeEnvironment();
