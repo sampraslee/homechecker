@@ -1667,3 +1667,36 @@ body:has(.sheet-backdrop) .dock {
   min-height: 44px;
   padding: 0 var(--space-4);
 }
+
+/* Defect Types: one light list inside the sheet, hairline dividers, a chevron per row (UX-027). */
+.type-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.type-list > li + li {
+  border-top: 1px solid var(--line-soft);
+}
+
+/* Over the icon-button rule, which would centre the row. */
+.type-list .type-row {
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 3.25rem;
+}
+
+.type-list .type-row-name {
+  flex: 1;
+}
+
+/* Already on this Item: a calm teal tick, not the red of an error. */
+.recorded-mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--teal-deep);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}

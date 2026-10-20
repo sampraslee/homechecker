@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Search } from "lucide-react";
+import { Check, ChevronRight, Search } from "lucide-react";
 import { isMedia, isNote, type DefectCategory, type DefectChoices, type DefectType, type DefectView, type Evidence } from "../core";
 import { refusalMessage } from "./format";
 import { useBackCloses } from "./backCloses";
@@ -88,6 +88,7 @@ export function DefectTypePicker({
           each.defectTypes.filter((defectType) => defectType.name.toLowerCase().includes(wanted)).map((defectType) => ({ category: each, defectType })),
         );
 
+  /** One light list row: a chevron to pick it, or a calm teal "Recorded" once the Item has it (UX-027). */
   const typeRow = (defectType: DefectType, of: DefectCategory, showCategory: boolean) => (
     <li key={defectType.code}>
       <button type="button" className="type-row" onClick={() => leave(() => onPicked({ ...defectType, noteRequired: !!of.noteRequired }))}>
@@ -95,7 +96,14 @@ export function DefectTypePicker({
           {defectType.name}
           {showCategory && <span className="muted type-row-category">{of.name}</span>}
         </span>
-        {recordedCodes.includes(defectType.code) && <span className="badge defects">Recorded</span>}
+        {recordedCodes.includes(defectType.code) ? (
+          <span className="recorded-mark">
+            <Check className="status-icon" aria-hidden="true" />
+            Recorded
+          </span>
+        ) : (
+          <ChevronRight className="chevron" aria-hidden="true" />
+        )}
       </button>
     </li>
   );
@@ -136,7 +144,7 @@ export function DefectTypePicker({
       </div>
 
       {category ? (
-        <ul className="rows">{category.defectTypes.map((defectType) => typeRow(defectType, category, false))}</ul>
+        <ul className="type-list">{category.defectTypes.map((defectType) => typeRow(defectType, category, false))}</ul>
       ) : (
         choices && (
           <>
@@ -156,7 +164,7 @@ export function DefectTypePicker({
           {searched.length === 0 ? (
             <p className="muted">Try another word, or pick a Category below.</p>
           ) : (
-            <ul className="rows">{searched.map(({ category: of, defectType }) => typeRow(defectType, of, true))}</ul>
+            <ul className="type-list">{searched.map(({ category: of, defectType }) => typeRow(defectType, of, true))}</ul>
           )}
         </>
       )}
