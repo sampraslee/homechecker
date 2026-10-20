@@ -2,7 +2,7 @@
 
 Source of truth for the audit's scope. Screens come from the `Screen` union and `CurrentScreen` switch in `src/ui/App.tsx`. Flows come from the user stories in `.scratch/home-check-prototype/spec.md`. Every row gets screenshots under `screens/` before it is scored.
 
-Status: in-progress
+Status: partial. Screens S-01 to S-05 captured as text and observations in `screens/captures-2026-10-20.md`. Walkthroughs T-01 and T-02 partial; T-03 to T-06 not run. S-06 not captured.
 
 ## Screens
 
@@ -53,7 +53,9 @@ Five to seven core jobs to time and count. Fill in during the walkthrough.
 |------|------|-------|------|--------|-----------|-------|
 | T-01 | F-02 | | | | | |
 | T-02 | F-06 | | | | | |
-| T-03 | F-07 | | | | | |
-| T-04 | F-08 | | | | | |
-| T-05 | F-09 | | | | | |
-| T-06 | F-10 | | | | | |
+| T-03 | F-07 | Added a note to a Window (throwaway Move-in). Record video not run: needs the camera. | 4 (Add Area, Living Room, Add Item, Add note, Save) | 0 | Note yes; video no | Note saved and shown as "1 note". |
+| T-04 | F-08 | Added Defect (Hairline Crack), linked the note by reopening the Defect, saved. AI Suggestion not run: no photo, so the AI queue stayed empty. | ~9 | 0 | Partial | Defect shows "No Evidence linked" until the Inspector reopens it (UX-012). Toast overlaps the Dock (UX-011). |
+| T-05 | F-09 | Complete → confirm sheet (Areas 1, Items 1, Evidence 1, Defects 1) → Complete. | 2 + confirm | 0 | Yes | Locked, Completed status, "Export it now" prompt. Copy is clear. |
+| T-06 | F-10 | Export now → "Export downloaded." | 1 | 0 | Yes | Last exported updated. The Export button moved from the Dock into the body after completion (UX-001). |
+
+Other observations on the throwaway Inspection: the Inspection screen has a "Delete Inspection" button next to Export and Complete with no visible separation (UX-013, to verify visually). Test Inspection left in the preview data: "T-03, Walkthrough Road" (Completed, exported).
