@@ -1654,3 +1654,16 @@ body:has(.sheet-backdrop) .dock {
 .sheet-backdrop.leaving .panel.sheet {
   animation: sheet-down 200ms ease-in forwards;
 }
+
+/* The usual Categories for an Item stand out from the rest (UX-026). */
+.chip.usual-chip {
+  border-color: var(--teal-deep);
+  background: var(--teal-tint);
+  color: var(--teal-deep);
+  font-weight: 600;
+}
+
+.more-categories {
+  min-height: 44px;
+  padding: 0 var(--space-4);
+}

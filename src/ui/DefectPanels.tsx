@@ -100,10 +100,13 @@ export function DefectTypePicker({
     </li>
   );
 
-  const chips = (categories: DefectCategory[]) => (
+  /** The usual Categories are enough most of the time, so the rest wait behind "More Categories" (UX-026). */
+  const [showAllCategories, setShowAllCategories] = useState(false);
+
+  const chips = (categories: DefectCategory[], usual = false) => (
     <div className="chips">
       {categories.map((option) => (
-        <button key={option.code} type="button" className="chip" onClick={() => setCategory(option)}>
+        <button key={option.code} type="button" className={usual ? "chip usual-chip" : "chip"} onClick={() => setCategory(option)}>
           {option.name}
         </button>
       ))}
@@ -163,11 +166,19 @@ export function DefectTypePicker({
             {choices.shownFirst.length > 0 && (
               <>
                 <h3>Usual for {itemName}</h3>
-                {chips(choices.shownFirst)}
+                {chips(choices.shownFirst, true)}
               </>
             )}
-            <h3>{choices.shownFirst.length > 0 ? "All other Categories" : "All Categories"}</h3>
-            {chips(choices.others)}
+            {choices.shownFirst.length > 0 && !showAllCategories ? (
+              <button type="button" className="secondary more-categories" onClick={() => setShowAllCategories(true)}>
+                More Categories ({choices.others.length})
+              </button>
+            ) : (
+              <>
+                <h3>{choices.shownFirst.length > 0 ? "All other Categories" : "All Categories"}</h3>
+                {chips(choices.others)}
+              </>
+            )}
           </>
         )
       )}
