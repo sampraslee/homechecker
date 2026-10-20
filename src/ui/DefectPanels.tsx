@@ -1,19 +1,22 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Search } from "lucide-react";
 import { isMedia, isNote, type DefectCategory, type DefectChoices, type DefectType, type DefectView, type Evidence } from "../core";
 import { refusalMessage } from "./format";
 import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
-import { scrollIntoViewGently } from "./scroll";
 import { MediaThumbnail } from "./MediaImage";
 
 export type PickedDefectType = DefectType & { noteRequired: boolean };
 
-/** Defect Category, then Defect Type. The Item's relevant Categories come first. */
+/**
+ * Defect Category, then Defect Type, in a bottom sheet over the screen (UX-025). The Item's relevant Categories come
+ * first. The sheet names what the Defect Type is for, and the Dock waits behind it (UX-022).
+ */
 export function DefectTypePicker({
   itemId,
   itemName,
   title = "Add Defect",
+  subject,
   recordedCodes,
   onPicked,
   onCancel,
@@ -21,6 +24,8 @@ export function DefectTypePicker({
   itemId: string;
   itemName: string;
   title?: string;
+  /** What the Defect Type is for, such as the Evidence being assigned, shown under the title. */
+  subject?: ReactNode;
   /** Defect Types this Item already has, marked so the Inspector can see them. */
   recordedCodes: string[];
   onPicked: (defectType: PickedDefectType) => void;
@@ -32,12 +37,29 @@ export function DefectTypePicker({
   const [category, setCategory] = useState<DefectCategory | null>(null);
   /** Searches every Defect Type by name, across Categories, instead of scanning the long Category list (UX-006). */
   const [query, setQuery] = useState("");
-  const panel = useRef<HTMLElement>(null);
+  const sheet = useRef<HTMLElement>(null);
+  const headingId = useId();
 
-  // The picker opens below the Item's Defects, often off screen: bring each step into view.
+  // Each step starts at the top of the sheet's own list.
   useEffect(() => {
-    scrollIntoViewGently(panel.current);
+    sheet.current?.scrollTo({ top: 0 });
   }, [category]);
+
+  // Focus moves into the sheet and back to the tapped button on close; Escape closes it.
+  const cancel = useRef(onCancel);
+  cancel.current = onCancel;
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    sheet.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") cancel.current();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      opener?.focus();
+    };
+  }, []);
 
   useEffect(() => {
     homeCheck.defectChoices(itemId).then((result) => {
@@ -77,12 +99,25 @@ export function DefectTypePicker({
   );
 
   return (
-    <section className="panel" ref={panel}>
-      <div className="card-row">
-        <h2>{category ? category.name : title}</h2>
-        <button type="button" className="link" onClick={category ? () => setCategory(null) : onCancel}>
-          {category ? "‹ Categories" : "Cancel"}
-        </button>
+    // Tapping outside the sheet cancels, as Cancel does.
+    <div className="sheet-backdrop" onClick={onCancel}>
+      <section
+        className="panel sheet"
+        ref={sheet}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={headingId}
+        tabIndex={-1}
+        onClick={(event) => event.stopPropagation()}
+      >
+      <div className="sheet-head">
+        <div className="card-row">
+          <h2 id={headingId}>{category ? category.name : title}</h2>
+          <button type="button" className="link" onClick={category ? () => setCategory(null) : onCancel}>
+            {category ? "‹ Categories" : "Cancel"}
+          </button>
+        </div>
+        {subject && <div className="sheet-subject">{subject}</div>}
       </div>
 
       {category ? (
@@ -124,7 +159,8 @@ export function DefectTypePicker({
           </>
         )
       )}
-    </section>
+      </section>
+    </div>
   );
 }
 

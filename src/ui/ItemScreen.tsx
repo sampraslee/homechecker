@@ -227,6 +227,21 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   const withoutEvidence = defects.filter((defect) => !defect.evidenceIds.some((evidenceId) => evidenceIds.has(evidenceId)));
   const counts = [countEvidence(evidence), defects.length > 0 && `${defects.length} ${defects.length === 1 ? "Defect" : "Defects"}`];
 
+  /** The Evidence the picker is assigning a Defect Type to, named at the top of the sheet (UX-025). */
+  const assigning = defectPanel?.mode === "pick" ? evidence.find((each) => each.id === defectPanel.evidenceId) : undefined;
+  const assigningSubject = assigning && (
+    <span className="sheet-subject-row">
+      {isMedia(assigning) ? (
+        <span className="sheet-thumb">
+          <MediaThumbnail evidence={assigning} />
+        </span>
+      ) : (
+        <NotebookPen className="row-icon" aria-hidden="true" />
+      )}
+      <span>For {isNote(assigning) ? <q>{assigning.text}</q> : `this ${assigning.kind}`}</span>
+    </span>
+  );
+
   function recordVideo() {
     setFlash(null);
     setRecording(true);
@@ -369,6 +384,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           itemId={id}
           itemName={item.name}
           title="Assign Defect Type"
+          subject={assigningSubject}
           recordedCodes={defects.map((defect) => defect.defectTypeCode)}
           onPicked={(defectType) => pickDefectType(defectType, defectPanel.evidenceId)}
           onCancel={() => setDefectPanel(null)}
