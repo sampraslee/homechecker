@@ -8,19 +8,24 @@ import { useAiChanges } from "./useAiChanges";
 const MAX_SCREEN_SHARE = 1 / 3;
 
 /**
- * Whether Inspections are kept on this phone, with the export that keeps a copy. It sits beside Export, where the
- * Inspector can act on it, rather than in the Dock (UX-002, UX-015).
+ * Whether an Inspection is kept on this phone, beside Export, where the Inspector can act on it (UX-002, UX-015).
+ * Once it is exported, the note is left out: the phone's storage setting is not the Inspection's state (UX-021).
  */
-export function StorageNote() {
+export function StorageNote({ exported }: { exported: boolean }) {
   const homeCheck = useHomeCheck();
   const [durability, setDurability] = useState<StorageDurability | null>(null);
   useEffect(() => {
     homeCheck.getSettings().then((settings) => setDurability(settings.storageDurability));
   }, [homeCheck]);
 
+  if (exported) return null;
   return (
     <p className="status-line" role="status">
-      {durability === "refused" ? <span className="not-kept">Not kept on this phone: export soon</span> : <span className="kept">Saved on this phone</span>}
+      {durability === "refused" ? (
+        <span className="not-kept">Only on this phone. Export to keep a copy.</span>
+      ) : (
+        <span className="kept">Saved on this phone</span>
+      )}
     </p>
   );
 }

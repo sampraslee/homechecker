@@ -159,6 +159,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
       </div>
       <ExportPanel
         inspectionId={id}
+        exported={Boolean(inspection?.lastExportedAt)}
         promptToExport={justCompleted}
         onExported={(exported) => {
           setJustCompleted(false);
@@ -245,10 +246,13 @@ const exportOutcomeMessage: Record<ShareOutcome, string> = {
 /** Builds the zip and hands it to the share menu. Works on Draft and Completed Inspections. */
 function ExportPanel({
   inspectionId,
+  exported,
   promptToExport,
   onExported,
 }: {
   inspectionId: string;
+  /** Whether this Inspection has been exported, which hides the storage note (UX-021). */
+  exported: boolean;
   /** Just Completed: urge an export now, as it's only on this phone until then. */
   promptToExport: boolean;
   onExported: (inspection: Inspection) => void;
@@ -319,7 +323,7 @@ function ExportPanel({
       ) : (
         exportButton
       )}
-      <StorageNote />
+      <StorageNote exported={exported} />
       {message && <p className="muted">{message}</p>}
       {error && <p className="error" role="alert">{error}</p>}
     </section>

@@ -53,8 +53,8 @@ function StorageDurabilityNotice({ durability }: { durability: StorageDurability
       {durability === "refused" && (
         <p className="notice status-text">
           <TriangleAlert className="status-icon" aria-hidden="true" />
-          Not kept: the browser may clear Inspections if the phone runs low on space. Export often, especially after
-          completing an Inspection.
+          Only on this phone: the browser may clear Inspections if the phone runs low on space. Export often, especially
+          after completing an Inspection.
         </p>
       )}
       {durability === null && <p className="muted">Not checked yet.</p>}
