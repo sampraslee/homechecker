@@ -3,7 +3,7 @@ import { ChevronRight, DoorOpen, Lock, Plus, Share, Sparkles, Trash2 } from "luc
 import { formatAddress, type AiWorkLeft, type AreaSource, type AreaView, type Inspection, type InspectionTotals, type UnreviewedAiSuggestionView } from "../core";
 import type { Navigate } from "./App";
 import { Band } from "./Band";
-import { Dock } from "./Dock";
+import { Dock, StorageNote } from "./Dock";
 import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel, lockedNotice, refusalMessage, shortAddress } from "./format";
 import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
@@ -220,7 +220,6 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
       )}
 
       <Dock
-        storage
         action={
           !locked &&
           !adding &&
@@ -320,6 +319,7 @@ function ExportPanel({
       ) : (
         exportButton
       )}
+      <StorageNote />
       {message && <p className="muted">{message}</p>}
       {error && <p className="error" role="alert">{error}</p>}
     </section>

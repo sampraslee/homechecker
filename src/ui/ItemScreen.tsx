@@ -274,7 +274,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           onOpen={setViewing}
         />
       )}
-      {evidence.length === 0 && <p className="muted">{editable ? `Take a photo of the ${item.name} to start.` : "No Evidence recorded."}</p>}
+      {evidence.length === 0 && <p className="muted">{editable ? "Add a photo or a note to start. Defects are added from the Evidence." : "No Evidence recorded."}</p>}
       {editable && defects.length === 0 && unassigned.length > 0 && (
         <p className="muted">Assign a Defect Type to your Evidence to record a Defect.</p>
       )}

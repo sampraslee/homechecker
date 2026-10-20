@@ -49,7 +49,7 @@ export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
                 ) : (
                   <span className="unexported">
                     <TriangleAlert className="status-icon" aria-hidden="true" />
-                    Not exported yet: only on this phone
+                    Only on this phone. Export to keep a copy.
                   </span>
                 )}
               </span>
@@ -60,7 +60,6 @@ export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
       </ul>
 
       <Dock
-        storage
         action={
           <button type="button" className="primary" onClick={() => navigate({ name: "start" })}>
             <Plus aria-hidden="true" />
