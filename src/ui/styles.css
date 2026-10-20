@@ -211,7 +211,7 @@ button {
 .details {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 0.5rem 1rem;
+  gap: var(--space-2) var(--space-4);
 }
 
 .details dt {
@@ -958,7 +958,7 @@ body:has(:is(input, textarea, select):focus) .dock {
 .item-card {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
   min-height: 4rem;
 }
 
@@ -974,9 +974,20 @@ body:has(:is(input, textarea, select):focus) .dock {
 }
 
 .chevron {
+  flex: none;
   color: var(--teal-deep);
   font-size: var(--text-xl);
   line-height: 1;
+}
+
+/* The icon at the start of a row: what kind of thing it is. */
+.row-icon {
+  flex: none;
+  color: var(--teal-deep);
+}
+
+.row-icon.ai {
+  color: var(--blue-deep);
 }
 
 .row-action {
@@ -998,8 +1009,8 @@ body:has(:is(input, textarea, select):focus) .dock {
 
 /* Completing locks the Inspection for good, so it looks unlike any routine button. */
 .lock-zone {
-  margin-top: 2rem;
-  padding-top: 1rem;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--line-soft);
 }
 
@@ -1295,8 +1306,11 @@ button:active:not(:disabled) {
   }
 }
 
+/* Set well apart from Export and Complete, so a slip can't reach it (UX-013). */
 .delete-zone {
-  margin-top: 1.5rem;
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line-soft);
   text-align: center;
 }
 

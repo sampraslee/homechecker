@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { ChevronRight, DoorOpen, Lock, Plus, Share, Sparkles, Trash2 } from "lucide-react";
 import { formatAddress, type AiWorkLeft, type AreaSource, type AreaView, type Inspection, type InspectionTotals, type UnreviewedAiSuggestionView } from "../core";
 import type { Navigate } from "./App";
 import { Band } from "./Band";
@@ -106,15 +107,14 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
             {toReview.map((suggestion) => (
               <li key={suggestion.id}>
                 <button type="button" className="card item-card ai-suggestion" onClick={() => navigate({ name: "item", id: suggestion.itemId })}>
+                  <Sparkles className="row-icon ai" aria-hidden="true" />
                   <span className="grow">
                     <strong>{suggestion.defectTypeName}</strong>
                     <span className="summary">
                       {suggestion.itemName} in {suggestion.areaName}
                     </span>
                   </span>
-                  <span className="chevron" aria-hidden="true">
-                    ›
-                  </span>
+                  <ChevronRight className="chevron" aria-hidden="true" />
                 </button>
               </li>
             ))}
@@ -133,13 +133,12 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
         {areas.map((area) => (
           <li key={area.id}>
             <button type="button" className="card item-card" onClick={() => navigate({ name: "area", id: area.id })}>
+              <DoorOpen className="row-icon" aria-hidden="true" />
               <span className="grow">
                 <strong>{area.name}</strong>
                 <span className="summary">{area.itemCount === 0 ? "No Items yet" : area.itemCount === 1 ? "1 Item" : `${area.itemCount} Items`}</span>
               </span>
-              <span className="chevron" aria-hidden="true">
-                ›
-              </span>
+              <ChevronRight className="chevron" aria-hidden="true" />
             </button>
           </li>
         ))}
@@ -154,6 +153,10 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
         />
       )}
 
+      {/* The end of an Inspection, together: export, complete, and (set apart) delete. */}
+      <div className="section-head">
+        <h2>Finish</h2>
+      </div>
       <ExportPanel
         inspectionId={id}
         promptToExport={justCompleted}
@@ -186,6 +189,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
                 setConfirmingComplete(true);
               }}
             >
+              <Lock aria-hidden="true" />
               Complete Inspection
             </button>
           </section>
@@ -209,6 +213,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
               setConfirmingDelete(true);
             }}
           >
+            <Trash2 aria-hidden="true" />
             Delete Inspection
           </button>
         </section>
@@ -221,6 +226,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
           !confirmingComplete &&
           !confirmingDelete && (
             <button type="button" className="primary" onClick={() => setAdding(true)}>
+              <Plus aria-hidden="true" />
               Add Area
             </button>
           )
@@ -286,6 +292,7 @@ function ExportPanel({
 
   const exportButton = (
     <button type="button" className={promptToExport ? "primary" : "secondary"} onClick={exportNow} disabled={exporting}>
+      <Share aria-hidden="true" />
       {exporting ? "Exporting…" : promptToExport ? "Export now" : "Export"}
     </button>
   );
@@ -296,6 +303,7 @@ function ExportPanel({
         <>
           <p className="muted">The export is ready. Tap to open the share menu.</p>
           <button type="button" className="primary" onClick={() => share(ready, true)}>
+            <Share aria-hidden="true" />
             Share export
           </button>
         </>
