@@ -1062,9 +1062,18 @@ body:has(:is(input, textarea, select):focus) .dock {
 
 /* Never exported: only on this phone, so losing the phone loses it. */
 .unexported {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   color: var(--warn);
   font-size: var(--text-sm);
   font-weight: 700;
+}
+
+/* A small icon at the start of a status line, sized to its text. */
+.lucide.status-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .kept-notice {
@@ -1443,4 +1452,22 @@ button:active:not(:disabled) {
 
 .form > .steps + .muted + h2 {
   margin-top: 0;
+}
+
+/* An Inspection card, spaced by hierarchy: status, then the address with its type and date held close, then the export line. */
+.inspection-card {
+  padding-block: var(--space-4);
+}
+
+.inspection-card .grow {
+  gap: var(--space-3);
+}
+
+.card-badge {
+  justify-self: start;
+}
+
+.card-heading {
+  display: grid;
+  gap: var(--space-1);
 }

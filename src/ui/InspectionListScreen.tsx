@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ChevronRight, Plus, Settings, TriangleAlert } from "lucide-react";
 import type { InspectionSummary } from "../core";
 import type { Navigate } from "./App";
 import { Band } from "./Band";
@@ -21,6 +22,7 @@ export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
         title="Inspections"
         action={
           <button type="button" className="on-band" onClick={() => navigate({ name: "settings" })}>
+            <Settings aria-hidden="true" />
             Settings
           </button>
         }
@@ -31,22 +33,27 @@ export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
       <ul className="cards">
         {inspections?.map((inspection) => (
           <li key={inspection.id}>
-            <button type="button" className="card" onClick={() => navigate({ name: "inspection", id: inspection.id })}>
-              {/* The address first: it's what the Inspector looks for. */}
-              <span className="card-row">
-                <strong>{inspection.addressLine}</strong>
-              </span>
-              <span className="card-row">
-                <span className="muted">
-                  {inspectionTypeLabel[inspection.type]}, {formatDate(inspection.startedAt)}
+            <button type="button" className="card item-card inspection-card" onClick={() => navigate({ name: "inspection", id: inspection.id })}>
+              <span className="grow">
+                {/* Status first, so Drafts and Completed ones are told apart at a glance; then the address. */}
+                <span className={`badge ${inspection.status} card-badge`}>{inspectionStatusLabel[inspection.status]}</span>
+                {/* The address and its type and date read as one block. */}
+                <span className="card-heading">
+                  <strong>{inspection.addressLine}</strong>
+                  <span className="muted">
+                    {inspectionTypeLabel[inspection.type]}, {formatDate(inspection.startedAt)}
+                  </span>
                 </span>
-                <span className={`badge ${inspection.status}`}>{inspectionStatusLabel[inspection.status]}</span>
+                {inspection.lastExportedAt ? (
+                  <span className="muted defect-meta">Exported {formatDateTime(inspection.lastExportedAt)}</span>
+                ) : (
+                  <span className="unexported">
+                    <TriangleAlert className="status-icon" aria-hidden="true" />
+                    Not exported yet: only on this phone
+                  </span>
+                )}
               </span>
-              {inspection.lastExportedAt ? (
-                <span className="muted defect-meta">Exported {formatDateTime(inspection.lastExportedAt)}</span>
-              ) : (
-                <span className="unexported">Not exported yet: only on this phone</span>
-              )}
+              <ChevronRight className="chevron" aria-hidden="true" />
             </button>
           </li>
         ))}
@@ -55,6 +62,7 @@ export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
       <Dock
         action={
           <button type="button" className="primary" onClick={() => navigate({ name: "start" })}>
+            <Plus aria-hidden="true" />
             Start Inspection
           </button>
         }
