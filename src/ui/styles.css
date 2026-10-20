@@ -125,6 +125,8 @@ button {
   padding: 0;
   margin: var(--space-4) 0 0;
   display: grid;
+  /* A wide card wraps inside the column rather than pushing it past the screen's edge. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
 }
 
@@ -809,6 +811,11 @@ button:disabled {
   margin: 0 auto;
 }
 
+/* Nothing to say and no button: no empty strip at the bottom of the screen. */
+.dock:has(> .dock-inner:empty) {
+  display: none;
+}
+
 .dock.in-flow {
   position: static;
   margin: var(--space-5) calc(-1 * var(--space-4)) 0;
@@ -959,8 +966,13 @@ body:has(:is(input, textarea, select):focus) .dock {
 
 .band-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-3);
+}
+
+.band-actions > * {
+  flex: 1;
 }
 
 /* One row per Item: the whole card opens it; in Edit mode it carries Rename and Remove instead. */
@@ -975,6 +987,20 @@ body:has(:is(input, textarea, select):focus) .dock {
   display: grid;
   flex: 1;
   min-width: 0;
+}
+
+/* In Edit mode: the name on its own line, Rename and Remove side by side under it. */
+.item-card.editing {
+  flex-wrap: wrap;
+}
+
+.item-card.editing .grow {
+  flex-basis: 100%;
+}
+
+.item-card.editing .row-action {
+  flex: 1;
+  min-height: 2.75rem;
 }
 
 .item-card .summary {

@@ -117,13 +117,14 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
         {editing && <BackCloses onBack={stopEditing} />}
         {editing && !renaming && (
           <div className="band-actions">
-            <button type="button" className="on-band" onClick={() => setRenaming(true)}>
+            {/* Short labels so both fit on a phone; the Band already names the Area. */}
+            <button type="button" className="on-band" aria-label="Rename Area" onClick={() => setRenaming(true)}>
               <Pencil aria-hidden="true" />
-              Rename Area
+              Rename
             </button>
-            <button type="button" className="on-band danger" onClick={removeArea}>
+            <button type="button" className="on-band danger" aria-label="Remove Area" onClick={removeArea}>
               <Trash2 aria-hidden="true" />
-              Remove Area
+              Remove
             </button>
           </div>
         )}
@@ -185,7 +186,7 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
                 </div>
               </div>
             ) : editing ? (
-              <div className="card item-card">
+              <div className="card item-card editing">
                 <span className="grow">
                   <strong>{item.displayName}</strong>
                   <span className="summary">{item.summary}</span>
