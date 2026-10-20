@@ -1733,3 +1733,53 @@ body:has(.sheet-backdrop) .dock {
   width: 22px;
   height: 22px;
 }
+
+/* AI Suggestions on an Item: one card per photo, the photo wide at the top, its suggestions as rows below (UX-030). */
+.ai-group {
+  display: grid;
+  gap: var(--space-3);
+  border-left: 6px solid var(--blue);
+}
+
+.ai-group-photo {
+  display: block;
+  height: 7rem;
+  overflow: hidden;
+  border-radius: var(--r-control);
+  background: var(--line-soft);
+}
+
+.ai-group-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ai-rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-row {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+}
+
+.ai-row + .ai-row {
+  border-top: 1px solid var(--line-soft);
+}
+
+.ai-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.ai-row .review-actions {
+  margin-top: var(--space-2);
+}

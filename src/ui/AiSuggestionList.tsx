@@ -75,35 +75,47 @@ export function AiSuggestionList({
     if (panel?.mode === "note") accept(panel.suggestion, panel.accepted, note);
   }
 
+  /** Suggestions grouped by the photo they came from, in order: the photo is shown once, wide, above its suggestions (UX-030). */
+  const byPhoto: { evidenceId: string; list: AiSuggestionView[] }[] = [];
+  for (const suggestion of suggestions) {
+    const group = byPhoto.find((each) => each.evidenceId === suggestion.evidenceId);
+    if (group) group.list.push(suggestion);
+    else byPhoto.push({ evidenceId: suggestion.evidenceId, list: [suggestion] });
+  }
+
   return (
     <>
-      <ul className="cards">
-        {suggestions.map((suggestion) => (
-          <li key={suggestion.id} className={`card ai-suggestion${arrived.has(suggestion.id) ? " arrived" : ""}`}>
-            <span className="thumbnail">
-              <MediaImage evidenceId={suggestion.evidenceId} version="thumbnail" alt="Photo" />
+      <ul className="cards ai-groups">
+        {byPhoto.map(({ evidenceId, list }) => (
+          <li key={evidenceId} className="card ai-group">
+            <span className="ai-group-photo">
+              <MediaImage evidenceId={evidenceId} version="thumbnail" alt="Photo" />
             </span>
-            <span>
-              <span className="card-row">
-                <strong>{suggestion.defectTypeName}</strong>
-                {suggestion.outcome !== "unreviewed" && <span className={`badge ${suggestion.outcome}`}>{aiOutcomeLabel(suggestion)}</span>}
-              </span>
-              <span className="ai-why">AI suggestion, {suggestion.confidence.toLowerCase()} confidence</span>
-            </span>
-            {suggestion.outcome === "unreviewed" && panel?.suggestion.id !== suggestion.id && (
-              <span className="button-row review-actions">
-                <button type="button" className="primary" onClick={() => accept(suggestion, { code: suggestion.defectTypeCode, name: suggestion.defectTypeName })}>
-                  Confirm
-                </button>
-                <button type="button" className="secondary" onClick={() => setPanel({ mode: "correct", suggestion })}>
-                  Correct
-                </button>
-                <button type="button" className="quiet" onClick={() => reject(suggestion)}>
-                  Reject
-                </button>
-              </span>
-            )}
-            {error?.suggestionId === suggestion.id && panel === null && <p className="error review-actions">{error.message}</p>}
+            <ul className="ai-rows">
+              {list.map((suggestion) => (
+                <li key={suggestion.id} className={`ai-row${arrived.has(suggestion.id) ? " arrived" : ""}`}>
+                  <span className="ai-row-head">
+                    <strong>{suggestion.defectTypeName}</strong>
+                    {suggestion.outcome !== "unreviewed" && <span className={`badge ${suggestion.outcome}`}>{aiOutcomeLabel(suggestion)}</span>}
+                  </span>
+                  <span className="ai-why">AI suggestion, {suggestion.confidence.toLowerCase()} confidence</span>
+                  {suggestion.outcome === "unreviewed" && panel?.suggestion.id !== suggestion.id && (
+                    <span className="button-row review-actions">
+                      <button type="button" className="primary" onClick={() => accept(suggestion, { code: suggestion.defectTypeCode, name: suggestion.defectTypeName })}>
+                        Confirm
+                      </button>
+                      <button type="button" className="secondary" onClick={() => setPanel({ mode: "correct", suggestion })}>
+                        Correct
+                      </button>
+                      <button type="button" className="quiet" onClick={() => reject(suggestion)}>
+                        Reject
+                      </button>
+                    </span>
+                  )}
+                  {error?.suggestionId === suggestion.id && panel === null && <p className="error review-actions">{error.message}</p>}
+                </li>
+              ))}
+            </ul>
           </li>
         ))}
       </ul>
