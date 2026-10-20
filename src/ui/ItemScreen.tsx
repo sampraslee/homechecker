@@ -157,6 +157,16 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     load();
   }
 
+  async function undoAiReview(suggestionId: string) {
+    const result = await homeCheck.undoAiReview(suggestionId);
+    if (result.ok) showFlash({ text: "Undone. The AI Suggestion is back to review." });
+    else {
+      setFlash(null);
+      setError(refusalMessage[result.reason]);
+    }
+    load();
+  }
+
   function closeNotePanel() {
     setNotePanel(null);
     load();
@@ -290,8 +300,8 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
             suggestions={aiSuggestions}
             arrived={arrived}
             defects={defects}
-            onReviewed={(message) => {
-              showFlash({ text: message });
+            onReviewed={(message, suggestionId) => {
+              showFlash({ text: message, undo: () => undoAiReview(suggestionId) });
               load();
             }}
           />

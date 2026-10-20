@@ -32,8 +32,8 @@ export function AiSuggestionList({
   arrived: Set<string>;
   /** The Item's Defects, so the picker can mark Defect Types already recorded. */
   defects: DefectView[];
-  /** Called with what happened, once a suggestion is reviewed. */
-  onReviewed: (message: string) => void;
+  /** Called with what happened and which suggestion, once a suggestion is reviewed, so the review can be undone. */
+  onReviewed: (message: string, suggestionId: string) => void;
 }) {
   const homeCheck = useHomeCheck();
   const [panel, setPanel] = useState<ReviewPanel | null>(null);
@@ -53,6 +53,7 @@ export function AiSuggestionList({
         result.addedToExisting
           ? `Photo added to the existing ${result.defect.defectTypeName} Defect.`
           : `Added ${result.defect.defectTypeName}.`,
+        suggestion.id,
       );
     } else if (result.reason === "note-required" && note === undefined) {
       setNote("");
@@ -65,7 +66,7 @@ export function AiSuggestionList({
   async function reject(suggestion: AiSuggestionView) {
     setError(null);
     const result = await homeCheck.rejectAiSuggestion(suggestion.id);
-    if (result.ok) onReviewed(`Rejected ${suggestion.defectTypeName}.`);
+    if (result.ok) onReviewed(`Rejected ${suggestion.defectTypeName}.`, suggestion.id);
     else setError({ suggestionId: suggestion.id, message: refusalMessage[result.reason] });
   }
 

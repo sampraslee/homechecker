@@ -214,7 +214,7 @@ export type AiQueueEntry = {
   lastAttemptAt?: string;
 };
 
-/** Where review of an AI Suggestion stands. Once reviewed it never changes. */
+/** Where review of an AI Suggestion stands. Once reviewed it changes only by the Inspector's Undo. */
 export type AiSuggestionOutcome = "unreviewed" | "confirmed" | "corrected" | "rejected";
 
 /** A Defect Type the AI proposed for a photo. Kept apart from Defects and never overwritten by a later AI run. */
@@ -234,6 +234,8 @@ export type AiSuggestion = {
   suggestedAt: string;
   /** When the Inspector confirmed, corrected or rejected it. */
   reviewedAt?: string;
+  /** The Defect this review linked its photo to, when the photo wasn't linked already; Undo takes back exactly that. */
+  linkedDefectId?: string;
   /** Order among the photo's suggestions, as the AI ranked them. */
   rank: number;
 };

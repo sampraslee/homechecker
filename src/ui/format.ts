@@ -67,6 +67,7 @@ export const refusalMessage: Record<RefusalReason, string> = {
   "evidence-not-a-note": "Only a note's text can be edited.",
   "ai-suggestion-not-found": "This AI Suggestion isn't on this phone.",
   "ai-suggestion-already-reviewed": "This AI Suggestion was already reviewed.",
+  "ai-suggestion-not-reviewed": "This AI Suggestion isn't reviewed yet, so there's nothing to undo.",
 };
 
 /** The part of a Unit's address an Inspector says out loud, e.g. "A-12-3, Residensi Harmoni". */

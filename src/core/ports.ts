@@ -53,6 +53,8 @@ export interface Storage {
   getAiSuggestion(id: string): Promise<AiSuggestion | undefined>;
   /** Saves a reviewed AI Suggestion together with the Defect it made or added its photo to, if any, atomically. */
   saveAiReview(suggestion: AiSuggestion, defect?: Defect): Promise<void>;
+  /** Saves an AI Suggestion put back to unreviewed, with its Defect saved or deleted, atomically. */
+  undoAiReview(suggestion: AiSuggestion, defect?: { put: Defect } | { deleteId: string }): Promise<void>;
 }
 
 /** Makes the smaller versions of a photo, and a video's thumbnail. Production: canvas and a video element. */

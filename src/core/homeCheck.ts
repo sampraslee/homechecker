@@ -262,7 +262,8 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       defectTypeCode === suggestion.defectTypeCode
         ? { outcome: "confirmed" }
         : { outcome: "corrected", correctedCode: defectTypeCode };
-    await storage.saveAiReview({ ...suggestion, ...outcome, reviewedAt: environment.now().toISOString() }, defect);
+    const linked = !sameType?.evidenceIds.includes(suggestion.evidenceId) && { linkedDefectId: defect.id };
+    await storage.saveAiReview({ ...suggestion, ...outcome, ...linked, reviewedAt: environment.now().toISOString() }, defect);
     aiChanged();
     return { ok: true as const, defect: toDefectView(defect), addedToExisting: !!sameType };
   }
@@ -915,6 +916,29 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       const found = await findUnreviewed(suggestionId);
       if (!found.ok) return found;
       await storage.saveAiReview({ ...found.suggestion, outcome: "rejected", reviewedAt: environment.now().toISOString() });
+      aiChanged();
+      return { ok: true as const };
+    },
+
+    /**
+     * Takes back a confirm, correct or reject: the suggestion is unreviewed again, and its photo comes off the Defect
+     * the review linked it to. A Defect the review made, holding only that photo, is removed. Works on a Completed
+     * Inspection, as reviewing does.
+     */
+    async undoAiReview(suggestionId: string) {
+      const suggestion = await storage.getAiSuggestion(suggestionId);
+      if (!suggestion) return aiSuggestionNotFound;
+      if (suggestion.outcome === "unreviewed") return { ok: false as const, reason: "ai-suggestion-not-reviewed" as const };
+      const { correctedCode: _corrected, reviewedAt: _reviewed, linkedDefectId, ...rest } = suggestion;
+      const unreviewed: AiSuggestion = { ...rest, outcome: "unreviewed" };
+      const defect = linkedDefectId ? await storage.getDefect(linkedDefectId) : undefined;
+      const others = defect?.evidenceIds.filter((id) => id !== suggestion.evidenceId) ?? [];
+      const change =
+        defect &&
+        (defect.aiSuggestionId === suggestion.id && others.length === 0
+          ? { deleteId: defect.id }
+          : { put: { ...defect, evidenceIds: others } });
+      await storage.undoAiReview(unreviewed, change);
       aiChanged();
       return { ok: true as const };
     },

@@ -353,3 +353,75 @@ describe("what a review reports", () => {
     expect({ made: made.addedToExisting, linked: linked.addedToExisting }).toEqual({ made: false, linked: true });
   });
 });
+
+describe("undoing an AI review", () => {
+  test("after confirming, removes the Defect it made and leaves the suggestion unreviewed", async () => {
+    const { homeCheck, itemId, suggestions } = await photoWithSuggestions();
+    expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id));
+
+    expectOk(await homeCheck.undoAiReview(suggestions[0].id));
+
+    expect(await homeCheck.listDefects(itemId)).toEqual([]);
+    const [undone] = await homeCheck.listAiSuggestions(itemId);
+    expect(undone.outcome).toBe("unreviewed");
+    expect(undone.reviewedAt).toBeUndefined();
+  });
+
+  test("after correcting, removes the corrected Defect and the correction", async () => {
+    const { homeCheck, itemId, suggestions } = await photoWithSuggestions();
+    expectOk(await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "CF-HINGE" }));
+
+    expectOk(await homeCheck.undoAiReview(suggestions[0].id));
+
+    expect(await homeCheck.listDefects(itemId)).toEqual([]);
+    const [undone] = await homeCheck.listAiSuggestions(itemId);
+    expect(undone.outcome).toBe("unreviewed");
+    expect(undone.correctedCode).toBeUndefined();
+  });
+
+  test("after rejecting, leaves the suggestion unreviewed", async () => {
+    const { homeCheck, itemId, suggestions } = await photoWithSuggestions();
+    expectOk(await homeCheck.rejectAiSuggestion(suggestions[0].id));
+
+    expectOk(await homeCheck.undoAiReview(suggestions[0].id));
+
+    expect((await homeCheck.listAiSuggestions(itemId))[0].outcome).toBe("unreviewed");
+  });
+
+  test("after adding the photo to an existing Defect, unlinks the photo and keeps the Defect", async () => {
+    const { homeCheck, itemId, suggestions } = await photoWithSuggestions();
+    const note = expectOk(await homeCheck.addNote(itemId, "by the handle")).evidence;
+    const existing = expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [note.id] })).defect;
+    expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id));
+
+    expectOk(await homeCheck.undoAiReview(suggestions[0].id));
+
+    expect(await homeCheck.listDefects(itemId)).toMatchObject([{ id: existing.id, evidenceIds: [note.id] }]);
+  });
+
+  test("leaves a photo linked when it was linked before the review", async () => {
+    const { homeCheck, itemId, photoId, suggestions } = await photoWithSuggestions();
+    const existing = expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [photoId] })).defect;
+    expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id));
+
+    expectOk(await homeCheck.undoAiReview(suggestions[0].id));
+
+    expect(await homeCheck.listDefects(itemId)).toMatchObject([{ id: existing.id, evidenceIds: [photoId] }]);
+  });
+
+  test("of a suggestion still unreviewed is refused", async () => {
+    const { homeCheck, suggestions } = await photoWithSuggestions();
+
+    expect(await homeCheck.undoAiReview(suggestions[0].id)).toEqual({ ok: false, reason: "ai-suggestion-not-reviewed" });
+  });
+
+  test("works on a Completed Inspection, as reviewing does", async () => {
+    const { homeCheck, itemId, inspectionId, suggestions } = await photoWithSuggestions();
+    expectOk(await homeCheck.completeInspection(inspectionId));
+    expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id));
+
+    expectOk(await homeCheck.undoAiReview(suggestions[0].id));
+
+    expect(await homeCheck.listDefects(itemId)).toEqual([]);
+  });
+});

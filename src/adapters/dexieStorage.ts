@@ -166,5 +166,12 @@ export function createDexieStorage(name = "home-check", options?: DexieOptions):
         if (defect) await db.defects.put(defect);
       });
     },
+    async undoAiReview(suggestion, defect) {
+      await db.transaction("rw", db.aiSuggestions, db.defects, async () => {
+        await db.aiSuggestions.put(suggestion);
+        if (defect && "put" in defect) await db.defects.put(defect.put);
+        if (defect && "deleteId" in defect) await db.defects.delete(defect.deleteId);
+      });
+    },
   };
 }
