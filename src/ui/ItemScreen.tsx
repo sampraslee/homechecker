@@ -5,7 +5,7 @@ import { AiSuggestionList } from "./AiSuggestionList";
 import { Band } from "./Band";
 import { Dock } from "./Dock";
 import { DefectEditor, DefectTypePicker, type PickedDefectType } from "./DefectPanels";
-import { countEvidence, lockedNotice, refusalMessage, shortAddress } from "./format";
+import { countEvidence, lockedNotice, refusalMessage, unitAndType } from "./format";
 import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
 import { MediaImage, MediaThumbnail, useMediaUrl } from "./MediaImage";
@@ -65,7 +65,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     setItem(found ?? null);
     if (found) {
       const [area, inspection] = await Promise.all([homeCheck.getArea(found.areaId), homeCheck.getInspection(found.inspectionId)]);
-      if (area && inspection) setPlace({ areaName: area.name, unit: shortAddress(inspection.address) });
+      if (area && inspection) setPlace({ areaName: area.name, unit: unitAndType(inspection) });
     }
     setEvidence(await homeCheck.listEvidence(id));
     setDefects(await homeCheck.listDefects(id));

@@ -3,7 +3,7 @@ import type { Area, CatalogItem, Evidence, Inspection, ItemChoices, ItemSource, 
 import type { Navigate } from "./App";
 import { Band } from "./Band";
 import { Dock } from "./Dock";
-import { countEvidence, inspectionTypeLabel, lockedNotice, refusalMessage, shortAddress } from "./format";
+import { countEvidence, inspectionTypeLabel, lockedNotice, refusalMessage, unitAndType } from "./format";
 import { BackCloses, useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
 import { scrollIntoViewGently } from "./scroll";
@@ -92,7 +92,7 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
       <Band
         navigate={navigate}
         back={{ to: backToInspection, label: inspection ? inspectionTypeLabel[inspection.type] : "Inspection" }}
-        unit={inspection ? shortAddress(inspection.address) : undefined}
+        unit={inspection ? unitAndType(inspection) : undefined}
         title={area.name}
         action={
           editable && (

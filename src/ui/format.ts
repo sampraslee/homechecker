@@ -1,6 +1,15 @@
-import { VIDEO_TIME_LIMIT_SECONDS, type AiSuggestionView, type Evidence, type InspectionStatus, type RefusalReason, type UnitAddress } from "../core";
+import {
+  inspectionTypeLabel,
+  VIDEO_TIME_LIMIT_SECONDS,
+  type AiSuggestionView,
+  type Evidence,
+  type InspectionStatus,
+  type InspectionType,
+  type RefusalReason,
+  type UnitAddress,
+} from "../core";
 
-export { inspectionTypeLabel } from "../core";
+export { inspectionTypeLabel };
 
 export const inspectionStatusLabel: Record<InspectionStatus, string> = {
   draft: "Draft",
@@ -87,4 +96,9 @@ export function countEvidence(evidence: Evidence[]): string {
     .filter(([count]) => count > 0)
     .map(([count, one]) => plural(count, one))
     .join(", ");
+}
+
+/** The band's line above an Area or Item: the Unit and which Inspection, so a Move-out never passes for its Move-in. */
+export function unitAndType(inspection: { address: UnitAddress; type: InspectionType }): string {
+  return `${shortAddress(inspection.address)} · ${inspectionTypeLabel[inspection.type]}`;
 }
