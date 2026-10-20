@@ -105,6 +105,8 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
     return (
       <main className="screen">
         <Band navigate={navigate} back={{ to: { name: "list" }, label: "Inspections" }} title="Start an Inspection" />
+        {/* The screen asks one thing, so it says so (UX-035). */}
+        <h2 className="type-question">What are you inspecting?</h2>
         <ul className="cards">
           {(["move-in", "move-out"] as const).map((each) => (
             <li key={each}>

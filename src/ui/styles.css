@@ -1818,3 +1818,8 @@ body:has(.sheet-backdrop) .dock {
 .unexported > .status-icon {
   margin-top: 0.15em;
 }
+
+/* The question on the Move-in / Move-out screen (UX-035). */
+.type-question {
+  margin: var(--space-2) 0 0;
+}
