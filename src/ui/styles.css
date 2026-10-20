@@ -1059,6 +1059,14 @@ body:has(:is(input, textarea, select):focus) .dock {
   font-weight: 700;
 }
 
+/* On the Inspection screen, Complete is outlined so it doesn't compete with the Dock's main action. The solid button is
+   kept for the confirmation, which carries the warning (UX-018). */
+.lock-zone .lock-button {
+  border: 2px solid var(--night);
+  background: var(--surface);
+  color: var(--night);
+}
+
 .totals {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
