@@ -1018,6 +1018,15 @@ body:has(:is(input, textarea, select):focus) .dock {
   flex: 1;
 }
 
+/* The photo viewer's delete confirmation sits at the bottom, in thumb reach. */
+.viewer-confirm {
+  margin-bottom: 1rem;
+}
+
+.viewer-confirm h2 {
+  margin: 0;
+}
+
 .danger-button {
   min-height: 3rem;
   border: 0;

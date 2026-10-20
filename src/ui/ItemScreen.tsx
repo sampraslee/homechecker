@@ -420,6 +420,8 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
       {viewing && (
         <MediaViewer
           evidence={viewing}
+          defects={defects}
+          aiSuggestions={aiSuggestions}
           canDelete={editable}
           onClose={() => setViewing(null)}
           onDeleted={() => {
@@ -450,13 +452,42 @@ function unreviewedCount(suggestions: AiSuggestionView[]): string {
   return count > 0 ? `${count} to review` : "";
 }
 
+/** What else goes with a photo or video: its links to Defects, and a photo's AI Suggestions with any reviews. */
+function deletionConsequences(evidence: MediaEvidence, defects: DefectView[], aiSuggestions: AiSuggestionView[]): string[] {
+  const lines: string[] = [];
+  const linked = defects.filter((defect) => defect.evidenceIds.includes(evidence.id));
+  const leftBare = linked.filter((defect) => defect.evidenceIds.length === 1).map((defect) => defect.defectTypeName);
+  if (leftBare.length > 0) lines.push(`It's the only Evidence for ${listNames(leftBare)}, which will have none.`);
+  else if (linked.length > 0) lines.push(`It comes off ${listNames(linked.map((defect) => defect.defectTypeName))}.`);
+  const suggestions = aiSuggestions.filter((suggestion) => suggestion.evidenceId === evidence.id);
+  const reviewed = suggestions.filter((suggestion) => suggestion.outcome !== "unreviewed").length;
+  if (reviewed > 0) {
+    lines.push(
+      `Its ${suggestions.length === 1 ? "AI Suggestion goes" : `${suggestions.length} AI Suggestions go`} too, ` +
+        `with ${reviewed === 1 ? "your review" : "your reviews"}, so ${reviewed === 1 ? "it leaves" : "they leave"} the AI results.`,
+    );
+  } else if (suggestions.length > 0) {
+    lines.push(suggestions.length === 1 ? "Its AI Suggestion goes too." : `Its ${suggestions.length} AI Suggestions go too.`);
+  }
+  return lines;
+}
+
+/** "A", "A and B", "A, B and C". */
+function listNames(names: string[]): string {
+  return names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
 function MediaViewer({
   evidence,
+  defects,
+  aiSuggestions,
   canDelete,
   onClose,
   onDeleted,
 }: {
   evidence: MediaEvidence;
+  defects: DefectView[];
+  aiSuggestions: AiSuggestionView[];
   canDelete: boolean;
   onClose: () => void;
   onDeleted: () => void;
@@ -495,16 +526,7 @@ function MediaViewer({
         <button type="button" className="link on-dark" onClick={onClose} ref={closeButton}>
           Close
         </button>
-        {!canDelete ? null : confirming ? (
-          <span className="button-row">
-            <button type="button" className="link on-dark" onClick={() => setConfirming(false)}>
-              Keep {evidence.kind}
-            </button>
-            <button type="button" className="link danger-on-dark" onClick={remove}>
-              Delete {evidence.kind}
-            </button>
-          </span>
-        ) : (
+        {canDelete && !confirming && (
           <button type="button" className="link danger-on-dark" onClick={() => setConfirming(true)}>
             Delete
           </button>
@@ -515,6 +537,24 @@ function MediaViewer({
         <MediaImage evidenceId={evidence.id} version="original" alt="Photo" className="viewer-image square" />
       ) : (
         <VideoPlayer evidenceId={evidence.id} />
+      )}
+      {/* At the bottom, away from where Delete was, so a double tap can't delete. */}
+      {confirming && (
+        <section className="panel confirm-card viewer-confirm" aria-label={`Delete this ${evidence.kind}?`}>
+          <h2>Delete this {evidence.kind}?</h2>
+          {deletionConsequences(evidence, defects, aiSuggestions).map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+          <p>It can't be undone.</p>
+          <div className="button-row">
+            <button type="button" className="secondary" onClick={() => setConfirming(false)}>
+              Keep {evidence.kind}
+            </button>
+            <button type="button" className="danger-button" onClick={remove}>
+              Delete {evidence.kind}
+            </button>
+          </div>
+        </section>
       )}
     </div>
   );
