@@ -3,8 +3,9 @@ import { Check, ChevronRight, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import type { Area, CatalogItem, Evidence, Inspection, ItemChoices, ItemSource, ItemView } from "../core";
 import type { Navigate } from "./App";
 import { Band } from "./Band";
+import { LockedNotice } from "./LockedNotice";
 import { Dock } from "./Dock";
-import { countEvidence, inspectionTypeLabel, lockedNotice, refusalMessage, unitAndType } from "./format";
+import { countEvidence, inspectionTypeLabel, refusalMessage, unitAndType } from "./format";
 import { BackCloses, useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
 import { scrollIntoViewGently } from "./scroll";
@@ -128,7 +129,7 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
             </button>
           </div>
         )}
-        {locked && <p className="notice">{lockedNotice}</p>}
+        {locked && <LockedNotice />}
       </Band>
 
       {renaming && (

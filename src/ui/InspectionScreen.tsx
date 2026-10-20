@@ -3,8 +3,9 @@ import { ChevronRight, DoorOpen, Lock, Plus, Share, Sparkles, Trash2 } from "luc
 import { formatAddress, type AiWorkLeft, type AreaSource, type AreaView, type Inspection, type InspectionTotals, type UnreviewedAiSuggestionView } from "../core";
 import type { Navigate } from "./App";
 import { Band } from "./Band";
+import { LockedNotice } from "./LockedNotice";
 import { Dock, StorageNote } from "./Dock";
-import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel, lockedNotice, refusalMessage, shortAddress } from "./format";
+import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel, refusalMessage, shortAddress } from "./format";
 import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
 import { scrollIntoViewGently } from "./scroll";
@@ -63,9 +64,10 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
         back={{ to: { name: "list" }, label: "Inspections" }}
         unit={shortAddress(inspection.address)}
         title={inspectionTypeLabel[inspection.type]}
-        action={<span className={`badge ${inspection.status}`}>{inspectionStatusLabel[inspection.status]}</span>}
+        // Completed shows as the "Completed · Locked" pill below, so the badge is only for a Draft.
+        action={!locked && <span className={`badge ${inspection.status}`}>{inspectionStatusLabel[inspection.status]}</span>}
       >
-        {locked && <p className="notice">{lockedNotice}</p>}
+        {locked && <LockedNotice />}
       </Band>
 
       <dl className="details">

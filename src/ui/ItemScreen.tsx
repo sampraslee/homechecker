@@ -14,9 +14,10 @@ import {
 import type { Navigate } from "./App";
 import { AiSuggestionList } from "./AiSuggestionList";
 import { Band } from "./Band";
+import { LockedNotice } from "./LockedNotice";
 import { Dock } from "./Dock";
 import { DefectEditor, DefectTypePicker, type PickedDefectType } from "./DefectPanels";
-import { countEvidence, lockedNotice, refusalMessage, unitAndType } from "./format";
+import { countEvidence, refusalMessage, unitAndType } from "./format";
 import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
 import { MediaImage, MediaThumbnail, useMediaUrl } from "./MediaImage";
@@ -280,7 +281,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         unit={place?.unit}
         title={item.displayName}
       >
-        {locked && <p className="notice">{lockedNotice}</p>}
+        {locked && <LockedNotice />}
       </Band>
 
       {/* One list: each piece of Evidence with the Defect Types assigned to it (ADR 0006). */}

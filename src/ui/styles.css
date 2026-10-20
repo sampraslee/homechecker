@@ -1783,3 +1783,21 @@ body:has(.sheet-backdrop) .dock {
 .ai-row .review-actions {
   margin-top: var(--space-2);
 }
+
+/* A Completed Inspection's screens: a quiet "Completed · Locked" pill in the Band (UX-031). */
+.band .locked-pill-row {
+  margin: var(--space-3) 0 0;
+}
+
+.locked-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: var(--r-pill);
+  background: var(--night-raised);
+  color: #fff;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
