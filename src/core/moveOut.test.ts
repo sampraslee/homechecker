@@ -221,3 +221,57 @@ describe("the Move-in picker", () => {
     expect(await homeCheck.listMoveIns()).toEqual([]);
   });
 });
+
+describe("what the Move-in recorded, shown on a Move-out Item", () => {
+  /** A Move-in Bedroom with a scratched Wardrobe (one photo) and two Windows, the right one cracked; and its Move-out. */
+  async function moveInAndMoveOut() {
+    const setup = await createTestHomeCheckWithItem();
+    const { homeCheck, inspectionId: moveInId, areaId, itemId } = setup;
+    const photo = expectOk(await homeCheck.addPhoto(itemId, new Blob(["scratched door"]))).evidence;
+    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [photo.id] }));
+    expectOk(await homeCheck.addItem(areaId, { catalogItemId: "window", shortName: "left" }));
+    const right = expectOk(await homeCheck.addItem(areaId, { catalogItemId: "window", shortName: "right" })).item;
+    expectOk(await homeCheck.addDefect(right.id, { defectTypeCode: "SF-STAIN" }));
+    const moveOut = expectOk(await homeCheck.startMoveOut({ moveInId })).inspection;
+    const [area] = await homeCheck.listAreas(moveOut.id);
+    const items = await homeCheck.listItems(area.id);
+    const byName = (displayName: string) => items.find((item) => item.displayName === displayName)!.id;
+    return { ...setup, moveInId, moveOutAreaId: area.id, photoId: photo.id, moveOutItem: byName };
+  }
+
+  test("lists the Defects and photos of the Item with the same Area and Item name", async () => {
+    const { homeCheck, photoId, moveOutItem } = await moveInAndMoveOut();
+
+    const record = await homeCheck.moveInRecord(moveOutItem("Wardrobe"));
+
+    expect(record?.defects.map((defect) => defect.defectTypeCode)).toEqual(["SF-SCRATCH"]);
+    expect(record?.media.map((media) => media.id)).toEqual([photoId]);
+  });
+
+  test("tells Items apart by their short name", async () => {
+    const { homeCheck, moveOutItem } = await moveInAndMoveOut();
+
+    expect((await homeCheck.moveInRecord(moveOutItem("Window – right")))?.defects.map((d) => d.defectTypeCode)).toEqual(["SF-STAIN"]);
+    expect(await homeCheck.moveInRecord(moveOutItem("Window – left"))).toEqual({ defects: [], media: [] });
+  });
+
+  test("is missing when the Area was renamed, so nothing matches", async () => {
+    const { homeCheck, moveOutAreaId, moveOutItem } = await moveInAndMoveOut();
+    expectOk(await homeCheck.renameArea(moveOutAreaId, "Guest room"));
+
+    expect(await homeCheck.moveInRecord(moveOutItem("Wardrobe"))).toBeUndefined();
+  });
+
+  test("is missing once the Move-in is deleted from this phone", async () => {
+    const { homeCheck, moveInId, moveOutItem } = await moveInAndMoveOut();
+    expectOk(await homeCheck.deleteInspection(moveInId));
+
+    expect(await homeCheck.moveInRecord(moveOutItem("Wardrobe"))).toBeUndefined();
+  });
+
+  test("is missing on a Move-in's own Item", async () => {
+    const { homeCheck, itemId } = await moveInAndMoveOut();
+
+    expect(await homeCheck.moveInRecord(itemId)).toBeUndefined();
+  });
+});

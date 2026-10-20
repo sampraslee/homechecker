@@ -26,6 +26,7 @@ import type {
   ItemSource,
   ItemView,
   MediaEvidence,
+  MoveInRecord,
   MoveOutSource,
   NoteEvidence,
   MediaVersion,
@@ -36,7 +37,7 @@ import type {
   UnreviewedAiSuggestionView,
   VideoEvidence,
 } from "./model";
-import { AI_CONFIDENCES, MAX_AI_SUGGESTIONS_PER_PHOTO, VIDEO_TIME_LIMIT_SECONDS } from "./model";
+import { AI_CONFIDENCES, isMedia, MAX_AI_SUGGESTIONS_PER_PHOTO, VIDEO_TIME_LIMIT_SECONDS } from "./model";
 import type { AiAnswer, AiClient, Environment, ImageProcessor, Storage } from "./ports";
 import {
   checkReferenceData,
@@ -847,6 +848,28 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
 
     async listDefects(itemId: string): Promise<DefectView[]> {
       return (await storage.listDefects(itemId)).map(toDefectView);
+    },
+
+    /**
+     * What the linked Move-in recorded on the same Item, for reference on a Move-out: the Item with the same Item name
+     * and short name, in the Area with the same name. Missing when nothing matches, the Move-in is deleted, or the Item
+     * isn't on a linked Move-out. Nothing is copied.
+     */
+    async moveInRecord(itemId: string): Promise<MoveInRecord | undefined> {
+      const item = await storage.getItem(itemId);
+      const area = item && (await storage.getArea(item.areaId));
+      const inspection = item && (await storage.getInspection(item.inspectionId));
+      if (!item || !area || !inspection?.linkedMoveInId) return undefined;
+      const moveInArea = (await storage.listAreas(inspection.linkedMoveInId)).find((other) => other.name === area.name);
+      if (!moveInArea) return undefined;
+      const moveInItem = (await storage.listItems(moveInArea.id)).find(
+        (other) => other.name === item.name && (other.shortName ?? "") === (item.shortName ?? ""),
+      );
+      if (!moveInItem) return undefined;
+      return {
+        defects: (await storage.listDefects(moveInItem.id)).map(toDefectView),
+        media: (await storage.listEvidence(moveInItem.id)).filter(isMedia),
+      };
     },
 
     /** Sends queued photos to the AI one at a time, while online. Works on Completed Inspections too. */

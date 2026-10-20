@@ -246,6 +246,9 @@ export type AiSuggestionView = AiSuggestion & { defectTypeName: string; category
 /** An AI Suggestion still to review, with the names of the Area and Item it's on. */
 export type UnreviewedAiSuggestionView = AiSuggestionView & { areaName: string; itemName: string };
 
+/** What the linked Move-in recorded on the same Item, shown on a Move-out for reference only. */
+export type MoveInRecord = { defects: DefectView[]; media: MediaEvidence[] };
+
 /** An Inspection's AI work still to come or to review, shown before completing. */
 export type AiWorkLeft = { waitingForAi: number; unreviewedAiSuggestions: number };
 

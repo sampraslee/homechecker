@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { isMedia, isNote, type AiSuggestionView, type DefectView, type Evidence, type ItemView, type MediaEvidence, type NoteEvidence } from "../core";
+import {
+  isMedia,
+  isNote,
+  type AiSuggestionView,
+  type DefectView,
+  type Evidence,
+  type ItemView,
+  type MediaEvidence,
+  type MoveInRecord,
+  type NoteEvidence,
+} from "../core";
 import type { Navigate } from "./App";
 import { AiSuggestionList } from "./AiSuggestionList";
 import { Band } from "./Band";
@@ -43,6 +53,9 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [defects, setDefects] = useState<DefectView[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<AiSuggestionView[]>([]);
+  /** On a linked Move-out: what the Move-in recorded on this Item, for reference. */
+  const [moveIn, setMoveIn] = useState<MoveInRecord | undefined>(undefined);
+  const [showMoveInMedia, setShowMoveInMedia] = useState(false);
   const [defectPanel, setDefectPanel] = useState<DefectPanel | null>(null);
   const [notePanel, setNotePanel] = useState<NotePanel | null>(null);
   const [recording, setRecording] = useState(false);
@@ -70,6 +83,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     setEvidence(await homeCheck.listEvidence(id));
     setDefects(await homeCheck.listDefects(id));
     setAiSuggestions(await homeCheck.listAiSuggestions(id));
+    setMoveIn(await homeCheck.moveInRecord(id));
     setLoaded(true);
   }, [homeCheck, id]);
 
@@ -312,6 +326,14 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         <h2>Defects</h2>
         <span className="count">{defects.length > 0 && defects.length}</span>
       </div>
+      {moveIn && (
+        <MoveInLine
+          record={moveIn}
+          expanded={showMoveInMedia}
+          onToggle={() => setShowMoveInMedia((shown) => !shown)}
+          onOpen={setViewing}
+        />
+      )}
       {defects.length === 0 && <p className="muted">{editable ? "No Defects yet. Add one, or confirm an AI Suggestion." : "No Defects recorded."}</p>}
       <ul className="cards">
         {defects.map((defect) => {
@@ -422,7 +444,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           evidence={viewing}
           defects={defects}
           aiSuggestions={aiSuggestions}
-          canDelete={editable}
+          canDelete={editable && viewing.itemId === id}
           onClose={() => setViewing(null)}
           onDeleted={() => {
             setViewing(null);
@@ -443,6 +465,57 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         />
       )}
     </main>
+  );
+}
+
+/**
+ * A Move-out Item's reference to the Move-in: the Defects it recorded on the same Item, with a tap to see its photos.
+ * Read-only, and never copied into the Move-out.
+ */
+function MoveInLine({
+  record,
+  expanded,
+  onToggle,
+  onOpen,
+}: {
+  record: MoveInRecord;
+  expanded: boolean;
+  onToggle: () => void;
+  onOpen: (media: MediaEvidence) => void;
+}) {
+  const names = record.defects.map((defect) => defect.defectTypeName).join(", ");
+  const media = countEvidence(record.media);
+  const text = (
+    <>
+      <span className="move-in-label">At Move-in</span>
+      <span>{names || "No Defects recorded"}</span>
+      {media && <span className="muted">{media}</span>}
+    </>
+  );
+  if (record.media.length === 0) return <p className="move-in-line">{text}</p>;
+  return (
+    <>
+      <button type="button" className="move-in-line" aria-expanded={expanded} onClick={onToggle}>
+        {text}
+        <span className="move-in-toggle">{expanded ? "Hide" : "Show"}</span>
+      </button>
+      {expanded && (
+        <ul className="thumbnails">
+          {record.media.map((each, index, all) => (
+            <li key={each.id}>
+              <button
+                type="button"
+                className={`thumbnail ${each.kind}`}
+                onClick={() => onOpen(each)}
+                aria-label={`Open Move-in ${each.kind} ${index + 1} of ${all.length}`}
+              >
+                <MediaThumbnail evidence={each} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
   );
 }
 

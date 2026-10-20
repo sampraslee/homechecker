@@ -1005,6 +1005,42 @@ body:has(:is(input, textarea, select):focus) .dock {
   padding-top: calc(env(safe-area-inset-top) + 1.25rem);
 }
 
+/* A Move-out Item's read-only reference to what the Move-in recorded. */
+.move-in-line {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.125rem 0.75rem;
+  width: 100%;
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-card);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+
+.move-in-line > :not(.move-in-toggle) {
+  grid-column: 1;
+}
+
+.move-in-label {
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.move-in-toggle {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-self: center;
+  color: var(--teal-deep);
+  font-weight: 700;
+}
+
 /* Confirming a deletion that can't be undone. */
 .confirm-card {
   border: 2px solid var(--danger);
