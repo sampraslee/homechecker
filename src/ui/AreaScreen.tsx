@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { Check, ChevronRight, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import type { Area, CatalogItem, Evidence, Inspection, ItemChoices, ItemSource, ItemView } from "../core";
 import type { Navigate } from "./App";
 import { Band } from "./Band";
@@ -107,6 +108,7 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
                 }
               }}
             >
+              {editing ? <Check aria-hidden="true" /> : <Pencil aria-hidden="true" />}
               {editing ? "Done" : "Edit"}
             </button>
           )
@@ -116,9 +118,11 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
         {editing && !renaming && (
           <div className="band-actions">
             <button type="button" className="on-band" onClick={() => setRenaming(true)}>
+              <Pencil aria-hidden="true" />
               Rename Area
             </button>
             <button type="button" className="on-band danger" onClick={removeArea}>
+              <Trash2 aria-hidden="true" />
               Remove Area
             </button>
           </div>
@@ -187,6 +191,7 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
                   <span className="summary">{item.summary}</span>
                 </span>
                 <button type="button" className="row-action" onClick={() => setEditingItemId(item.id)}>
+                  <Pencil aria-hidden="true" />
                   Rename
                 </button>
                 <button
@@ -194,6 +199,7 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
                   className="row-action danger"
                   onClick={() => (item.hasContents ? setConfirmingRemoveId(item.id) : removeItem(item.id))}
                 >
+                  <Trash2 aria-hidden="true" />
                   Remove
                 </button>
               </div>
@@ -203,9 +209,7 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
                   <strong>{item.displayName}</strong>
                   <span className="summary">{item.summary}</span>
                 </span>
-                <span className="chevron" aria-hidden="true">
-                  ›
-                </span>
+                <ChevronRight className="chevron" aria-hidden="true" />
               </button>
             )}
           </li>
@@ -228,6 +232,7 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
           !editing &&
           !picking && (
             <button type="button" className="primary" onClick={() => setPicking(true)}>
+              <Plus aria-hidden="true" />
               Add Item
             </button>
           )
@@ -259,6 +264,8 @@ function ItemPicker({
   const [choices, setChoices] = useState<ItemChoices | null>(null);
   const [shortName, setShortName] = useState("");
   const [otherName, setOtherName] = useState("");
+  /** Narrows the long Item list to names containing what's typed (UX-006). */
+  const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const panel = useRef<HTMLElement>(null);
 
@@ -284,6 +291,12 @@ function ItemPicker({
     add({ otherName });
   }
 
+  /** While searching: the matches from both lists, usual ones first; `null` when the search is empty. */
+  const wanted = query.trim().toLowerCase();
+  const searched = !choices || !wanted
+    ? null
+    : [...choices.shownFirst, ...choices.others].filter((item) => item.name.toLowerCase().includes(wanted));
+
   const chips = (items: CatalogItem[]) => (
     <div className="chips">
       {items.map((item) => (
@@ -306,13 +319,26 @@ function ItemPicker({
         Short name (optional), e.g. "left"
         <input value={shortName} onChange={(event) => setShortName(event.target.value)} />
       </label>
-      {choices && choices.shownFirst.length > 0 && (
+      <label className="form search-field">
+        Find an Item
+        <span className="search-input">
+          <Search aria-hidden="true" />
+          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="e.g. window" />
+        </span>
+      </label>
+      {choices && searched !== null && (
+        <>
+          <h3>{searched.length === 0 ? "No Item matches" : "Matching Items"}</h3>
+          {searched.length === 0 ? <p className="muted">Add it below as an Item not in the list.</p> : chips(searched)}
+        </>
+      )}
+      {choices && searched === null && choices.shownFirst.length > 0 && (
         <>
           <h3>Usual in {areaName}</h3>
           {chips(choices.shownFirst)}
         </>
       )}
-      {choices && (
+      {choices && searched === null && (
         <>
           <h3>{choices.shownFirst.length > 0 ? "All other Items" : "All Items"}</h3>
           {chips(choices.others)}

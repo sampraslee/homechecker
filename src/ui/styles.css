@@ -1394,3 +1394,25 @@ button:active:not(:disabled) {
   min-height: 4rem;
   font-size: var(--text-sm);
 }
+
+/* A search box with its icon inside, for long pick lists (UX-006). */
+.search-input {
+  position: relative;
+  display: block;
+}
+
+.search-input .lucide {
+  position: absolute;
+  top: 50%;
+  left: var(--space-3);
+  width: 20px;
+  height: 20px;
+  color: var(--ink-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.form .search-input input {
+  width: 100%;
+  padding-left: calc(var(--space-3) + 20px + var(--space-2));
+}

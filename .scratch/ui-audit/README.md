@@ -33,7 +33,7 @@ This folder holds the audit of the existing app and the redesign plan that comes
 ## Visual pass decisions (settled in grilling, 2026-10-20)
 
 - **Order:** foundations first (type, spacing, corners, icons, buttons, chips, cards), then screens by use: Item, Inspection, Area, Start, List, Settings.
-- **Icons:** Lucide, bundled (works offline). 24 px, one stroke weight. Always beside a text label, except the back chevron. Used on capture actions, Dock buttons, Area and Item rows, status lines.
+- **Icons:** Lucide, bundled (works offline). 24 px, one stroke weight. Always beside a text label, except the back chevron. Used on capture actions, Dock buttons and status lines, and on a row only when it tells rows apart (the AI Suggestion sparkle). Not on Item rows: the same icon on every row adds nothing. Area rows on the Inspection screen keep their door icon (user's choice).
 - **Type scale:** five sizes on the 17 px base: 14, 17, 20, 24, 32 px. Line height and weights unchanged.
 - **Spacing:** 4, 8, 12, 16, 24, 32 px. 16 px between blocks, 24 px between sections.
 - **Corners:** 8 px controls, 16 px cards and panels, round chips.
