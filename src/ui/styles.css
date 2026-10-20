@@ -1495,3 +1495,13 @@ button:active:not(:disabled) {
 .status-text.kept {
   color: var(--done);
 }
+
+/* A Defect Type found by search, with its Category under the name. */
+.type-row-name {
+  display: grid;
+  text-align: left;
+}
+
+.type-row-category {
+  font-size: var(--text-sm);
+}

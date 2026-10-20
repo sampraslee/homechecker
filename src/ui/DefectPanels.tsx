@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Search } from "lucide-react";
 import { isMedia, isNote, type DefectCategory, type DefectChoices, type DefectType, type DefectView, type Evidence } from "../core";
 import { refusalMessage } from "./format";
 import { useBackCloses } from "./backCloses";
@@ -29,6 +30,8 @@ export function DefectTypePicker({
   useBackCloses(onCancel);
   const [choices, setChoices] = useState<DefectChoices | null>(null);
   const [category, setCategory] = useState<DefectCategory | null>(null);
+  /** Searches every Defect Type by name, across Categories, instead of scanning the long Category list (UX-006). */
+  const [query, setQuery] = useState("");
   const panel = useRef<HTMLElement>(null);
 
   // The picker opens below the Item's Defects, often off screen: bring each step into view.
@@ -41,6 +44,27 @@ export function DefectTypePicker({
       if (result.ok) setChoices(result);
     });
   }, [homeCheck, itemId]);
+
+  const wanted = query.trim().toLowerCase();
+  /** While searching: the matching Defect Types with their Category, relevant Categories first; `null` when empty. */
+  const searched =
+    !choices || !wanted
+      ? null
+      : [...choices.shownFirst, ...choices.others].flatMap((each) =>
+          each.defectTypes.filter((defectType) => defectType.name.toLowerCase().includes(wanted)).map((defectType) => ({ category: each, defectType })),
+        );
+
+  const typeRow = (defectType: DefectType, of: DefectCategory, showCategory: boolean) => (
+    <li key={defectType.code}>
+      <button type="button" className="type-row" onClick={() => onPicked({ ...defectType, noteRequired: !!of.noteRequired })}>
+        <span className="type-row-name">
+          {defectType.name}
+          {showCategory && <span className="muted type-row-category">{of.name}</span>}
+        </span>
+        {recordedCodes.includes(defectType.code) && <span className="badge defects">Recorded</span>}
+      </button>
+    </li>
+  );
 
   const chips = (categories: DefectCategory[]) => (
     <div className="chips">
@@ -62,21 +86,31 @@ export function DefectTypePicker({
       </div>
 
       {category ? (
-        <ul className="rows">
-          {category.defectTypes.map((defectType) => (
-            <li key={defectType.code}>
-              <button
-                type="button"
-                className="type-row"
-                onClick={() => onPicked({ ...defectType, noteRequired: !!category.noteRequired })}
-              >
-                <span>{defectType.name}</span>
-                {recordedCodes.includes(defectType.code) && <span className="badge defects">Recorded</span>}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <ul className="rows">{category.defectTypes.map((defectType) => typeRow(defectType, category, false))}</ul>
       ) : (
+        choices && (
+          <>
+            <label className="form search-field">
+              Find a Defect Type
+              <span className="search-input">
+                <Search aria-hidden="true" />
+                <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="e.g. crack" />
+              </span>
+            </label>
+          </>
+        )
+      )}
+      {!category && searched !== null && (
+        <>
+          <h3>{searched.length === 0 ? "No Defect Type matches" : "Matching Defect Types"}</h3>
+          {searched.length === 0 ? (
+            <p className="muted">Try another word, or pick a Category below.</p>
+          ) : (
+            <ul className="rows">{searched.map(({ category: of, defectType }) => typeRow(defectType, of, true))}</ul>
+          )}
+        </>
+      )}
+      {!category && (
         choices && (
           <>
             {choices.shownFirst.length > 0 && (
