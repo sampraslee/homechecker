@@ -1700,3 +1700,17 @@ body:has(.sheet-backdrop) .dock {
   font-size: var(--text-sm);
   font-weight: 600;
 }
+
+/* Long Defect chips and badges stay one line, cut with an ellipsis, so a pill never wraps into a blob (UX-028). */
+.defect-chip,
+.badge {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The card's text column may shrink, so a long chip is cut rather than pushing the card wider. */
+.evidence-card-body {
+  min-width: 0;
+}

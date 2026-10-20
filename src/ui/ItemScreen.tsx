@@ -252,14 +252,21 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     setNotePanel({ mode: "add" });
   }
 
+  /** A long name is cut to one line (UX-028); the full name shows on hover and in the Defect it opens. */
   function defectChip(defect: DefectView) {
     const className = `chip defect-chip${defect.source === "ai-suggested" ? " ai" : ""}${arrived.has(defect.id) ? " arrived" : ""}`;
     return editable ? (
-      <button key={defect.id} type="button" className={className} onClick={() => setDefectPanel({ mode: "edit", defectId: defect.id })}>
+      <button
+        key={defect.id}
+        type="button"
+        className={className}
+        title={defect.defectTypeName}
+        onClick={() => setDefectPanel({ mode: "edit", defectId: defect.id })}
+      >
         {defect.defectTypeName}
       </button>
     ) : (
-      <span key={defect.id} className={className}>
+      <span key={defect.id} className={className} title={defect.defectTypeName}>
         {defect.defectTypeName}
       </span>
     );
