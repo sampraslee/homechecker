@@ -1604,3 +1604,45 @@ body:has(.sheet-backdrop) {
 body:has(.sheet-backdrop) .dock {
   display: none;
 }
+
+/* The sheet slides up from the bottom edge while the page dims behind it. Reduced motion turns both off (above). */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    background: transparent;
+  }
+}
+
+.sheet-backdrop {
+  animation: backdrop-in 200ms ease-out;
+}
+
+.panel.sheet {
+  animation: sheet-up 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Closing: the sheet slides back down and the page brightens, then the sheet is removed. */
+@keyframes sheet-down {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes backdrop-out {
+  to {
+    background: transparent;
+  }
+}
+
+.sheet-backdrop.leaving {
+  animation: backdrop-out 200ms ease-in forwards;
+}
+
+.sheet-backdrop.leaving .panel.sheet {
+  animation: sheet-down 200ms ease-in forwards;
+}

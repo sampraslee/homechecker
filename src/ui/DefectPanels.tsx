@@ -6,6 +6,9 @@ import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
 import { MediaThumbnail } from "./MediaImage";
 
+/** How long the sheet takes to slide down; matches the CSS. */
+const SHEET_OUT_MS = 200;
+
 export type PickedDefectType = DefectType & { noteRequired: boolean };
 
 /**
@@ -32,7 +35,16 @@ export function DefectTypePicker({
   onCancel: () => void;
 }) {
   const homeCheck = useHomeCheck();
-  useBackCloses(onCancel);
+  /** Sliding down before closing: the parent unmounts the sheet once `onCancel` or `onPicked` runs. */
+  const [leaving, setLeaving] = useState(false);
+  function leave(then: () => void) {
+    if (leaving) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return then();
+    setLeaving(true);
+    setTimeout(then, SHEET_OUT_MS);
+  }
+  const close = () => leave(onCancel);
+  useBackCloses(close);
   const [choices, setChoices] = useState<DefectChoices | null>(null);
   const [category, setCategory] = useState<DefectCategory | null>(null);
   /** Searches every Defect Type by name, across Categories, instead of scanning the long Category list (UX-006). */
@@ -46,8 +58,8 @@ export function DefectTypePicker({
   }, [category]);
 
   // Focus moves into the sheet and back to the tapped button on close; Escape closes it.
-  const cancel = useRef(onCancel);
-  cancel.current = onCancel;
+  const cancel = useRef(close);
+  cancel.current = close;
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
     sheet.current?.focus();
@@ -78,7 +90,7 @@ export function DefectTypePicker({
 
   const typeRow = (defectType: DefectType, of: DefectCategory, showCategory: boolean) => (
     <li key={defectType.code}>
-      <button type="button" className="type-row" onClick={() => onPicked({ ...defectType, noteRequired: !!of.noteRequired })}>
+      <button type="button" className="type-row" onClick={() => leave(() => onPicked({ ...defectType, noteRequired: !!of.noteRequired }))}>
         <span className="type-row-name">
           {defectType.name}
           {showCategory && <span className="muted type-row-category">{of.name}</span>}
@@ -100,7 +112,7 @@ export function DefectTypePicker({
 
   return (
     // Tapping outside the sheet cancels, as Cancel does.
-    <div className="sheet-backdrop" onClick={onCancel}>
+    <div className={leaving ? "sheet-backdrop leaving" : "sheet-backdrop"} onClick={close}>
       <section
         className="panel sheet"
         ref={sheet}
@@ -113,7 +125,7 @@ export function DefectTypePicker({
       <div className="sheet-head">
         <div className="card-row">
           <h2 id={headingId}>{category ? category.name : title}</h2>
-          <button type="button" className="link" onClick={category ? () => setCategory(null) : onCancel}>
+          <button type="button" className="link" onClick={category ? () => setCategory(null) : close}>
             {category ? "‹ Categories" : "Cancel"}
           </button>
         </div>
