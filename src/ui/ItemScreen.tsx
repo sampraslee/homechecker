@@ -304,7 +304,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         {evidence.map((each) => {
           const supports = defects.filter((defect) => defect.evidenceIds.includes(each.id));
           return (
-            <li key={each.id} className={`evidence-card${arrived.has(each.id) ? " arrived" : ""}`}>
+            <li key={each.id} className={`evidence-card${isNote(each) ? " note" : ""}${arrived.has(each.id) ? " arrived" : ""}`}>
               {isMedia(each) ? (
                 <button type="button" className={`evidence-thumb ${each.kind}`} onClick={() => setViewing(each)} aria-label={`Open ${each.kind}`}>
                   <MediaThumbnail evidence={each} />

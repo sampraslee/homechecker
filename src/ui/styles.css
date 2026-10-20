@@ -1714,3 +1714,22 @@ body:has(.sheet-backdrop) .dock {
 .evidence-card-body {
   min-width: 0;
 }
+
+/* A note card has no picture, so no square: a small note icon sits beside the text, and the chips get the width (UX-029).
+   The icon is still the button that opens the note, with a 44px tap area around the 28px mark. */
+.evidence-card.note {
+  grid-template-columns: 28px 1fr;
+  gap: var(--space-2);
+}
+
+.evidence-card.note .evidence-thumb {
+  width: 44px;
+  height: 44px;
+  margin: calc(-1 * var(--space-2));
+  background: none;
+}
+
+.evidence-card.note .evidence-thumb .lucide {
+  width: 22px;
+  height: 22px;
+}
