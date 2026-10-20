@@ -60,6 +60,7 @@ export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
       </ul>
 
       <Dock
+        storage
         action={
           <button type="button" className="primary" onClick={() => navigate({ name: "start" })}>
             <Plus aria-hidden="true" />

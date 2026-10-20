@@ -9,9 +9,18 @@ const MAX_SCREEN_SHARE = 1 / 3;
 
 /**
  * The bottom of every screen, in thumb reach: a passing message, whether Inspections are safe on
- * this phone, how many photos wait for AI, and the screen's main button.
+ * this phone (`storage`), whether the phone is offline, how many photos wait for AI, and the screen's main button.
  */
-export function Dock({ message, action }: { message?: ReactNode; action?: ReactNode }) {
+export function Dock({
+  message,
+  action,
+  storage = false,
+}: {
+  message?: ReactNode;
+  action?: ReactNode;
+  /** Whether Inspections are kept on this phone: shown only where the Inspector can act on it by exporting (UX-002). */
+  storage?: boolean;
+}) {
   const homeCheck = useHomeCheck();
   const [waiting, setWaiting] = useState(0);
   const [durability, setDurability] = useState<StorageDurability | null>(null);
@@ -56,12 +65,15 @@ export function Dock({ message, action }: { message?: ReactNode; action?: ReactN
     <footer className={inFlow ? "dock in-flow" : "dock"} ref={dock}>
       <div className="dock-inner">
         {message}
+        {/* Left out when there's nothing to say, so the Dock stays short. */}
+        {(storage || !online || waiting > 0) && (
         <p className="status-line" role="status">
-          {durability === "refused" ? (
-            <span className="not-kept">Not kept on this phone: export soon</span>
-          ) : (
-            <span className="kept">Saved on this phone</span>
-          )}
+          {storage &&
+            (durability === "refused" ? (
+              <span className="not-kept">Not kept on this phone: export soon</span>
+            ) : (
+              <span className="kept">Saved on this phone</span>
+            ))}
           {!online ? (
             <span className="offline">
               <WifiOff className="status-icon" aria-hidden="true" />
@@ -71,6 +83,7 @@ export function Dock({ message, action }: { message?: ReactNode; action?: ReactN
             waiting > 0 && <span className="ai-waiting">{waiting === 1 ? "1 photo" : `${waiting} photos`} waiting for AI</span>
           )}
         </p>
+        )}
         {action}
       </div>
     </footer>

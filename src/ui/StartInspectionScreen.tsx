@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
+import { Fragment, useEffect, useRef, useState, type Dispatch, type FormEvent, type KeyboardEvent, type SetStateAction } from "react";
 import { Check, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import {
   formatAddress,
@@ -276,6 +276,20 @@ function AddressForm({
     setStep(step - 1);
   }
 
+  /**
+   * The Dock, with Next, hides while the keyboard is up (UX-007), so the keyboard's Next key moves on: to the group's
+   * next field, or to the next group from its last field. The form has no submit button of its own on these steps, so
+   * the key is caught here rather than left to submit the form.
+   */
+  function nextFromKeyboard(event: KeyboardEvent<HTMLFormElement>) {
+    if (reviewing || event.key !== "Enter" || !(event.target instanceof HTMLInputElement)) return;
+    event.preventDefault();
+    const fields = Array.from(form.current?.querySelectorAll<HTMLElement>("input, select") ?? []);
+    const at = fields.indexOf(event.target);
+    if (at >= 0 && at < fields.length - 1) fields[at + 1].focus();
+    else next();
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!reviewing) {
@@ -344,6 +358,7 @@ function AddressForm({
             value={address[field] ?? ""}
             onChange={(event) => typeInto(field, event.target.value)}
             inputMode={spec.inputMode}
+            enterKeyHint="next"
             maxLength={field === "postcode" ? 5 : undefined}
             aria-invalid={Boolean(errors[field])}
           />
@@ -392,7 +407,7 @@ function AddressForm({
 
   return (
     <>
-      <form id={ADDRESS_FORM_ID} ref={form} className="form spaced" onSubmit={submit} noValidate>
+      <form id={ADDRESS_FORM_ID} ref={form} className="form spaced" onSubmit={submit} onKeyDown={nextFromKeyboard} noValidate>
         {reviewing ? (
           <section className="address-review" aria-label="Check the address">
             <h2>Check the address</h2>

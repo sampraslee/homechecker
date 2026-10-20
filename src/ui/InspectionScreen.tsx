@@ -220,6 +220,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
       )}
 
       <Dock
+        storage
         action={
           !locked &&
           !adding &&
