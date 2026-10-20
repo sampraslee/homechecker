@@ -896,6 +896,19 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       };
     },
 
+    /** Whether the phone is online now: AI Suggestions only arrive while it is. */
+    isOnline(): boolean {
+      return environment.isOnline();
+    },
+
+    /** Calls `listener` with the new state when the phone goes online or offline; returns an unsubscribe function. */
+    onOnlineChange(listener: (online: boolean) => void): () => void {
+      const unsubscribe = environment.onOnlineChange(listener);
+      return () => {
+        unsubscribe();
+      };
+    },
+
     /** Calls `listener` when a photo joins or leaves the AI queue, or AI Suggestions arrive or are reviewed; returns an unsubscribe function. */
     onAiChange(listener: () => void) {
       aiChangeListeners.add(listener);

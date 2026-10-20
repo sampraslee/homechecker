@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { WifiOff } from "lucide-react";
 import type { StorageDurability } from "../core";
 import { useHomeCheck } from "./homeCheckContext";
 import { useAiChanges } from "./useAiChanges";
@@ -47,6 +48,10 @@ export function Dock({ message, action }: { message?: ReactNode; action?: ReactN
     homeCheck.getSettings().then((settings) => setDurability(settings.storageDurability));
   }, [homeCheck]);
 
+  /** AI Suggestions only arrive online, so the status line says when the phone is offline (UX-009). It never blocks anything. */
+  const [online, setOnline] = useState(() => homeCheck.isOnline());
+  useEffect(() => homeCheck.onOnlineChange(setOnline), [homeCheck]);
+
   return (
     <footer className={inFlow ? "dock in-flow" : "dock"} ref={dock}>
       <div className="dock-inner">
@@ -57,7 +62,14 @@ export function Dock({ message, action }: { message?: ReactNode; action?: ReactN
           ) : (
             <span className="kept">Saved on this phone</span>
           )}
-          {waiting > 0 && <span className="ai-waiting">{waiting === 1 ? "1 photo" : `${waiting} photos`} waiting for AI</span>}
+          {!online ? (
+            <span className="offline">
+              <WifiOff className="status-icon" aria-hidden="true" />
+              {waiting > 0 ? "Offline: AI Suggestions will come when you're back online" : "Offline"}
+            </span>
+          ) : (
+            waiting > 0 && <span className="ai-waiting">{waiting === 1 ? "1 photo" : `${waiting} photos`} waiting for AI</span>
+          )}
         </p>
         {action}
       </div>

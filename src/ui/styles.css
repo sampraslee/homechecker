@@ -864,6 +864,15 @@ body:has(:is(input, textarea, select):focus) .dock {
   font-weight: 700;
 }
 
+/* Offline: quiet, in slate, since recording carries on as normal. */
+.status-line .offline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
 .toast {
   display: flex;
   justify-content: space-between;
