@@ -5,7 +5,7 @@ import type { Navigate } from "./App";
 import { Band } from "./Band";
 import { LockedNotice } from "./LockedNotice";
 import { Dock, StorageNote } from "./Dock";
-import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel, refusalMessage, shortAddress } from "./format";
+import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel, refusalMessage } from "./format";
 import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
 import { scrollIntoViewGently } from "./scroll";
@@ -62,7 +62,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
       <Band
         navigate={navigate}
         back={{ to: { name: "list" }, label: "Inspections" }}
-        unit={shortAddress(inspection.address)}
+        unit={formatAddress(inspection.address)}
         title={inspectionTypeLabel[inspection.type]}
         // Completed shows as the "Completed · Locked" pill below, so the badge is only for a Draft.
         action={!locked && <span className={`badge ${inspection.status}`}>{inspectionStatusLabel[inspection.status]}</span>}
@@ -70,34 +70,26 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
         {locked && <LockedNotice />}
       </Band>
 
-      <dl className="details">
-        <dt>Unit</dt>
-        <dd>{formatAddress(inspection.address)}</dd>
-        {inspection.type === "move-out" && (
-          <>
-            <dt>Move-in</dt>
-            <dd>
-              {!linkedMoveInId
-                ? "Not linked"
-                : linkedMoveIn === null
-                  ? "Deleted from this phone"
-                  : linkedMoveIn && `${formatDate(linkedMoveIn.startedAt)}, by ${linkedMoveIn.inspectorName}`}
-            </dd>
-          </>
-        )}
-        <dt>Inspector</dt>
-        <dd>{inspection.inspectorName}</dd>
-        <dt>Started</dt>
-        <dd>{formatDateTime(inspection.startedAt)}</dd>
-        {inspection.completedAt && (
-          <>
-            <dt>Completed</dt>
-            <dd>{formatDateTime(inspection.completedAt)}</dd>
-          </>
-        )}
-        <dt>Last exported</dt>
-        <dd>{inspection.lastExportedAt ? formatDateTime(inspection.lastExportedAt) : "Never"}</dd>
-      </dl>
+      {/* Who and when, in one short line, so the Areas start near the top (UX-032). The full address is in the Band. */}
+      <p className="inspection-meta">
+        {[
+          inspection.inspectorName,
+          `Started ${formatDateTime(inspection.startedAt)}`,
+          inspection.completedAt && `Completed ${formatDateTime(inspection.completedAt)}`,
+          inspection.lastExportedAt ? `Exported ${formatDateTime(inspection.lastExportedAt)}` : "Never exported",
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
+      {inspection.type === "move-out" && (
+        <p className="inspection-meta">
+          {!linkedMoveInId
+            ? "Not linked to a Move-in"
+            : linkedMoveIn === null
+              ? "Linked Move-in deleted from this phone"
+              : linkedMoveIn && `Linked to the Move-in of ${formatDate(linkedMoveIn.startedAt)}, by ${linkedMoveIn.inspectorName}`}
+        </p>
+      )}
 
       {toReview.length > 0 && (
         <>

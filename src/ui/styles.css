@@ -1801,3 +1801,10 @@ body:has(.sheet-backdrop) .dock {
   font-size: var(--text-sm);
   font-weight: 600;
 }
+
+/* The Inspection's who and when, as one short line under the Band (UX-032). */
+.inspection-meta {
+  margin: 0 0 var(--space-2);
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
