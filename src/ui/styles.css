@@ -770,11 +770,11 @@ button:disabled {
   margin: var(--space-3) 0 0;
 }
 
+/* A section heading with its count on the line below, so a long heading never pushes the count aside (UX-033). */
 .section-head {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--space-4);
+  flex-direction: column;
+  align-items: flex-start;
   margin: var(--space-5) 0 var(--space-2);
 }
 
@@ -790,6 +790,10 @@ button:disabled {
   color: var(--ink-muted);
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
+}
+
+.count:empty {
+  display: none;
 }
 
 /* The bottom of every screen: a message, the status line and the screen's main button. */
