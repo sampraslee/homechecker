@@ -1,6 +1,6 @@
 # FP-01: Guided Start Inspection (fewer, grouped screens)
 
-Status: approved-with-changes
+Status: implemented (uncommitted on branch design/ux-changes); approved-with-changes
 
 Flow changed: F-02 Start Move-in, F-03 Start Move-out (linked), F-04 Start Move-out (unlinked). Screen: S-02 `StartInspectionScreen.tsx`.
 

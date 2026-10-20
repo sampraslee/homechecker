@@ -3,6 +3,7 @@ import {
   formatAddress,
   MALAYSIAN_STATES,
   SUGGESTING_ADDRESS_FIELDS,
+  validateAddress,
   type AddressErrors,
   type AddressField,
   type HomeCheck,
@@ -48,6 +49,8 @@ type StartResult = Awaited<ReturnType<HomeCheck["startMoveIn"]> | ReturnType<Hom
 export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
   const homeCheck = useHomeCheck();
   const [hasName, setHasName] = useState<boolean | null>(null);
+  /** The Move-in / Move-out choice is its own first screen, so nothing else shows until one is picked. */
+  const [typeChosen, setTypeChosen] = useState(false);
   const [type, setType] = useState<InspectionType>("move-in");
   const [moveIns, setMoveIns] = useState<InspectionSummary[] | null>(null);
   /** A Move-out for a Unit whose Move-in isn't on this phone. */
@@ -77,6 +80,31 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
   const pickingMoveIn = type === "move-out" && !typingMoveOutAddress && moveIns !== null && moveIns.length > 0;
   const typingAddress = hasName === true && (type === "move-in" || (!pickingMoveIn && moveIns !== null));
 
+  function chooseType(each: InspectionType) {
+    setType(each);
+    setRefusal(null);
+    setTypeChosen(true);
+  }
+
+  // The Move-in / Move-out choice, as its own screen before the address.
+  if (hasName === true && !typeChosen) {
+    return (
+      <main className="screen">
+        <Band navigate={navigate} back={{ to: { name: "list" }, label: "Inspections" }} title="Start an Inspection" />
+        <ul className="cards">
+          {(["move-in", "move-out"] as const).map((each) => (
+            <li key={each}>
+              <button type="button" className="card" onClick={() => chooseType(each)}>
+                <strong>{inspectionTypeLabel[each]}</strong>
+                <span className="muted">{each === "move-in" ? "Before a tenant moves in" : "After a tenant moves out"}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </main>
+    );
+  }
+
   return (
     <main className="screen">
       <Band navigate={navigate} back={{ to: { name: "list" }, label: "Inspections" }} title={`Start ${inspectionTypeLabel[type]}`} />
@@ -90,25 +118,14 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
 
       {hasName && (
         <>
-          <div className="segmented" role="group" aria-label="Inspection type">
-            {(["move-in", "move-out"] as const).map((each) => (
-              <button
-                key={each}
-                type="button"
-                aria-pressed={type === each}
-                onClick={() => {
-                  setType(each);
-                  setRefusal(null);
-                }}
-              >
-                {inspectionTypeLabel[each]}
-              </button>
-            ))}
-          </div>
           {refusal && <p className="error" role="alert">{refusal}</p>}
 
           {type === "move-in" && (
-            <AddressForm key="move-in" onSubmit={async (address) => openOrExplain(await homeCheck.startMoveIn(address))} />
+            <AddressForm
+              key="move-in"
+              startLabel={`Start ${inspectionTypeLabel[type]}`}
+              onSubmit={async (address) => openOrExplain(await homeCheck.startMoveIn(address))}
+            />
           )}
 
           {pickingMoveIn && (
@@ -143,44 +160,96 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
                 {moveIns.length === 0 ? "There's no Move-in on this phone, so" : "Without a Move-in,"} this Move-out won't
                 be linked and starts with no Areas.
               </p>
-              <AddressForm key="move-out" onSubmit={async (address) => openOrExplain(await homeCheck.startMoveOut({ address }))} />
+              <AddressForm
+                key="move-out"
+                startLabel={`Start ${inspectionTypeLabel[type]}`}
+                onSubmit={async (address) => openOrExplain(await homeCheck.startMoveOut({ address }))}
+              />
             </>
           )}
         </>
       )}
 
-      <Dock
-        action={
-          typingAddress && (
-            <button type="submit" form={ADDRESS_FORM_ID} className="primary">
-              Start {inspectionTypeLabel[type]}
-            </button>
-          )
-        }
-      />
+      {/* The address form brings its own Dock, with Back and Next. */}
+      {!typingAddress && <Dock />}
     </main>
   );
 }
 
-/** The Unit's address in Malaysian fields, with earlier addresses on this phone suggested as it's typed. `onSubmit` returns the errors to show. */
-function AddressForm({ onSubmit }: { onSubmit: (address: UnitAddressInput) => Promise<AddressErrors> }) {
+/** The address in three screens, one group of related fields each, then a review of the whole. */
+const ADDRESS_GROUPS: { title: string; fields: AddressField[] }[] = [
+  { title: "Which Unit?", fields: ["unitNumber", "buildingName"] },
+  { title: "Where is it?", fields: ["street", "locality"] },
+  { title: "Postal details", fields: ["postcode", "city", "state"] },
+];
+
+const addressLabel: Record<AddressField, string> = {
+  unitNumber: "Unit number",
+  buildingName: "Building or condo name",
+  street: "Street",
+  locality: "Taman or neighbourhood",
+  postcode: "Postcode",
+  city: "City",
+  state: "State",
+};
+
+function errorsIn(errors: AddressErrors, fields: AddressField[]): AddressErrors {
+  const picked: AddressErrors = {};
+  for (const field of fields) if (errors[field]) picked[field] = errors[field];
+  return picked;
+}
+
+/**
+ * The Unit's address, asked a group of fields at a time, with earlier addresses on this phone suggested as it's typed. The
+ * review checks the whole address and sends the Inspector back to the first group with an error. `onSubmit` returns the errors to show.
+ */
+function AddressForm({ startLabel, onSubmit }: { startLabel: string; onSubmit: (address: UnitAddressInput) => Promise<AddressErrors> }) {
   const homeCheck = useHomeCheck();
   const [address, setAddress] = useState(emptyAddress);
   const [errors, setErrors] = useState<AddressErrors>({});
+  /** Which group is showing; the step after the last group is the review. */
+  const [step, setStep] = useState(0);
+  const reviewing = step === ADDRESS_GROUPS.length;
   /** The field being typed in, and the earlier addresses matching it. */
   const [suggesting, setSuggesting] = useState<{ field: AddressField; suggestions: UnitAddress[] } | null>(null);
   /** Counts lookups, so a slower one for an earlier keystroke can't replace a newer one's. */
   const latestLookup = useRef(0);
   const form = useRef<HTMLFormElement>(null);
 
-  // After a refused start, take the Inspector to the first field to fix (WCAG 3.3.1).
+  // After a refused step, take the Inspector to the first field to fix (WCAG 3.3.1).
   useEffect(() => {
     form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
   }, [errors]);
 
+  /** Moves on from the current group, or shows what needs fixing in it first. */
+  function next() {
+    const validation = validateAddress(address);
+    const groupErrors = validation.ok ? {} : errorsIn(validation.errors, ADDRESS_GROUPS[step].fields);
+    if (Object.keys(groupErrors).length > 0) {
+      setErrors(groupErrors);
+      return;
+    }
+    setErrors({});
+    setSuggesting(null);
+    setStep(step + 1);
+  }
+
+  function back() {
+    setErrors({});
+    setSuggesting(null);
+    setStep(step - 1);
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
-    setErrors(await onSubmit(address));
+    if (!reviewing) {
+      next();
+      return;
+    }
+    const found = await onSubmit(address);
+    setErrors(found);
+    const groupWithError = ADDRESS_GROUPS.findIndex((group) => group.fields.some((field) => found[field]));
+    if (groupWithError >= 0) setStep(groupWithError);
   }
 
   function setField(field: AddressField, value: string) {
@@ -211,46 +280,111 @@ function AddressForm({ onSubmit }: { onSubmit: (address: UnitAddressInput) => Pr
     setSuggesting(null);
   }
 
+  /** One field: a text input with its suggestions, or the State picker. */
+  function renderField(field: AddressField) {
+    if (field === "state") {
+      return (
+        <label key={field}>
+          State
+          <select value={address.state} onChange={(event) => setField("state", event.target.value)} aria-invalid={Boolean(errors.state)}>
+            <option value="">Choose a state</option>
+            {MALAYSIAN_STATES.map((state) => (
+              <option key={state} value={state}>
+                {state}
+              </option>
+            ))}
+          </select>
+          {errors.state && <span className="error">{errors.state}</span>}
+        </label>
+      );
+    }
+    const spec = textFields.find((each) => each.field === field);
+    if (!spec) return null;
+    return (
+      <Fragment key={field}>
+        <label>
+          {spec.label}
+          <input
+            value={address[field] ?? ""}
+            onChange={(event) => typeInto(field, event.target.value)}
+            inputMode={spec.inputMode}
+            maxLength={field === "postcode" ? 5 : undefined}
+            aria-invalid={Boolean(errors[field])}
+          />
+          {errors[field] && <span className="error">{errors[field]}</span>}
+        </label>
+        {suggesting?.field === field && suggesting.suggestions.length > 0 && (
+          <ul className="suggestions" aria-label="Addresses entered before on this phone">
+            {suggesting.suggestions.slice(0, MAX_SHOWN_SUGGESTIONS).map((suggestion) => (
+              <li key={formatAddress(suggestion)}>
+                <button type="button" onClick={() => pick(suggestion)}>
+                  {formatAddress(suggestion)}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Fragment>
+    );
+  }
+
+  const nav = reviewing ? (
+    <div className="dock-actions">
+      <button type="button" className="secondary" onClick={back}>
+        Back
+      </button>
+      <button type="submit" form={ADDRESS_FORM_ID} className="primary">
+        {startLabel}
+      </button>
+    </div>
+  ) : (
+    <div className="dock-actions">
+      {step > 0 && (
+        <button type="button" className="secondary" onClick={back}>
+          Back
+        </button>
+      )}
+      <button type="button" className="primary" onClick={next}>
+        {step === ADDRESS_GROUPS.length - 1 ? "Review address" : "Next"}
+      </button>
+    </div>
+  );
+
   return (
-    <form id={ADDRESS_FORM_ID} ref={form} className="form spaced" onSubmit={submit} noValidate>
-      {textFields.map(({ field, label, inputMode }) => (
-        <Fragment key={field}>
-          <label>
-            {label}
-            <input
-              value={address[field] ?? ""}
-              onChange={(event) => typeInto(field, event.target.value)}
-              inputMode={inputMode}
-              maxLength={field === "postcode" ? 5 : undefined}
-              aria-invalid={Boolean(errors[field])}
-            />
-            {errors[field] && <span className="error">{errors[field]}</span>}
-          </label>
-          {suggesting?.field === field && suggesting.suggestions.length > 0 && (
-            <ul className="suggestions" aria-label="Addresses entered before on this phone">
-              {suggesting.suggestions.slice(0, MAX_SHOWN_SUGGESTIONS).map((suggestion) => (
-                <li key={formatAddress(suggestion)}>
-                  <button type="button" onClick={() => pick(suggestion)}>
-                    {formatAddress(suggestion)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Fragment>
-      ))}
-      <label>
-        State
-        <select value={address.state} onChange={(event) => setField("state", event.target.value)} aria-invalid={Boolean(errors.state)}>
-          <option value="">Choose a state</option>
-          {MALAYSIAN_STATES.map((state) => (
-            <option key={state} value={state}>
-              {state}
-            </option>
-          ))}
-        </select>
-        {errors.state && <span className="error">{errors.state}</span>}
-      </label>
-    </form>
+    <>
+      <form id={ADDRESS_FORM_ID} ref={form} className="form spaced" onSubmit={submit} noValidate>
+        {reviewing ? (
+          <section className="address-review" aria-label="Check the address">
+            <h2>Check the address</h2>
+            {ADDRESS_GROUPS.map((group, index) => (
+              <div key={group.title} className="address-review-group">
+                <dl>
+                  {group.fields
+                    .filter((field) => address[field])
+                    .map((field) => (
+                      <Fragment key={field}>
+                        <dt>{addressLabel[field]}</dt>
+                        <dd>{address[field]}</dd>
+                      </Fragment>
+                    ))}
+                </dl>
+                <button type="button" className="link" aria-label={`Edit ${group.title}`} onClick={() => setStep(index)}>
+                  Edit
+                </button>
+              </div>
+            ))}
+          </section>
+        ) : (
+          <>
+            <p className="muted">
+              Step {step + 1} of {ADDRESS_GROUPS.length}
+            </p>
+            <h2>{ADDRESS_GROUPS[step].title}</h2>
+            {ADDRESS_GROUPS[step].fields.map(renderField)}
+          </>
+        )}
+      </form>
+      <Dock action={nav} />
+    </>
   );
 }

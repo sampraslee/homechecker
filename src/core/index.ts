@@ -1,5 +1,5 @@
 export { createHomeCheck, type HomeCheck, type HomeCheckDeps, type RefusalReason } from "./homeCheck";
-export { formatAddress, SUGGESTING_ADDRESS_FIELDS } from "./address";
+export { formatAddress, SUGGESTING_ADDRESS_FIELDS, validateAddress } from "./address";
 export * from "./model";
 export type { AiAnswer, AiClient, AiRequest, Environment, ImageProcessor, Storage } from "./ports";
 export type {

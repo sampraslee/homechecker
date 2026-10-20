@@ -218,6 +218,29 @@ h3 {
   margin-top: 1rem;
 }
 
+/* The review of a Start Inspection address: each group's values, with an Edit under it. */
+.address-review-group {
+  margin-top: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.address-review dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
+
+.address-review dt {
+  color: var(--ink-muted);
+}
+
+.address-review dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .secondary {
   width: 100%;
   min-height: 3rem;
