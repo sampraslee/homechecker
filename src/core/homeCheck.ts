@@ -1003,6 +1003,7 @@ function summarise(inspections: Inspection[]): InspectionSummary[] {
     type,
     status,
     addressLine: formatAddress(address),
+    address,
     startedAt,
     ...(lastExportedAt && { lastExportedAt }),
   }));

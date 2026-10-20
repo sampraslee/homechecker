@@ -4,7 +4,7 @@ import type { InspectionSummary } from "../core";
 import type { Navigate } from "./App";
 import { Band } from "./Band";
 import { Dock } from "./Dock";
-import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel } from "./format";
+import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel, shortAddress } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 
 export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
@@ -38,8 +38,12 @@ export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
                 {/* Status first, so Drafts and Completed ones are told apart at a glance; then the address. */}
                 <span className={`badge ${inspection.status} card-badge`}>{inspectionStatusLabel[inspection.status]}</span>
                 {/* The address and its type and date read as one block. */}
+                {/* The short address is what the Inspector looks for; the city tells two "A-12-3"s apart (UX-034). */}
                 <span className="card-heading">
-                  <strong>{inspection.addressLine}</strong>
+                  <strong>{shortAddress(inspection.address)}</strong>
+                  <span className="muted">
+                    {inspection.address.postcode} {inspection.address.city}
+                  </span>
                   <span className="muted">
                     {inspectionTypeLabel[inspection.type]}, {formatDate(inspection.startedAt)}
                   </span>

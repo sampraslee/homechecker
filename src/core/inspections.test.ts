@@ -61,12 +61,14 @@ describe("the Inspection list", () => {
       {
         type: "move-in",
         status: "draft",
+        address: { unitNumber: "7", street: "Jalan Kenari 3", postcode: "47100", city: "Puchong", state: "Selangor" },
         addressLine: "7, Jalan Kenari 3, 47100 Puchong, Selangor",
         startedAt: "2026-01-06T14:30:00.000Z",
       },
       {
         type: "move-in",
         status: "draft",
+        address: expect.objectContaining({ unitNumber: "A-12-3", city: "Kuala Lumpur" }),
         addressLine: "A-12-3, Residensi Harmoni, Jalan Ampang, Taman U-Thant, 50450 Kuala Lumpur, W.P. Kuala Lumpur",
         startedAt: "2026-01-05T09:00:00.000Z",
       },

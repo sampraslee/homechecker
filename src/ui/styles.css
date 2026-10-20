@@ -156,9 +156,10 @@ button {
   vertical-align: middle;
 }
 
+/* Draft is the normal state while working, so it is neutral; amber is kept for real warnings (UX-034). */
 .badge.draft {
-  background: var(--warn-tint);
-  color: var(--warn);
+  background: var(--line-soft);
+  color: var(--ink-muted);
 }
 
 .badge.completed {
@@ -1110,7 +1111,7 @@ body:has(:is(input, textarea, select):focus) .dock {
 /* Never exported: only on this phone, so losing the phone loses it. */
 .unexported {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-1);
   color: var(--warn);
   font-size: var(--text-sm);
@@ -1811,4 +1812,9 @@ body:has(.sheet-backdrop) .dock {
   margin: 0 0 var(--space-2);
   color: var(--ink-muted);
   font-size: var(--text-sm);
+}
+
+/* The storage line's icon sits on its first line when the text wraps (UX-034). */
+.unexported > .status-icon {
+  margin-top: 0.15em;
 }
