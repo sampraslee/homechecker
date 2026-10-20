@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { Camera, Check, NotebookPen, Plus, Video } from "lucide-react";
 import {
   isMedia,
   isNote,
@@ -221,6 +222,33 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   /** Evidence that no Defect uses yet: each waits for a Defect Type to be assigned to it. */
   const assignedIds = new Set(defects.flatMap((defect) => defect.evidenceIds));
   const unassigned = evidence.filter((each) => !assignedIds.has(each.id));
+  /** Defects whose Evidence is all gone: only from before every Defect needed Evidence (ADR 0006). */
+  const evidenceIds = new Set(evidence.map((each) => each.id));
+  const withoutEvidence = defects.filter((defect) => !defect.evidenceIds.some((evidenceId) => evidenceIds.has(evidenceId)));
+  const counts = [countEvidence(evidence), defects.length > 0 && `${defects.length} ${defects.length === 1 ? "Defect" : "Defects"}`];
+
+  function recordVideo() {
+    setFlash(null);
+    setRecording(true);
+  }
+
+  function addNote() {
+    setFlash(null);
+    setNotePanel({ mode: "add" });
+  }
+
+  function defectChip(defect: DefectView) {
+    const className = `chip defect-chip${defect.source === "ai-suggested" ? " ai" : ""}${arrived.has(defect.id) ? " arrived" : ""}`;
+    return editable ? (
+      <button key={defect.id} type="button" className={className} onClick={() => setDefectPanel({ mode: "edit", defectId: defect.id })}>
+        {defect.defectTypeName}
+      </button>
+    ) : (
+      <span key={defect.id} className={className}>
+        {defect.defectTypeName}
+      </span>
+    );
+  }
 
   return (
     <main className="screen">
@@ -233,80 +261,75 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         {locked && <p className="notice">{lockedNotice}</p>}
       </Band>
 
+      {/* One list: each piece of Evidence with the Defect Types assigned to it (ADR 0006). */}
       <div className="section-head">
-        <h2>Evidence</h2>
-        <span className="count">{countEvidence(evidence)}</span>
+        <h2>Evidence and Defects</h2>
+        <span className="count">{counts.filter(Boolean).join(" · ")}</span>
       </div>
+      {moveIn && (
+        <MoveInLine
+          record={moveIn}
+          expanded={showMoveInMedia}
+          onToggle={() => setShowMoveInMedia((shown) => !shown)}
+          onOpen={setViewing}
+        />
+      )}
       {evidence.length === 0 && <p className="muted">{editable ? `Take a photo of the ${item.name} to start.` : "No Evidence recorded."}</p>}
-      <ul className="thumbnails">
-        {evidence.filter(isMedia).map((media, index, all) => (
-          <li key={media.id}>
-            <button
-              type="button"
-              className={`thumbnail ${media.kind}${arrived.has(media.id) ? " arrived" : ""}`}
-              onClick={() => setViewing(media)}
-              aria-label={`Open ${media.kind} ${index + 1} of ${all.length}`}
-            >
-              <MediaThumbnail evidence={media} />
-            </button>
-          </li>
-        ))}
+      {editable && defects.length === 0 && unassigned.length > 0 && (
+        <p className="muted">Assign a Defect Type to your Evidence to record a Defect.</p>
+      )}
+      <ul className="evidence-cards">
+        {evidence.map((each) => {
+          const supports = defects.filter((defect) => defect.evidenceIds.includes(each.id));
+          return (
+            <li key={each.id} className={`evidence-card${arrived.has(each.id) ? " arrived" : ""}`}>
+              {isMedia(each) ? (
+                <button type="button" className={`evidence-thumb ${each.kind}`} onClick={() => setViewing(each)} aria-label={`Open ${each.kind}`}>
+                  <MediaThumbnail evidence={each} />
+                </button>
+              ) : editable ? (
+                <button
+                  type="button"
+                  className="evidence-thumb note"
+                  onClick={() => setNotePanel({ mode: "edit", note: each })}
+                  aria-label={`Edit note: ${each.text}`}
+                >
+                  <NotebookPen aria-hidden="true" />
+                </button>
+              ) : (
+                <span className="evidence-thumb note">
+                  <NotebookPen aria-hidden="true" />
+                </span>
+              )}
+              <div className="evidence-card-body">
+                {isNote(each) && <p className="evidence-note-text">{each.text}</p>}
+                <div className="chips">
+                  {supports.map(defectChip)}
+                  {editable && (
+                    <button
+                      type="button"
+                      className="chip assign-chip"
+                      onClick={() => setDefectPanel({ mode: "pick", evidenceId: each.id })}
+                      aria-label={`Assign a Defect Type to ${isNote(each) ? `note: ${each.text}` : each.kind}`}
+                    >
+                      <Plus aria-hidden="true" />
+                      {supports.length === 0 ? "Assign" : "Add"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </li>
+          );
+        })}
       </ul>
-      <ul className="cards">
-        {evidence.filter(isNote).map((note) => (
-          <li key={note.id}>
-            {editable ? (
-              <button
-                type="button"
-                className={`card note-card${arrived.has(note.id) ? " arrived" : ""}`}
-                onClick={() => setNotePanel({ mode: "edit", note })}
-                aria-label={`Edit note: ${note.text}`}
-              >
-                {note.text}
-              </button>
-            ) : (
-              <div className="card note-card">{note.text}</div>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      {editable && (
+      {withoutEvidence.length > 0 && (
         <>
-          <input
-            ref={cameraInput}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            hidden
-            onChange={capture}
-          />
-          <div className="button-row spaced capture-row">
-            <button
-              type="button"
-              className="secondary"
-              disabled={saving}
-              onClick={() => {
-                setFlash(null);
-                setRecording(true);
-              }}
-            >
-              Record video
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              disabled={notePanel !== null}
-              onClick={() => {
-                setFlash(null);
-                setNotePanel({ mode: "add" });
-              }}
-            >
-              Add note
-            </button>
-          </div>
+          <p className="muted spaced">No Evidence linked. Open a Defect to link a photo or note.</p>
+          <div className="chips">{withoutEvidence.map(defectChip)}</div>
         </>
       )}
+
+      {editable && <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={capture} />}
       {error && <p className="error" role="alert">{error}</p>}
       {notePanel && (
         <NoteEditor
@@ -341,93 +364,6 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         </>
       )}
 
-      {/* No Evidence, no Defects: a Defect is made by assigning a Defect Type to a piece of Evidence. */}
-      {(evidence.length > 0 || defects.length > 0) && (
-      <>
-      <div className="section-head">
-        <h2>Defects</h2>
-        <span className="count">{defects.length > 0 && defects.length}</span>
-      </div>
-      {moveIn && (
-        <MoveInLine
-          record={moveIn}
-          expanded={showMoveInMedia}
-          onToggle={() => setShowMoveInMedia((shown) => !shown)}
-          onOpen={setViewing}
-        />
-      )}
-      {editable && unassigned.length > 0 && (
-        <>
-          <p className="muted">
-            {defects.length === 0
-              ? "Assign a Defect Type to your Evidence to record a Defect. Tap a piece of Evidence below."
-              : "Not assigned yet. Tap a piece of Evidence to assign it a Defect Type."}
-          </p>
-          <ul className="thumbnails unassigned">
-            {unassigned.filter(isMedia).map((media) => (
-              <li key={media.id}>
-                <button
-                  type="button"
-                  className={`thumbnail selectable ${media.kind}`}
-                  onClick={() => setDefectPanel({ mode: "pick", evidenceId: media.id })}
-                  aria-label={`Assign a Defect Type to ${media.kind}`}
-                >
-                  <MediaThumbnail evidence={media} />
-                </button>
-              </li>
-            ))}
-          </ul>
-          <ul className="cards">
-            {unassigned.filter(isNote).map((note) => (
-              <li key={note.id}>
-                <button
-                  type="button"
-                  className="card note-card selectable"
-                  onClick={() => setDefectPanel({ mode: "pick", evidenceId: note.id })}
-                  aria-label={`Assign a Defect Type to note: ${note.text}`}
-                >
-                  {note.text}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      {!editable && defects.length === 0 && <p className="muted">No Defects recorded.</p>}
-      <ul className="cards">
-        {defects.map((defect) => {
-          const linked = countEvidence(evidence.filter((e) => defect.evidenceIds.includes(e.id)));
-          const summary = (
-            <>
-              <span className="card-row">
-                <strong>{defect.defectTypeName}</strong>
-                {defect.source === "ai-suggested" && <span className="ai-why">From AI Suggestion</span>}
-              </span>
-              <span className="muted defect-meta">{defect.categoryName}</span>
-              <span className="muted defect-meta">{linked ? `Linked: ${linked}` : "No Evidence linked"}</span>
-              {defect.note && <span>{defect.note}</span>}
-            </>
-          );
-          return (
-            <li key={defect.id}>
-              {editable ? (
-                <button
-                  type="button"
-                  className={`card${arrived.has(defect.id) ? " arrived" : ""}`}
-                  onClick={() => setDefectPanel({ mode: "edit", defectId: defect.id })}
-                >
-                  {summary}
-                </button>
-              ) : (
-                <div className="card">{summary}</div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-
-      </>
-      )}
       {defectPanel?.mode === "pick" && (
         <DefectTypePicker
           itemId={id}
@@ -483,14 +419,27 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           )
         }
         action={
-          <div className="dock-actions">
+          // Every way to capture Evidence, and Done, in one bar in thumb reach.
+          <div className="dock-tiles">
             {editable && (
-              <button type="button" className="primary" disabled={saving} onClick={() => cameraInput.current?.click()}>
-                {saving ? "Saving…" : "Take photo"}
-              </button>
+              <>
+                <button type="button" className="primary" disabled={saving} onClick={() => cameraInput.current?.click()}>
+                  <Camera aria-hidden="true" />
+                  {saving ? "Saving…" : "Photo"}
+                </button>
+                <button type="button" className="secondary" disabled={saving} onClick={recordVideo}>
+                  <Video aria-hidden="true" />
+                  Video
+                </button>
+                <button type="button" className="secondary" disabled={notePanel !== null} onClick={addNote}>
+                  <NotebookPen aria-hidden="true" />
+                  Note
+                </button>
+              </>
             )}
-            {/* Finished with this Item: back to the Area's Items, in thumb reach. */}
+            {/* Finished with this Item: back to the Area's Items. */}
             <button type="button" className="secondary" onClick={() => navigate({ name: "area", id: item.areaId }, { up: true })}>
+              <Check aria-hidden="true" />
               Done
             </button>
           </div>

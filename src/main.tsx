@@ -9,6 +9,8 @@ import { bundledReferenceData } from "./referenceData";
 import { App } from "./ui/App";
 import { ErrorNotice, listenForUnexpectedErrors } from "./ui/ErrorNotice";
 import { HomeCheckProvider } from "./ui/homeCheckContext";
+// Bundled, not from a font CDN, so the app keeps its fonts offline.
+import "./ui/fonts.css";
 import "./ui/styles.css";
 
 listenForUnexpectedErrors();

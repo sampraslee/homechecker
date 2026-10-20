@@ -26,15 +26,35 @@
   --done: #166534;
   --done-tint: #dcfce7;
 
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --tight: -0.025em;
-  --r-control: 6px;
-  --r-card: 12px;
+  /* Corners: controls, cards and panels, chips. */
+  --r-control: 8px;
+  --r-card: 16px;
+  --r-pill: 999px;
+
+  /* Type scale on the 17px base: 14, 17, 20, 24, 32px. */
+  --text-sm: 0.8235rem;
+  --text-md: 1rem;
+  --text-lg: 1.1765rem;
+  --text-xl: 1.4118rem;
+  --text-2xl: 1.8824rem;
+
+  /* Spacing: 16px between blocks, 24px between sections. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Fonts: Inter for body, Manrope for headings. Bundled, so they work offline. */
+  --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Manrope Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   color-scheme: light;
   /* 1rem is 17px: the phone is read at arm's length. */
   font-size: 106.25%;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-body);
   line-height: 1.45;
   color: var(--ink);
   background: var(--page);
@@ -54,8 +74,14 @@ body {
   background: var(--page);
 }
 
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+}
+
 h1 {
-  font-size: 1.6rem;
+  font-size: var(--text-xl);
   font-weight: 800;
   letter-spacing: var(--tight);
   margin: 0 0 1rem;
@@ -65,7 +91,7 @@ h1 {
   max-width: 40rem;
   margin: 0 auto;
   /* The bottom clears the Dock, which measures itself. */
-  padding: calc(env(safe-area-inset-top) + 0.75rem) 1rem calc(var(--dock-height, 8rem) + 1rem);
+  padding: calc(env(safe-area-inset-top) + var(--space-3)) var(--space-4) calc(var(--dock-height, 8rem) + var(--space-4));
 }
 
 button {
@@ -97,7 +123,7 @@ button {
 .cards {
   list-style: none;
   padding: 0;
-  margin: 1rem 0 0;
+  margin: var(--space-4) 0 0;
   display: grid;
   gap: 0.6rem;
 }
@@ -121,10 +147,10 @@ button {
 }
 
 .badge {
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   padding: 0.15rem 0.55rem;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   vertical-align: middle;
 }
 
@@ -152,7 +178,7 @@ button {
 .form input,
 .form select {
   font: inherit;
-  font-size: 1rem;
+  font-size: var(--text-md);
   min-height: 2.9rem;
   padding: 0 0.75rem;
   border: 1px solid var(--line);
@@ -167,7 +193,7 @@ button {
 
 .error {
   color: var(--danger);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   font-weight: 400;
 }
 
@@ -197,14 +223,14 @@ button {
 }
 
 h2 {
-  font-size: 1.2rem;
+  font-size: var(--text-lg);
   font-weight: 700;
   letter-spacing: var(--tight);
   margin: 1.5rem 0 0.5rem;
 }
 
 h3 {
-  font-size: 0.95rem;
+  font-size: var(--text-md);
   color: var(--ink-muted);
   margin: 1rem 0 0.5rem;
 }
@@ -215,7 +241,7 @@ h3 {
 }
 
 .spaced {
-  margin-top: 1rem;
+  margin-top: var(--space-4);
 }
 
 /* The review of a Start Inspection address: each group's values, with an Edit under it. */
@@ -280,11 +306,26 @@ h3 {
   gap: 0.5rem;
 }
 
+/* Icons: Lucide, 24px, one stroke weight, always beside a text label (except the back chevron). */
+.lucide {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+
+button:has(> .lucide) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
 .chip {
-  min-height: 2.5rem;
-  padding: 0 0.85rem;
+  /* 44px: the touch target size (UX-005). */
+  min-height: 44px;
+  padding: 0 var(--space-4);
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--page);
   color: inherit;
 }
@@ -406,12 +447,12 @@ button:disabled {
 }
 
 .defect-meta {
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .note-input {
   font: inherit;
-  font-size: 1rem;
+  font-size: var(--text-md);
   min-height: 5rem;
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--line);
@@ -437,10 +478,10 @@ button:disabled {
   right: 0.25rem;
   width: 1.5rem;
   height: 1.5rem;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--teal-deep);
   color: #fff;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   line-height: 1.5rem;
   text-align: center;
 }
@@ -487,7 +528,7 @@ button:disabled {
 .error-notice details {
   margin-bottom: 0.75rem;
   color: var(--ink-muted);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   overflow-wrap: anywhere;
 }
 
@@ -505,10 +546,10 @@ button:disabled {
   left: 0.3rem;
   bottom: 0.3rem;
   padding: 0.1rem 0.4rem;
-  border-radius: 0.3rem;
+  border-radius: var(--r-control);
   background: rgb(0 0 0 / 65%);
   color: #fff;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
@@ -525,7 +566,7 @@ button:disabled {
 .note-card.selectable[aria-pressed="true"]::before {
   content: "✓ Linked";
   color: var(--teal-deep);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
@@ -540,19 +581,19 @@ button:disabled {
   width: 4.5rem;
   height: 4.5rem;
   border: 4px solid #fff;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: #e5484d;
 }
 
 /* A rounded square, the usual "stop" shape. */
 .record-button.recording {
-  border-radius: 1rem;
+  border-radius: var(--r-card);
 }
 
 .muted-on-dark {
   margin: 0;
   color: #c9ced6;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
 
 .on-dark-error {
@@ -624,7 +665,7 @@ button:disabled {
 .segmented button {
   min-height: 2.75rem;
   border: 0;
-  border-radius: 0.45rem;
+  border-radius: var(--r-control);
   background: none;
   color: inherit;
   font-weight: 500;
@@ -714,13 +755,12 @@ button:disabled {
 .band .unit {
   margin: 0.15rem 0 0;
   color: var(--mint);
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .band h1 {
   margin: 0.1rem 0 0;
-  font-size: 1.9rem;
+  font-size: var(--text-2xl);
   line-height: 1.1;
 }
 
@@ -732,8 +772,8 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 1rem;
-  margin: 1.5rem 0 0.5rem;
+  gap: var(--space-4);
+  margin: var(--space-5) 0 var(--space-2);
 }
 
 .band + .section-head {
@@ -746,7 +786,7 @@ button:disabled {
 
 .count {
   color: var(--ink-muted);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -781,7 +821,7 @@ body:has(:is(input, textarea, select):focus) .dock {
 
 .dock .primary {
   min-height: 3.3rem;
-  font-size: 1.15rem;
+  font-size: var(--text-lg);
 }
 
 /* The main button, with a smaller one beside it. */
@@ -805,7 +845,7 @@ body:has(:is(input, textarea, select):focus) .dock {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 1rem;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -873,7 +913,7 @@ body:has(:is(input, textarea, select):focus) .dock {
 
 .ai-why {
   color: var(--blue-deep);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
@@ -897,7 +937,7 @@ body:has(:is(input, textarea, select):focus) .dock {
   min-height: 2.5rem;
   padding: 0 1rem;
   border: 1px solid rgb(255 255 255 / 35%);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgb(255 255 255 / 8%);
   color: #fff;
   font-weight: 600;
@@ -930,12 +970,12 @@ body:has(:is(input, textarea, select):focus) .dock {
 
 .item-card .summary {
   color: var(--ink-muted);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .chevron {
   color: var(--teal-deep);
-  font-size: 1.6rem;
+  font-size: var(--text-xl);
   line-height: 1;
 }
 
@@ -947,7 +987,7 @@ body:has(:is(input, textarea, select):focus) .dock {
   border-radius: var(--r-control);
   background: var(--surface);
   color: var(--teal-deep);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
@@ -989,12 +1029,12 @@ body:has(:is(input, textarea, select):focus) .dock {
 
 .totals dt {
   color: var(--ink-muted);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
 }
 
 .totals dd {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: var(--text-xl);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -1012,7 +1052,7 @@ body:has(:is(input, textarea, select):focus) .dock {
 /* Never exported: only on this phone, so losing the phone loses it. */
 .unexported {
   color: var(--warn);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   font-weight: 700;
 }
 
@@ -1050,7 +1090,7 @@ body:has(:is(input, textarea, select):focus) .dock {
 
 .move-in-label {
   color: var(--ink-muted);
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1258,4 +1298,85 @@ button:active:not(:disabled) {
 .delete-zone {
   margin-top: 1.5rem;
   text-align: center;
+}
+
+/* The Item's Evidence, one card each, with the Defect Types assigned to it as chips (ADR 0006). */
+.evidence-cards {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.evidence-card {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+
+.evidence-thumb {
+  display: grid;
+  place-items: center;
+  width: 5.5rem;
+  height: 5.5rem;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--teal-tint);
+  color: var(--teal-deep);
+}
+
+.evidence-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.evidence-note-text {
+  margin: 0 0 var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.defect-chip {
+  border-color: var(--teal-deep);
+  background: var(--teal-tint);
+}
+
+/* From an AI Suggestion: blue marks AI. */
+.defect-chip.ai {
+  border-color: var(--blue-deep);
+  background: var(--blue-tint);
+}
+
+.assign-chip {
+  border-style: dashed;
+  color: var(--teal-deep);
+  white-space: nowrap;
+}
+
+/* The Item's Dock: Photo, Video, Note and Done, icon above label. */
+.dock-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.dock-tiles > button {
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 4rem;
+  padding: var(--space-2) var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.dock .dock-tiles > .primary {
+  min-height: 4rem;
+  font-size: var(--text-sm);
 }
