@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { browserEnvironment } from "./adapters/browserEnvironment";
 import { canvasImageProcessor } from "./adapters/canvasImageProcessor";
 import { createDexieStorage } from "./adapters/dexieStorage";
+import { createFakeAiClient } from "./adapters/fakeAiClient";
 import { createGeminiAiClient } from "./adapters/geminiAiClient";
 import { createHomeCheck } from "./core";
 import { bundledReferenceData } from "./referenceData";
@@ -20,7 +21,11 @@ const homeCheck = createHomeCheck({
   environment: browserEnvironment,
   referenceData: bundledReferenceData,
   imageProcessor: canvasImageProcessor,
-  aiClient: createGeminiAiClient(import.meta.env.VITE_GEMINI_API_KEY),
+  // Dev only: `?fakeAi` swaps Gemini for a fake, so AI Suggestions can be seen in a preview without a key.
+  aiClient:
+    import.meta.env.DEV && new URLSearchParams(window.location.search).has("fakeAi")
+      ? createFakeAiClient()
+      : createGeminiAiClient(import.meta.env.VITE_GEMINI_API_KEY),
 });
 
 // Finish any photo or video whose smaller versions couldn't be made at capture, then send waiting
