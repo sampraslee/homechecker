@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Check } from "lucide-react";
 import { refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 
@@ -26,6 +27,7 @@ export function InspectorNameForm({ initialName = "", onSaved }: { initialName?:
         {error && <span className="error" role="alert">{error}</span>}
       </label>
       <button type="submit" className="primary">
+        <Check aria-hidden="true" />
         Save name
       </button>
     </form>
