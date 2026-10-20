@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { HomeCheck } from "./homeCheck";
-import { createTestHomeCheck, createTestHomeCheckWithItem, expectOk } from "../testing/homeCheck";
+import { createTestHomeCheck, createTestHomeCheckWithItem, expectOk, noteOf } from "../testing/homeCheck";
 
 /** The Areas and Items of an Inspection as the Inspector sees them, without ids. */
 async function areasAndItemsOf(homeCheck: HomeCheck, inspectionId: string) {
@@ -231,7 +231,7 @@ describe("what the Move-in recorded, shown on a Move-out Item", () => {
     expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [photo.id] }));
     expectOk(await homeCheck.addItem(areaId, { catalogItemId: "window", shortName: "left" }));
     const right = expectOk(await homeCheck.addItem(areaId, { catalogItemId: "window", shortName: "right" })).item;
-    expectOk(await homeCheck.addDefect(right.id, { defectTypeCode: "SF-STAIN" }));
+    expectOk(await homeCheck.addDefect(right.id, { defectTypeCode: "SF-STAIN", evidenceIds: [await noteOf(homeCheck, right.id)] }));
     const moveOut = expectOk(await homeCheck.startMoveOut({ moveInId })).inspection;
     const [area] = await homeCheck.listAreas(moveOut.id);
     const items = await homeCheck.listItems(area.id);

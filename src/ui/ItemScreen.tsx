@@ -24,9 +24,10 @@ import { useArrivals } from "./useArrivals";
 import { useLocked } from "./useLocked";
 import { VideoRecorder } from "./VideoRecorder";
 
+/** Every Defect is made from a piece of Evidence, so the panels that make one carry that Evidence. */
 type DefectPanel =
-  | { mode: "pick" }
-  | { mode: "add"; defectType: PickedDefectType }
+  | { mode: "pick"; evidenceId: string }
+  | { mode: "add"; defectType: PickedDefectType; evidenceId: string }
   | { mode: "edit"; defectId: string; notice?: string };
 
 /** A new note, or one of the Item's notes being edited. */
@@ -141,13 +142,27 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     }
   }
 
-  /** Picking a Defect Type records the Defect straight away, unless it needs a note first. */
-  async function pickDefectType(defectType: PickedDefectType) {
-    const existing = defects.find((defect) => defect.defectTypeCode === defectType.code);
-    if (existing) return setDefectPanel(alreadyRecorded(existing.id, defectType));
-    if (defectType.noteRequired) return setDefectPanel({ mode: "add", defectType });
+  /**
+   * Assigning a Defect Type to a piece of Evidence records the Defect straight away, unless it needs a note first. If the
+   * Item already has that Defect Type, the Evidence is added to that Defect instead, since an Item has one Defect per type.
+   */
+  async function pickDefectType(defectType: PickedDefectType, evidenceId: string) {
     setError(null);
-    const result = await homeCheck.addDefect(id, { defectTypeCode: defectType.code });
+    const existing = defects.find((defect) => defect.defectTypeCode === defectType.code);
+    if (existing) {
+      if (existing.evidenceIds.includes(evidenceId)) return setDefectPanel(alreadyRecorded(existing.id, defectType));
+      const linked = await homeCheck.editDefect(existing.id, { evidenceIds: [...existing.evidenceIds, evidenceId] });
+      if (linked.ok) {
+        setDefectPanel(null);
+        showFlash({ text: `Linked to ${defectType.name}.` });
+        load();
+      } else {
+        setError(refusalMessage[linked.reason]);
+      }
+      return;
+    }
+    if (defectType.noteRequired) return setDefectPanel({ mode: "add", defectType, evidenceId });
+    const result = await homeCheck.addDefect(id, { defectTypeCode: defectType.code, evidenceIds: [evidenceId] });
     if (result.ok) {
       setDefectPanel(null);
       showFlash({ text: `Added ${defectType.name}.`, undo: () => undoDefect(result.defect.id, defectType.name) });
@@ -155,7 +170,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     } else if (result.reason === "defect-type-already-recorded") {
       setDefectPanel(alreadyRecorded(result.existingDefectId, defectType));
     } else if (result.reason === "note-required") {
-      setDefectPanel({ mode: "add", defectType });
+      setDefectPanel({ mode: "add", defectType, evidenceId });
     } else {
       setError(refusalMessage[result.reason]);
     }
@@ -203,6 +218,9 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   }
 
   const photos = evidence.filter((e) => e.kind === "photo");
+  /** Evidence that no Defect uses yet: each waits for a Defect Type to be assigned to it. */
+  const assignedIds = new Set(defects.flatMap((defect) => defect.evidenceIds));
+  const unassigned = evidence.filter((each) => !assignedIds.has(each.id));
 
   return (
     <main className="screen">
@@ -295,6 +313,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           key={notePanel.mode === "edit" ? notePanel.note.id : "new"}
           itemId={id}
           note={notePanel.mode === "edit" ? notePanel.note : undefined}
+          defects={defects}
           onSaved={closeNotePanel}
           onCancel={() => setNotePanel(null)}
         />
@@ -322,6 +341,9 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         </>
       )}
 
+      {/* No Evidence, no Defects: a Defect is made by assigning a Defect Type to a piece of Evidence. */}
+      {(evidence.length > 0 || defects.length > 0) && (
+      <>
       <div className="section-head">
         <h2>Defects</h2>
         <span className="count">{defects.length > 0 && defects.length}</span>
@@ -334,7 +356,44 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           onOpen={setViewing}
         />
       )}
-      {defects.length === 0 && <p className="muted">{editable ? "No Defects yet. Add one, or confirm an AI Suggestion." : "No Defects recorded."}</p>}
+      {editable && unassigned.length > 0 && (
+        <>
+          <p className="muted">
+            {defects.length === 0
+              ? "Assign a Defect Type to your Evidence to record a Defect. Tap a piece of Evidence below."
+              : "Not assigned yet. Tap a piece of Evidence to assign it a Defect Type."}
+          </p>
+          <ul className="thumbnails unassigned">
+            {unassigned.filter(isMedia).map((media) => (
+              <li key={media.id}>
+                <button
+                  type="button"
+                  className={`thumbnail selectable ${media.kind}`}
+                  onClick={() => setDefectPanel({ mode: "pick", evidenceId: media.id })}
+                  aria-label={`Assign a Defect Type to ${media.kind}`}
+                >
+                  <MediaThumbnail evidence={media} />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <ul className="cards">
+            {unassigned.filter(isNote).map((note) => (
+              <li key={note.id}>
+                <button
+                  type="button"
+                  className="card note-card selectable"
+                  onClick={() => setDefectPanel({ mode: "pick", evidenceId: note.id })}
+                  aria-label={`Assign a Defect Type to note: ${note.text}`}
+                >
+                  {note.text}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {!editable && defects.length === 0 && <p className="muted">No Defects recorded.</p>}
       <ul className="cards">
         {defects.map((defect) => {
           const linked = countEvidence(evidence.filter((e) => defect.evidenceIds.includes(e.id)));
@@ -367,17 +426,15 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         })}
       </ul>
 
-      {editable && defectPanel === null && (
-        <button type="button" className="secondary spaced" onClick={() => setDefectPanel({ mode: "pick" })}>
-          Add Defect
-        </button>
+      </>
       )}
       {defectPanel?.mode === "pick" && (
         <DefectTypePicker
           itemId={id}
           itemName={item.name}
+          title="Assign Defect Type"
           recordedCodes={defects.map((defect) => defect.defectTypeCode)}
-          onPicked={pickDefectType}
+          onPicked={(defectType) => pickDefectType(defectType, defectPanel.evidenceId)}
           onCancel={() => setDefectPanel(null)}
         />
       )}
@@ -387,6 +444,7 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
           itemId={id}
           evidence={evidence}
           defectType={defectPanel.defectType}
+          initialLinked={[defectPanel.evidenceId]}
           onSaved={closeDefectPanel}
           onDuplicate={(existingDefectId) => setDefectPanel(alreadyRecorded(existingDefectId, defectPanel.defectType))}
           onCancel={() => setDefectPanel(null)}
@@ -525,12 +583,17 @@ function unreviewedCount(suggestions: AiSuggestionView[]): string {
   return count > 0 ? `${count} to review` : "";
 }
 
-/** What else goes with a photo or video: its links to Defects, and a photo's AI Suggestions with any reviews. */
-function deletionConsequences(evidence: MediaEvidence, defects: DefectView[], aiSuggestions: AiSuggestionView[]): string[] {
+/**
+ * What else goes with a piece of Evidence: the Defects it is the only proof of (which go too, since a Defect always has
+ * Evidence), the Defects it is linked to, and a photo's AI Suggestions with any reviews.
+ */
+function deletionConsequences(evidence: Evidence, defects: DefectView[], aiSuggestions: AiSuggestionView[]): string[] {
   const lines: string[] = [];
   const linked = defects.filter((defect) => defect.evidenceIds.includes(evidence.id));
   const leftBare = linked.filter((defect) => defect.evidenceIds.length === 1).map((defect) => defect.defectTypeName);
-  if (leftBare.length > 0) lines.push(`It's the only Evidence for ${listNames(leftBare)}, which will have none.`);
+  if (leftBare.length > 0) {
+    lines.push(`It's the only Evidence for ${listNames(leftBare)}, so ${leftBare.length === 1 ? "that Defect is" : "those Defects are"} removed too.`);
+  }
   else if (linked.length > 0) lines.push(`It comes off ${listNames(linked.map((defect) => defect.defectTypeName))}.`);
   const suggestions = aiSuggestions.filter((suggestion) => suggestion.evidenceId === evidence.id);
   const reviewed = suggestions.filter((suggestion) => suggestion.outcome !== "unreviewed").length;
@@ -641,11 +704,13 @@ function VideoPlayer({ evidenceId }: { evidenceId: string }) {
 function NoteEditor({
   itemId,
   note,
+  defects,
   onSaved,
   onCancel,
 }: {
   itemId: string;
   note?: NoteEvidence;
+  defects: DefectView[];
   onSaved: () => void;
   onCancel: () => void;
 }) {
@@ -696,7 +761,10 @@ function NoteEditor({
       {note &&
         (confirmingDelete ? (
           <>
-            <p>Delete this note? It is unlinked from any Defects.</p>
+            <p>Delete this note?</p>
+            {deletionConsequences(note, defects, []).map((line) => (
+              <p key={line}>{line}</p>
+            ))}
             <div className="button-row">
               <button type="button" className="secondary" onClick={() => setConfirmingDelete(false)}>
                 Keep note

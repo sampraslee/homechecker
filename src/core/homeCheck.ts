@@ -69,6 +69,8 @@ const itemNotFound = { ok: false, reason: "item-not-found" } as const;
 const itemNameRequired = { ok: false, reason: "item-name-required" } as const;
 const noteRequired = { ok: false, reason: "note-required" } as const;
 const evidenceNotOnItem = { ok: false, reason: "evidence-not-on-item" } as const;
+/** A Defect is made by assigning a Defect Type to Evidence, so it always has at least one piece. */
+const evidenceRequired = { ok: false, reason: "evidence-required" } as const;
 const defectNotFound = { ok: false, reason: "defect-not-found" } as const;
 const videoTooLong = { ok: false, reason: "video-too-long" } as const;
 /** An empty Evidence note; not to be confused with `note-required`, a Defect that needs a note. */
@@ -746,15 +748,19 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       return storage.listEvidence(itemId);
     },
 
-    /** Unlinks the Evidence from its Item's Defects first, so no Defect is left pointing at deleted Evidence. */
+    /**
+     * Unlinks the Evidence from its Item's Defects first. A Defect left with no Evidence goes too, since a Defect
+     * always has proof. The app asks for confirmation first, naming those Defects.
+     */
     async deleteEvidence(evidenceId: string) {
       const evidence = await storage.getEvidence(evidenceId);
       if (!evidence) return evidenceNotFound;
       if (await isLocked(evidence.inspectionId)) return inspectionCompleted;
       for (const defect of await storage.listDefects(evidence.itemId)) {
-        if (defect.evidenceIds.includes(evidenceId)) {
-          await storage.putDefect({ ...defect, evidenceIds: defect.evidenceIds.filter((id) => id !== evidenceId) });
-        }
+        if (!defect.evidenceIds.includes(evidenceId)) continue;
+        const remaining = defect.evidenceIds.filter((id) => id !== evidenceId);
+        if (remaining.length === 0) await storage.deleteDefect(defect.id);
+        else await storage.putDefect({ ...defect, evidenceIds: remaining });
       }
       await storage.deleteEvidence(evidenceId);
       if (evidence.kind === "photo") aiChanged();
@@ -798,6 +804,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       }
       const evidenceIds = await evidenceOfItem(itemId, input.evidenceIds ?? []);
       if (!evidenceIds) return evidenceNotOnItem;
+      if (evidenceIds.length === 0) return evidenceRequired;
       const note = input.note?.trim();
       if (needsNote(input.defectTypeCode) && !note) return noteRequired;
       const defect: Defect = {
@@ -823,6 +830,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       if (changes.evidenceIds) {
         const checked = await evidenceOfItem(defect.itemId, changes.evidenceIds);
         if (!checked) return evidenceNotOnItem;
+        if (checked.length === 0) return evidenceRequired;
         evidenceIds = checked;
       }
       const { note: oldNote, ...rest } = defect;

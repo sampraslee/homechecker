@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { HomeCheck } from "./homeCheck";
-import { createTestHomeCheckWithInspection } from "../testing/homeCheck";
+import { createTestHomeCheckWithInspection, noteOf } from "../testing/homeCheck";
 
 async function wardrobeInBedroom() {
   const setup = await createTestHomeCheckWithInspection();
@@ -98,10 +98,10 @@ describe("picking a Defect Type", () => {
 describe("one Defect per Defect Type on an Item", () => {
   test("a second Defect with the same Defect Type is refused and reports the existing one", async () => {
     const { homeCheck, itemId } = await wardrobeInBedroom();
-    const first = await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", note: "door" });
+    const first = await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", note: "door", evidenceIds: [await noteOf(homeCheck, itemId)] });
     if (!first.ok) throw new Error("could not add Defect");
 
-    const second = await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", note: "side panel" });
+    const second = await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", note: "side panel", evidenceIds: [await noteOf(homeCheck, itemId)] });
 
     expect(second).toMatchObject({ ok: false, reason: "defect-type-already-recorded", existingDefectId: first.defect.id });
     expect(await homeCheck.listDefects(itemId)).toHaveLength(1);
@@ -112,8 +112,8 @@ describe("one Defect per Defect Type on an Item", () => {
     const windowItem = await homeCheck.addItem(areaId, { catalogItemId: "window" });
     if (!windowItem.ok) throw new Error("could not add Item");
 
-    await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH" });
-    const onWindow = await homeCheck.addDefect(windowItem.item.id, { defectTypeCode: "SF-SCRATCH" });
+    await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [await noteOf(homeCheck, itemId)] });
+    const onWindow = await homeCheck.addDefect(windowItem.item.id, { defectTypeCode: "SF-SCRATCH", evidenceIds: [await noteOf(homeCheck, windowItem.item.id)] });
 
     expect(onWindow.ok).toBe(true);
   });
@@ -121,8 +121,8 @@ describe("one Defect per Defect Type on an Item", () => {
   test("different Defect Types can be recorded on the same Item", async () => {
     const { homeCheck, itemId } = await wardrobeInBedroom();
 
-    await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH" });
-    await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE" });
+    await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [await noteOf(homeCheck, itemId)] });
+    await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE", evidenceIds: [await noteOf(homeCheck, itemId)] });
 
     expect((await homeCheck.listDefects(itemId)).map((defect) => defect.defectTypeCode)).toEqual(["SF-SCRATCH", "CF-HINGE"]);
   });
@@ -141,7 +141,7 @@ describe("linking Evidence to a Defect", () => {
     expect(await homeCheck.listDefects(itemId)).toEqual([]);
   });
 
-  test("deleting a linked photo unlinks it from every Defect but keeps the Defects", async () => {
+  test("deleting a linked photo unlinks it from every Defect, and removes a Defect it was the only proof of", async () => {
     const { homeCheck, itemId } = await wardrobeInBedroom();
     const wrongPhotoId = await takePhoto(homeCheck, itemId);
     const keptPhotoId = await takePhoto(homeCheck, itemId);
@@ -150,7 +150,7 @@ describe("linking Evidence to a Defect", () => {
 
     await homeCheck.deleteEvidence(wrongPhotoId);
 
-    expect((await homeCheck.listDefects(itemId)).map((defect) => defect.evidenceIds)).toEqual([[keptPhotoId], []]);
+    expect((await homeCheck.listDefects(itemId)).map((defect) => defect.evidenceIds)).toEqual([[keptPhotoId]]);
   });
 
   test("one photo can support several Defects on its Item", async () => {
@@ -187,18 +187,19 @@ describe("editing a Defect", () => {
     const windowItem = await homeCheck.addItem(areaId, { catalogItemId: "window" });
     if (!windowItem.ok) throw new Error("could not add Item");
     const windowPhotoId = await takePhoto(homeCheck, windowItem.item.id);
-    const added = await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH" });
+    const proof = await noteOf(homeCheck, itemId);
+    const added = await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [proof] });
     if (!added.ok) throw new Error("could not add Defect");
 
     const edited = await homeCheck.editDefect(added.defect.id, { evidenceIds: [windowPhotoId] });
 
     expect(edited).toEqual({ ok: false, reason: "evidence-not-on-item" });
-    expect((await homeCheck.getDefect(added.defect.id))?.evidenceIds).toEqual([]);
+    expect((await homeCheck.getDefect(added.defect.id))?.evidenceIds).toEqual([proof]);
   });
 
   test("can't clear the note of an Other / Unknown Defect", async () => {
     const { homeCheck, itemId } = await wardrobeInBedroom();
-    const added = await homeCheck.addDefect(itemId, { defectTypeCode: "OT-UNKNOWN", note: "odd mark" });
+    const added = await homeCheck.addDefect(itemId, { defectTypeCode: "OT-UNKNOWN", note: "odd mark", evidenceIds: [await noteOf(homeCheck, itemId)] });
     if (!added.ok) throw new Error("could not add Defect");
 
     expect(await homeCheck.editDefect(added.defect.id, { note: "" })).toEqual({ ok: false, reason: "note-required" });
@@ -206,7 +207,7 @@ describe("editing a Defect", () => {
 
   test("clearing the note of any other Defect removes it", async () => {
     const { homeCheck, itemId } = await wardrobeInBedroom();
-    const added = await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", note: "door" });
+    const added = await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", note: "door", evidenceIds: [await noteOf(homeCheck, itemId)] });
     if (!added.ok) throw new Error("could not add Defect");
 
     await homeCheck.editDefect(added.defect.id, { note: " " });
@@ -231,12 +232,12 @@ describe("removing a Defect", () => {
 
   test("lets the same Defect Type be recorded again", async () => {
     const { homeCheck, itemId } = await wardrobeInBedroom();
-    const added = await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH" });
+    const added = await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [await noteOf(homeCheck, itemId)] });
     if (!added.ok) throw new Error("could not add Defect");
 
     await homeCheck.removeDefect(added.defect.id);
 
-    expect((await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH" })).ok).toBe(true);
+    expect((await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [await noteOf(homeCheck, itemId)] })).ok).toBe(true);
   });
 
   test("a Defect that doesn't exist can't be edited or removed", async () => {
@@ -251,7 +252,7 @@ describe("the Defect Dictionary", () => {
   test("only Defect Types in the Dictionary can be recorded", async () => {
     const { homeCheck, itemId } = await wardrobeInBedroom();
 
-    const invented = await homeCheck.addDefect(itemId, { defectTypeCode: "SF-UGLY" });
+    const invented = await homeCheck.addDefect(itemId, { defectTypeCode: "SF-UGLY", evidenceIds: [await noteOf(homeCheck, itemId)] });
 
     expect(invented).toEqual({ ok: false, reason: "unknown-defect-type" });
     expect(await homeCheck.listDefects(itemId)).toEqual([]);
@@ -260,8 +261,8 @@ describe("the Defect Dictionary", () => {
   test("when nothing fits, Other / Unknown can be recorded with a note, but not without one", async () => {
     const { homeCheck, itemId } = await wardrobeInBedroom();
 
-    const withoutNote = await homeCheck.addDefect(itemId, { defectTypeCode: "OT-OTHER", note: "  " });
-    const withNote = await homeCheck.addDefect(itemId, { defectTypeCode: "OT-OTHER", note: "sticker residue inside door" });
+    const withoutNote = await homeCheck.addDefect(itemId, { defectTypeCode: "OT-OTHER", note: "  ", evidenceIds: [await noteOf(homeCheck, itemId)] });
+    const withNote = await homeCheck.addDefect(itemId, { defectTypeCode: "OT-OTHER", note: "sticker residue inside door", evidenceIds: [await noteOf(homeCheck, itemId)] });
 
     expect(withoutNote).toEqual({ ok: false, reason: "note-required" });
     expect(withNote.ok && withNote.defect).toMatchObject({ note: "sticker residue inside door", noteRequired: true });
@@ -269,24 +270,26 @@ describe("the Defect Dictionary", () => {
 });
 
 describe("Defects on an Item", () => {
-  test("an Item with Defects can't be removed until its Defects are", async () => {
+  test("an Item with a Defect can't be removed until its Defect is gone, and deleting its Evidence takes the Defect too", async () => {
     const { homeCheck, itemId } = await wardrobeInBedroom();
-    const added = await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH" });
+    const proof = await noteOf(homeCheck, itemId);
+    const added = await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [proof] });
     if (!added.ok) throw new Error("could not add Defect");
 
-    const whileDefectRemains = await homeCheck.removeItem(itemId);
-    await homeCheck.removeDefect(added.defect.id);
+    const whileEvidenceRemains = await homeCheck.removeItem(itemId);
+    await homeCheck.deleteEvidence(proof);
     const onceEmpty = await homeCheck.removeItem(itemId);
 
-    expect(whileDefectRemains).toEqual({ ok: false, reason: "item-has-defects" });
+    expect(whileEvidenceRemains).toEqual({ ok: false, reason: "item-has-defects" });
+    expect(await homeCheck.listDefects(itemId)).toEqual([]);
     expect(onceEmpty).toEqual({ ok: true });
   });
 
   test("an Area lists how many Defects each of its Items has", async () => {
     const { homeCheck, areaId, itemId } = await wardrobeInBedroom();
     await homeCheck.addItem(areaId, { catalogItemId: "window" });
-    await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH" });
-    await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE" });
+    await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [await noteOf(homeCheck, itemId)] });
+    await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE", evidenceIds: [await noteOf(homeCheck, itemId)] });
 
     const items = await homeCheck.listItems(areaId);
 
@@ -299,7 +302,7 @@ describe("Defects on an Item", () => {
 
   test("lists its Defects with their Defect Type and Category names", async () => {
     const { homeCheck, itemId } = await wardrobeInBedroom();
-    await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE" });
+    await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE", evidenceIds: [await noteOf(homeCheck, itemId)] });
 
     const [defect] = await homeCheck.listDefects(itemId);
 

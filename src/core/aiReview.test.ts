@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { HomeCheck } from "./homeCheck";
 import type { AiAnswer } from "./ports";
-import { createTestHomeCheckWithItem, expectOk } from "../testing/homeCheck";
+import { createTestHomeCheckWithItem, expectOk, noteOf } from "../testing/homeCheck";
 
 /** A second Draft Move-in on the same phone, for another Unit. */
 async function anotherInspection(homeCheck: HomeCheck) {
@@ -115,12 +115,13 @@ describe("correcting an AI Suggestion", () => {
 
   test("to a Defect Type the Item already has links the photo to that Defect", async () => {
     const { homeCheck, itemId, photoId, suggestions } = await photoWithSuggestions();
-    const existing = expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE" })).defect;
+    const proof = await noteOf(homeCheck, itemId);
+    const existing = expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE", evidenceIds: [proof] })).defect;
 
     const corrected = expectOk(await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "CF-HINGE" }));
 
     expect(corrected.defect.id).toBe(existing.id);
-    expect(await homeCheck.listDefects(itemId)).toEqual([{ ...existing, evidenceIds: [photoId] }]);
+    expect(await homeCheck.listDefects(itemId)).toEqual([{ ...existing, evidenceIds: [proof, photoId] }]);
   });
 
   test("to a code not in the Dictionary is refused and leaves the suggestion unreviewed", async () => {
@@ -191,12 +192,13 @@ describe("Other / Unknown AI Suggestions", () => {
 
   test("needs no note when the Item already has that Defect, which keeps its own note", async () => {
     const { homeCheck, itemId, photoId, suggestions } = await photoWithSuggestions([{ code: "OT-UNKNOWN", confidence: "Low" }]);
-    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "OT-UNKNOWN", note: "odd smell" }));
+    const proof = await noteOf(homeCheck, itemId);
+    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "OT-UNKNOWN", note: "odd smell", evidenceIds: [proof] }));
 
     const confirmed = await homeCheck.confirmAiSuggestion(suggestions[0].id);
 
     expect(confirmed.ok).toBe(true);
-    expect(await homeCheck.listDefects(itemId)).toMatchObject([{ note: "odd smell", evidenceIds: [photoId] }]);
+    expect(await homeCheck.listDefects(itemId)).toMatchObject([{ note: "odd smell", evidenceIds: [proof, photoId] }]);
   });
 
   test("a note given for an ordinary Defect Type is kept on the new Defect", async () => {
@@ -224,7 +226,8 @@ describe("on a Completed Inspection", () => {
   test("a photo still waiting for AI when completed gets suggestions that can be corrected onto an existing Defect", async () => {
     const { homeCheck, inspectionId, itemId } = await createTestHomeCheckWithItem();
     const photo = expectOk(await homeCheck.addPhoto(itemId, new Blob(["door"], { type: "image/jpeg" }))).evidence;
-    const existing = expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE" })).defect;
+    const proof = await noteOf(homeCheck, itemId);
+    const existing = expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE", evidenceIds: [proof] })).defect;
     await homeCheck.completeInspection(inspectionId);
     await homeCheck.processAiQueue();
     const [late] = await homeCheck.listAiSuggestions(itemId);
@@ -232,7 +235,7 @@ describe("on a Completed Inspection", () => {
     const corrected = await homeCheck.correctAiSuggestion(late.id, { defectTypeCode: "CF-HINGE" });
 
     expect(corrected.ok).toBe(true);
-    expect(await homeCheck.listDefects(itemId)).toEqual([{ ...existing, evidenceIds: [photo.id] }]);
+    expect(await homeCheck.listDefects(itemId)).toEqual([{ ...existing, evidenceIds: [proof, photo.id] }]);
   });
 
   test("accepts rejecting, and every other edit stays locked", async () => {
@@ -345,7 +348,7 @@ describe("what a review reports", () => {
       { code: "CF-HINGE", confidence: "High" },
       { code: "SF-SCRATCH", confidence: "Low" },
     ]);
-    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH" }));
+    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [await noteOf(homeCheck, itemId)] }));
 
     const made = expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id));
     const linked = expectOk(await homeCheck.confirmAiSuggestion(suggestions[1].id));

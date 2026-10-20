@@ -100,6 +100,7 @@ export function DefectEditor({
   evidence,
   defectType,
   defect,
+  initialLinked,
   notice,
   onSaved,
   onDuplicate,
@@ -110,6 +111,8 @@ export function DefectEditor({
   evidence: Evidence[];
   defectType?: PickedDefectType;
   defect?: DefectView;
+  /** The Evidence a new Defect starts with: the piece it is being assigned to. */
+  initialLinked?: string[];
   notice?: string;
   onSaved: () => void;
   /** The core refused a new Defect because the Item already has this Defect Type. */
@@ -119,7 +122,7 @@ export function DefectEditor({
   const homeCheck = useHomeCheck();
   useBackCloses(onCancel);
   const [note, setNote] = useState(defect?.note ?? "");
-  const [linked, setLinked] = useState<string[]>(defect?.evidenceIds ?? []);
+  const [linked, setLinked] = useState<string[]>(defect?.evidenceIds ?? initialLinked ?? []);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

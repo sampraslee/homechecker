@@ -197,6 +197,13 @@ export async function createTestHomeCheckWithInspection(referenceData: Reference
 }
 
 /** A Home Check core with a Wardrobe in a Bedroom of a Draft Move-in Inspection. */
+/** A note on the Item, to serve as the Evidence a Defect needs. Notes need no image processing, so they don't disturb the photo tests. */
+export async function noteOf(homeCheck: HomeCheck, itemId: string): Promise<string> {
+  const note = await homeCheck.addNote(itemId, "seen");
+  if (!note.ok) throw new Error(`could not add note: ${note.reason}`);
+  return note.evidence.id;
+}
+
 export async function createTestHomeCheckWithItem(referenceData: ReferenceData = testReferenceData) {
   const setup = await createTestHomeCheckWithInspection(referenceData);
   const area = await setup.homeCheck.addArea(setup.inspectionId, { standardAreaId: "bedroom" });

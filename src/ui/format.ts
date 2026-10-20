@@ -68,6 +68,7 @@ export const refusalMessage: Record<RefusalReason, string> = {
   "unknown-defect-type": "That Defect Type isn't in the Defect Dictionary. Pick another.",
   "defect-type-already-recorded": "This Item already has that Defect Type. Add to the existing Defect instead.",
   "evidence-not-on-item": "Only this Item's own Evidence can be linked.",
+  "evidence-required": "A Defect needs Evidence. Record a photo, video or note, then assign the Defect Type to it.",
   "note-required": "Add a note describing what you see.",
   "no-areas": "Can't complete an Inspection with no Areas. Add the Areas you inspected first.",
   "defect-not-found": "This Defect isn't on this phone.",

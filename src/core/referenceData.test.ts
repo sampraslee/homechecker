@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { bundledReferenceData } from "../referenceData";
-import { createTestHomeCheck, createTestHomeCheckWithInspection } from "../testing/homeCheck";
+import { createTestHomeCheck, createTestHomeCheckWithInspection, noteOf } from "../testing/homeCheck";
 import { testReferenceData } from "../testing/referenceData";
 
 describe("reference data", () => {
@@ -27,7 +27,7 @@ describe("reference data", () => {
 
     const choices = await homeCheck.defectChoices(wall.item.id);
     if (!choices.ok) throw new Error("no Defect choices");
-    const recorded = await homeCheck.addDefect(wall.item.id, { defectTypeCode: "CD-HAIRLINE" });
+    const recorded = await homeCheck.addDefect(wall.item.id, { defectTypeCode: "CD-HAIRLINE", evidenceIds: [await noteOf(homeCheck, wall.item.id)] });
 
     expect(choices.shownFirst.map((category) => category.code)).toEqual(["SF", "CD", "WM", "MB", "CL", "PD", "IW"]);
     const categories = [...choices.shownFirst, ...choices.others];

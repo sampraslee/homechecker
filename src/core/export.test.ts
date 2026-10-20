@@ -1,7 +1,7 @@
 import ExcelJS from "exceljs";
 import JSZip from "jszip";
 import { describe, expect, test } from "vitest";
-import { createTestHomeCheckWithInspection, createTestHomeCheckWithItem, expectOk } from "../testing/homeCheck";
+import { createTestHomeCheckWithInspection, createTestHomeCheckWithItem, expectOk, noteOf } from "../testing/homeCheck";
 
 /** The unzipped export: its workbook read back with ExcelJS, and the zip to look files up in. */
 async function unzipExport(bytes: Uint8Array) {
@@ -147,7 +147,7 @@ describe("exporting an Inspection", () => {
         evidenceIds: [photo.id, note.id, video.id],
       }),
     );
-    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE" }));
+    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE", evidenceIds: [await noteOf(homeCheck, itemId)] }));
 
     const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip);
 
@@ -184,13 +184,13 @@ describe("exporting an Inspection", () => {
         { text: "01-bedroom-01-wardrobe-left-01.jpg", hyperlink: "media/01-bedroom-01-wardrobe-left-01.jpg" },
         { text: "01-bedroom-01-wardrobe-left-02.mp4", hyperlink: "media/01-bedroom-01-wardrobe-left-02.mp4" },
       ],
-      [...leading, "Cabinet / Furniture Specific", "CF-HINGE", "Hinge Fault", undefined, undefined, "Manual"],
+      [...leading, "Cabinet / Furniture Specific", "CF-HINGE", "Hinge Fault", undefined, "seen", "Manual"],
     ]);
   });
 
   test("marks each Defect as manual or AI-suggested, with the AI's confidence for an AI-suggested one", async () => {
     const { homeCheck, inspectionId, itemId, aiClient } = await createTestHomeCheckWithItem();
-    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE" }));
+    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE", evidenceIds: [await noteOf(homeCheck, itemId)] }));
     aiClient.answer([{ code: "SF-SCRATCH", confidence: "Medium" }]);
     expectOk(await homeCheck.addPhoto(itemId, new Blob(["scratched door"], { type: "image/jpeg" })));
     await homeCheck.processAiQueue();
@@ -219,7 +219,7 @@ describe("exporting an Inspection", () => {
 
   test("has an AI Suggestions sheet listing every suggestion with its photo, confidence and outcome", async () => {
     const { homeCheck, inspectionId, areaId, itemId, aiClient } = await createTestHomeCheckWithItem();
-    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-STAIN" }));
+    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-STAIN", evidenceIds: [await noteOf(homeCheck, itemId)] }));
     aiClient.answer([
       { code: "SF-SCRATCH", confidence: "High" },
       { code: "CF-HINGE", confidence: "Medium" },
