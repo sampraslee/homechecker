@@ -32,8 +32,8 @@ This folder holds the audit of the existing app and the redesign plan that comes
 
 ## Flow proposals
 
-- `flow-proposals/FP-02-evidence-on-defect.md`: approved and built, uncommitted on `design/ux-changes`. A Defect is made by assigning a Defect Type to recorded Evidence; Evidence comes first (UX-012).
-- `docs/adr/0006-defects-come-from-assigned-evidence.md`: the ADR for the same decision, accepted.
+- `flow-proposals/FP-02-evidence-on-defect.md`: approved and built, committed in 6cadc2a. A Defect is made by assigning a Defect Type to recorded Evidence; Evidence comes first (UX-012). ADR: `docs/adr/0006-defects-come-from-assigned-evidence.md` (accepted).
+- `flow-proposals/FP-03-back-to-inspection-type.md`: approved and built, uncommitted. Back from the address returns to the Move-in / Move-out screen (UX-008).
 
 - `flow-proposals/FP-01-guided-start-inspection.md`: approved with changes. Address steps merged into three screens, Review step for every path, Move-in / Move-out placement left open until the prototype.
 

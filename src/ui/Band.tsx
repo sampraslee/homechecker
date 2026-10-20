@@ -11,8 +11,11 @@ export function Band({
   children,
 }: {
   navigate: Navigate;
-  /** The way back; the Inspections list, the first screen, has none. */
-  back?: { to: Screen; label: string };
+  /**
+   * The way back; the Inspections list, the first screen, has none. Usually a screen to go up to; `onBack` instead for a
+   * step within a screen, such as the Move-in / Move-out choice inside Start Inspection.
+   */
+  back?: { to: Screen; label: string } | { onBack: () => void; label: string };
   /** The Unit's address, so the Inspector can tell one Basin from another. */
   unit?: string;
   title: string;
@@ -23,7 +26,8 @@ export function Band({
   return (
     <header className="band">
       {back && (
-        <button type="button" className="back" aria-label={`Back to ${back.label}`} onClick={() => navigate(back.to, { up: true })}>
+        <button type="button" className="back" aria-label={`Back to ${back.label}`} onClick={() => ("to" in back ? navigate(back.to, { up: true }) : back.onBack())}
+        >
           {back.label}
         </button>
       )}

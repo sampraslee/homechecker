@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import {
   formatAddress,
   MALAYSIAN_STATES,
@@ -13,6 +13,7 @@ import {
   type UnitAddressInput,
 } from "../core";
 import type { Navigate } from "./App";
+import { BackCloses } from "./backCloses";
 import { Band } from "./Band";
 import { Dock } from "./Dock";
 import { formatDate, inspectionStatusLabel, inspectionTypeLabel, refusalMessage } from "./format";
@@ -56,6 +57,8 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
   /** A Move-out for a Unit whose Move-in isn't on this phone. */
   const [typingMoveOutAddress, setTypingMoveOutAddress] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
+  /** Kept here, not in the form, so going back to change Move-in or Move-out keeps what was typed. */
+  const [address, setAddress] = useState(emptyAddress);
 
   useEffect(() => {
     homeCheck.getSettings().then((settings) => setHasName(settings.inspectorName !== null));
@@ -86,6 +89,16 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
     setTypeChosen(true);
   }
 
+  /** Up to the Move-in / Move-out screen, keeping any typed address. */
+  function backToType() {
+    setTypeChosen(false);
+    setTypingMoveOutAddress(false);
+    setRefusal(null);
+  }
+
+  /** Past the Move-in / Move-out screen, back goes to it, not to the list. */
+  const insideStart = hasName === true && typeChosen;
+
   // The Move-in / Move-out choice, as its own screen before the address.
   if (hasName === true && !typeChosen) {
     return (
@@ -107,7 +120,13 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
 
   return (
     <main className="screen">
-      <Band navigate={navigate} back={{ to: { name: "list" }, label: "Inspections" }} title={`Start ${inspectionTypeLabel[type]}`} />
+      <Band
+        navigate={navigate}
+        back={insideStart ? { onBack: backToType, label: "Move-in or Move-out" } : { to: { name: "list" }, label: "Inspections" }}
+        title={`Start ${inspectionTypeLabel[type]}`}
+      />
+      {/* The phone's back gesture does the same. */}
+      {insideStart && <BackCloses onBack={backToType} />}
 
       {hasName === false && (
         <section className="prompt">
@@ -123,6 +142,8 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
           {type === "move-in" && (
             <AddressForm
               key="move-in"
+              address={address}
+              setAddress={setAddress}
               startLabel={`Start ${inspectionTypeLabel[type]}`}
               onSubmit={async (address) => openOrExplain(await homeCheck.startMoveIn(address))}
             />
@@ -162,6 +183,8 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
               </p>
               <AddressForm
                 key="move-out"
+                address={address}
+                setAddress={setAddress}
                 startLabel={`Start ${inspectionTypeLabel[type]}`}
                 onSubmit={async (address) => openOrExplain(await homeCheck.startMoveOut({ address }))}
               />
@@ -203,9 +226,18 @@ function errorsIn(errors: AddressErrors, fields: AddressField[]): AddressErrors 
  * The Unit's address, asked a group of fields at a time, with earlier addresses on this phone suggested as it's typed. The
  * review checks the whole address and sends the Inspector back to the first group with an error. `onSubmit` returns the errors to show.
  */
-function AddressForm({ startLabel, onSubmit }: { startLabel: string; onSubmit: (address: UnitAddressInput) => Promise<AddressErrors> }) {
+function AddressForm({
+  address,
+  setAddress,
+  startLabel,
+  onSubmit,
+}: {
+  address: UnitAddressInput;
+  setAddress: Dispatch<SetStateAction<UnitAddressInput>>;
+  startLabel: string;
+  onSubmit: (address: UnitAddressInput) => Promise<AddressErrors>;
+}) {
   const homeCheck = useHomeCheck();
-  const [address, setAddress] = useState(emptyAddress);
   const [errors, setErrors] = useState<AddressErrors>({});
   /** Which group is showing; the step after the last group is the review. */
   const [step, setStep] = useState(0);
@@ -384,6 +416,8 @@ function AddressForm({ startLabel, onSubmit }: { startLabel: string; onSubmit: (
           </>
         )}
       </form>
+      {/* Past the first group, the phone's back gesture steps back one group, as Back in the Dock does. Keyed by step, so each group has its own history entry. */}
+      {step > 0 && <BackCloses key={step} onBack={back} />}
       <Dock action={nav} />
     </>
   );
