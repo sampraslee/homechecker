@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
+import { Check, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import {
   formatAddress,
   MALAYSIAN_STATES,
@@ -107,9 +108,12 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
         <ul className="cards">
           {(["move-in", "move-out"] as const).map((each) => (
             <li key={each}>
-              <button type="button" className="card" onClick={() => chooseType(each)}>
-                <strong>{inspectionTypeLabel[each]}</strong>
-                <span className="muted">{each === "move-in" ? "Before a tenant moves in" : "After a tenant moves out"}</span>
+              <button type="button" className="card item-card" onClick={() => chooseType(each)}>
+                <span className="grow">
+                  <strong>{inspectionTypeLabel[each]}</strong>
+                  <span className="summary">{each === "move-in" ? "Before a tenant moves in" : "After a tenant moves out"}</span>
+                </span>
+                <ChevronRight className="chevron" aria-hidden="true" />
               </button>
             </li>
           ))}
@@ -363,9 +367,11 @@ function AddressForm({
   const nav = reviewing ? (
     <div className="dock-actions">
       <button type="button" className="secondary" onClick={back}>
+        <ChevronLeft aria-hidden="true" />
         Back
       </button>
       <button type="submit" form={ADDRESS_FORM_ID} className="primary">
+        <Check aria-hidden="true" />
         {startLabel}
       </button>
     </div>
@@ -373,11 +379,13 @@ function AddressForm({
     <div className="dock-actions">
       {step > 0 && (
         <button type="button" className="secondary" onClick={back}>
+          <ChevronLeft aria-hidden="true" />
           Back
         </button>
       )}
       <button type="button" className="primary" onClick={next}>
         {step === ADDRESS_GROUPS.length - 1 ? "Review address" : "Next"}
+        <ChevronRight aria-hidden="true" />
       </button>
     </div>
   );
@@ -401,6 +409,7 @@ function AddressForm({
                     ))}
                 </dl>
                 <button type="button" className="link" aria-label={`Edit ${group.title}`} onClick={() => setStep(index)}>
+                  <Pencil aria-hidden="true" />
                   Edit
                 </button>
               </div>
@@ -408,6 +417,12 @@ function AddressForm({
           </section>
         ) : (
           <>
+            {/* A segmented bar shows how far through the address the Inspector is. */}
+            <div className="steps" aria-hidden="true">
+              {ADDRESS_GROUPS.map((group, index) => (
+                <span key={group.title} className={index <= step ? "reached" : undefined} />
+              ))}
+            </div>
             <p className="muted">
               Step {step + 1} of {ADDRESS_GROUPS.length}
             </p>

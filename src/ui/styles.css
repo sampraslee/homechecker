@@ -1416,3 +1416,31 @@ button:active:not(:disabled) {
   width: 100%;
   padding-left: calc(var(--space-3) + 20px + var(--space-2));
 }
+
+/* Progress through the Start Inspection address: one segment per group. */
+.steps {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.steps > span {
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--line-soft);
+}
+
+.steps > .reached {
+  background: var(--teal-deep);
+}
+
+/* The step line and its title sit close under the bar, as one heading block. */
+.form > .steps + .muted {
+  margin: 0;
+}
+
+.form > .steps + .muted + h2 {
+  margin-top: 0;
+}
