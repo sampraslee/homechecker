@@ -55,8 +55,12 @@ One coded entry in the Defect Dictionary, such as `SF-SCRATCH` Scratched.
 _Avoid_: Sub-label, defect code, tag
 
 **Defect**:
-One recorded finding: an Item paired with a Defect Type, supported by Evidence. An Item has at most one Defect per Defect Type; extent and location go in its Evidence and note.
+One recorded finding: an Item paired with a Defect Type, supported by Evidence and given a Severity. An Item has at most one Defect per Defect Type; extent and location go in its Evidence and note.
 _Avoid_: Issue, finding, fault
+
+**Severity**:
+The Inspector's observed degree of one Defect: Minor, Moderate or Major. It describes the condition only, never urgency, repair priority, cost or responsibility.
+_Avoid_: Priority, risk, urgency, grade
 
 **Evidence**:
 A photo, video, audio recording or text note captured for one Item to support one or more of that Item's Defects.
