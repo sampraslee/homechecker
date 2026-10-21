@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronRight, DoorOpen, Lock, Plus, Share, Sparkles, Trash2 } from "lucide-react";
-import { formatAddress, type AiWorkLeft, type AreaView, type Inspection, type InspectionTotals, type UnreviewedAiSuggestionView } from "../core";
+import { ChevronRight, DoorOpen, Lock, Plus, Sparkles, Trash2 } from "lucide-react";
+import { formatAddress, type AreaView, type Inspection, type InspectionTotals, type UnreviewedAiSuggestionView } from "../core";
 import type { Navigate } from "./App";
 import { AddAreaFlow } from "./AddAreaFlow";
 import { Band } from "./Band";
 import { LockedNotice } from "./LockedNotice";
-import { Dock, StorageNote } from "./Dock";
+import { Dock } from "./Dock";
+import { ExportPanel } from "./ExportPanel";
 import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel, refusalMessage } from "./format";
 import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
 import { scrollIntoViewGently } from "./scroll";
-import { shareOrDownload, TapTooOldError, type ShareOutcome } from "./shareFile";
 import { useAiChanges } from "./useAiChanges";
 
 export function InspectionScreen({ id, navigate }: { id: string; navigate: Navigate }) {
@@ -18,9 +18,6 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
   const [inspection, setInspection] = useState<Inspection | null | undefined>(undefined);
   const [areas, setAreas] = useState<AreaView[]>([]);
   const [adding, setAdding] = useState(false);
-  const [confirmingComplete, setConfirmingComplete] = useState(false);
-  /** Completed on this visit and not exported since, so the Inspector is prompted to export. */
-  const [justCompleted, setJustCompleted] = useState(false);
   const [toReview, setToReview] = useState<UnreviewedAiSuggestionView[]>([]);
   /** `null`: the linked Move-in was deleted from this phone. */
   const [linkedMoveIn, setLinkedMoveIn] = useState<Inspection | null | undefined>(undefined);
@@ -145,48 +142,30 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
         ))}
       </ul>
 
-      {/* The end of an Inspection, together: export, complete, and (set apart) delete. */}
+      {/* The end of an Inspection: complete it (or, once Completed, export it), and delete it, set apart. */}
       <div className="section-head">
-        <h2>Finish</h2>
+        <h2>{locked ? "Export" : "Finish"}</h2>
       </div>
-      <ExportPanel
-        inspectionId={id}
-        exported={Boolean(inspection?.lastExportedAt)}
-        promptToExport={justCompleted}
-        onExported={(exported) => {
-          setJustCompleted(false);
-          setInspection(exported);
-        }}
-      />
-
-      {/* Kept apart from Export: completing locks the Inspection for good. */}
-      {!locked &&
-        (confirmingComplete ? (
-          <CompletePanel
-            inspectionId={id}
-            onCompleted={() => {
-              setConfirmingComplete(false);
-              setJustCompleted(true);
-              loadInspection();
-            }}
-            onCancel={() => setConfirmingComplete(false)}
-          />
-        ) : (
-          <section className="lock-zone">
-            <p className="muted">When every Area is done, complete the Inspection. It is then locked and can't be changed.</p>
-            <button
-              type="button"
-              className="lock-button"
-              onClick={() => {
-                setAdding(false);
-                setConfirmingComplete(true);
-              }}
-            >
-              <Lock aria-hidden="true" />
-              Complete Inspection
-            </button>
-          </section>
-        ))}
+      {locked ? (
+        <ExportPanel
+          inspectionId={id}
+          exported={Boolean(inspection.lastExportedAt)}
+          promptToExport={false}
+          onExported={setInspection}
+        />
+      ) : (
+        <section className="lock-zone">
+          <p className="muted">When every Area is done, complete the Inspection. It is then locked and can't be changed.</p>
+          <button
+            type="button"
+            className="lock-button"
+            onClick={() => navigate({ name: "complete", id })}
+          >
+            <Lock aria-hidden="true" />
+            Complete Inspection
+          </button>
+        </section>
+      )}
 
       {/* Rare and permanent, so last on the screen and confirmed. */}
       {confirmingDelete ? (
@@ -202,7 +181,6 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
             className="link danger"
             onClick={() => {
               setAdding(false);
-              setConfirmingComplete(false);
               setConfirmingDelete(true);
             }}
           >
@@ -216,7 +194,6 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
         action={
           !locked &&
           !adding &&
-          !confirmingComplete &&
           !confirmingDelete && (
             <button type="button" className="primary" onClick={() => setAdding(true)}>
               <Plus aria-hidden="true" />
@@ -226,99 +203,6 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
         }
       />
     </main>
-  );
-}
-
-const exportOutcomeMessage: Record<ShareOutcome, string> = {
-  shared: "Export shared.",
-  cancelled: "Sharing cancelled. Tap Export to share it again.",
-  downloaded: "Export downloaded.",
-};
-
-/** Builds the zip and hands it to the share menu. Works on Draft and Completed Inspections. */
-function ExportPanel({
-  inspectionId,
-  exported,
-  promptToExport,
-  onExported,
-}: {
-  inspectionId: string;
-  /** Whether this Inspection has been exported, which hides the storage note (UX-021). */
-  exported: boolean;
-  /** Just Completed: urge an export now, as it's only on this phone until then. */
-  promptToExport: boolean;
-  onExported: (inspection: Inspection) => void;
-}) {
-  const homeCheck = useHomeCheck();
-  const [exporting, setExporting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  /** A built zip the share menu refused to open for, as the tap was too long ago; a new tap shares or downloads it. */
-  const [ready, setReady] = useState<File | null>(null);
-
-  async function share(file: File, secondTap: boolean) {
-    try {
-      const outcome = await shareOrDownload(file, { secondTap });
-      setMessage(exportOutcomeMessage[outcome]);
-      setReady(null);
-    } catch (shareError) {
-      if (!(shareError instanceof TapTooOldError)) throw shareError;
-      setReady(file);
-    }
-  }
-
-  async function exportNow() {
-    setExporting(true);
-    setMessage(null);
-    setError(null);
-    setReady(null);
-    // Anything thrown surfaces in the ErrorNotice, as on every screen.
-    try {
-      const result = await homeCheck.exportInspection(inspectionId);
-      if (!result.ok) {
-        setError(refusalMessage[result.reason]);
-        return;
-      }
-      onExported(result.inspection);
-      await share(new File([result.zip as Uint8Array<ArrayBuffer>], result.fileName, { type: "application/zip" }), false);
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  const exportButton = (
-    <button type="button" className={promptToExport ? "primary" : "secondary"} onClick={exportNow} disabled={exporting}>
-      <Share aria-hidden="true" />
-      {exporting ? "Exporting…" : promptToExport ? "Export now" : "Export"}
-    </button>
-  );
-
-  return (
-    <section className="spaced">
-      {ready ? (
-        <>
-          <p className="muted">The export is ready. Tap to open the share menu.</p>
-          <button type="button" className="primary" onClick={() => share(ready, true)}>
-            <Share aria-hidden="true" />
-            Share export
-          </button>
-        </>
-      ) : promptToExport ? (
-        <div className="prompt">
-          <svg className="done-check" viewBox="0 0 48 48" aria-hidden="true">
-            <circle cx="24" cy="24" r="22" />
-            <path d="M14 25l7 7 13-15" />
-          </svg>
-          <p>Inspection completed. Export it now: until you do, it's only on this phone.</p>
-          {exportButton}
-        </div>
-      ) : (
-        exportButton
-      )}
-      <StorageNote exported={exported} />
-      {message && <p className="muted">{message}</p>}
-      {error && <p className="error" role="alert">{error}</p>}
-    </section>
   );
 }
 
@@ -371,99 +255,6 @@ function DeletePanel({ inspection, onDeleted, onCancel }: { inspection: Inspecti
         <button type="button" className="danger-button" onClick={remove}>
           {lastExportedAt ? "Delete Inspection" : "Delete without exporting"}
         </button>
-      </div>
-    </section>
-  );
-}
-
-/** The confirmation step before completing; completing can't be undone. */
-function CompletePanel({
-  inspectionId,
-  onCompleted,
-  onCancel,
-}: {
-  inspectionId: string;
-  onCompleted: () => void;
-  onCancel: () => void;
-}) {
-  const homeCheck = useHomeCheck();
-  useBackCloses(onCancel);
-  const [error, setError] = useState<string | null>(null);
-  const [totals, setTotals] = useState<InspectionTotals | null>(null);
-  const [aiWork, setAiWork] = useState<AiWorkLeft | null>(null);
-  const panel = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    homeCheck.inspectionTotals(inspectionId).then(setTotals);
-  }, [homeCheck, inspectionId]);
-  useEffect(() => {
-    scrollIntoViewGently(panel.current);
-  }, []);
-  useAiChanges(useCallback(() => homeCheck.aiWorkLeft(inspectionId).then(setAiWork), [homeCheck, inspectionId]));
-
-  async function complete() {
-    const result = await homeCheck.completeInspection(inspectionId);
-    if (result.ok) onCompleted();
-    else setError(refusalMessage[result.reason]);
-  }
-
-  if (!totals) return null;
-  const rows: [string, number][] = [
-    ["Areas", totals.areas],
-    ["Items", totals.items],
-    ["Evidence", totals.evidence],
-    ["Defects", totals.defects],
-  ];
-
-  return (
-    <section className="panel" ref={panel}>
-      <h2>Complete this Inspection?</h2>
-      <dl className="totals">
-        {rows.map(([label, count]) => (
-          <div key={label} className={count === 0 ? "zero" : undefined}>
-            <dt>{label}</dt>
-            <dd>{count}</dd>
-          </div>
-        ))}
-      </dl>
-      {totals.areas === 0 ? (
-        <p className="notice">This Inspection has no Areas, so there is nothing to complete. Add the Areas you inspected first.</p>
-      ) : (
-        <>
-          {totals.evidence === 0 && (
-            <p className="notice">This Inspection has no Evidence: no photos, videos or notes. Check that this is right before you complete it.</p>
-          )}
-          {totals.defectsWithoutSeverity > 0 && (
-            <p className="notice">
-              {totals.defectsWithoutSeverity === 1
-                ? "1 Defect has no Severity."
-                : `${totals.defectsWithoutSeverity} Defects have no Severity.`}{" "}
-              You can still complete, or keep editing to set them.
-            </p>
-          )}
-          {aiWork && (aiWork.waitingForAi > 0 || aiWork.unreviewedAiSuggestions > 0) && (
-            <p>
-              Photos waiting for AI: {aiWork.waitingForAi}
-              <br />
-              AI Suggestions not reviewed: {aiWork.unreviewedAiSuggestions}
-            </p>
-          )}
-          <p className="muted">
-            Completing locks this Inspection: nothing in it can be added, changed or removed, and it can't be reopened. AI
-            Suggestions can still be reviewed.
-          </p>
-        </>
-      )}
-      {error && <p className="error" role="alert">{error}</p>}
-      <div className="button-row">
-        <button type="button" className="secondary" onClick={onCancel}>
-          {totals.areas === 0 ? "Back" : "Keep editing"}
-        </button>
-        {totals.areas > 0 && (
-          <button type="button" className="lock-button" onClick={complete}>
-            Complete
-          </button>
-        )}
       </div>
     </section>
   );

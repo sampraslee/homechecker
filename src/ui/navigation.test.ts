@@ -144,6 +144,18 @@ describe("going up to a parent", () => {
     expect(history.length).toBe(2);
   });
 
+  test("returns from the Complete this Inspection page to the Inspection, as Keep editing and Back do", () => {
+    const { history, navigation, last } = setUp();
+    navigation.go({ name: "inspection", id: "i1" });
+    navigation.go({ name: "complete", id: "i1" });
+
+    navigation.up({ name: "inspection", id: "i1" });
+    history.land();
+
+    expect(last()).toEqual({ screen: { name: "inspection", id: "i1" }, direction: "back" });
+    expect(history.length).toBe(2);
+  });
+
   test("moves to the parent when the Inspector came from elsewhere", () => {
     const { history, navigation, last } = setUp();
     navigation.go({ name: "inspection", id: "i1" });

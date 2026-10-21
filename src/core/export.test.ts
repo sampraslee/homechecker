@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import JSZip from "jszip";
 import { describe, expect, test } from "vitest";
+import type { HomeCheck } from "./homeCheck";
 import { createTestHomeCheckWithInspection, createTestHomeCheckWithItem, expectOk, noteOf } from "../testing/homeCheck";
 
 /** The unzipped export: its workbook read back with ExcelJS, and the zip to look files up in. */
@@ -33,13 +34,22 @@ function imagesOf(workbook: ExcelJS.Workbook, sheetName: string) {
   }));
 }
 
+/** Exports as the app does: only a Completed Inspection can be exported, so a Draft is completed first (given an empty Area if it has none). */
+async function exportOf(homeCheck: HomeCheck, inspectionId: string) {
+  if ((await homeCheck.getInspection(inspectionId))?.status !== "completed") {
+    if ((await homeCheck.listAreas(inspectionId)).length === 0) expectOk(await homeCheck.addArea(inspectionId, { customName: "Hall" }));
+    expectOk(await homeCheck.completeInspection(inspectionId));
+  }
+  return expectOk(await homeCheck.exportInspection(inspectionId));
+}
+
 describe("exporting an Inspection", () => {
   test("gives a zip whose Inspection sheet describes the Inspection", async () => {
     const { homeCheck, environment, inspectionId } = await createTestHomeCheckWithItem();
     environment.setNow(new Date("2026-01-05T11:45:00.000Z"));
     expectOk(await homeCheck.completeInspection(inspectionId));
 
-    const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip);
+    const { workbook } = await unzipExport((await exportOf(homeCheck, inspectionId)).zip);
 
     expect(rowsOf(workbook, "Inspection")).toEqual([
       ["Inspection type", "Move-in"],
@@ -57,15 +67,15 @@ describe("exporting an Inspection", () => {
     environment.setNow(new Date("2027-01-04T02:00:00.000Z"));
     const moveOut = expectOk(await homeCheck.startMoveOut({ moveInId })).inspection;
 
-    const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(moveOut.id)).zip);
+    const { workbook } = await unzipExport((await exportOf(homeCheck, moveOut.id)).zip);
 
     expect(rowsOf(workbook, "Inspection")).toEqual([
       ["Inspection type", "Move-out"],
       ["Unit address", "7, Jalan Kenari 3, 47100 Puchong, Selangor"],
       ["Inspector", "Aisyah"],
       ["Started at", "4 Jan 2027, 10:00"],
-      ["Completed at"],
-      ["Duration"],
+      ["Completed at", "4 Jan 2027, 10:00"],
+      ["Duration", "0 min"],
       ["Defect Dictionary version", "test-dictionary-1"],
       ["Linked Move-in address", "7, Jalan Kenari 3, 47100 Puchong, Selangor"],
       ["Linked Move-in date", "5 Jan 2026"],
@@ -77,7 +87,7 @@ describe("exporting an Inspection", () => {
     const moveOut = expectOk(await homeCheck.startMoveOut({ moveInId: inspectionId })).inspection;
     expectOk(await homeCheck.deleteInspection(inspectionId));
 
-    const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(moveOut.id)).zip);
+    const { workbook } = await unzipExport((await exportOf(homeCheck, moveOut.id)).zip);
 
     expect(rowsOf(workbook, "Inspection").slice(-2)).toEqual([
       ["Linked Move-in address", "Deleted from this phone"],
@@ -93,7 +103,7 @@ describe("exporting an Inspection", () => {
       }),
     ).inspection;
 
-    const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(moveOut.id)).zip);
+    const { workbook } = await unzipExport((await exportOf(homeCheck, moveOut.id)).zip);
 
     expect(rowsOf(workbook, "Inspection").slice(-2)).toEqual([
       ["Linked Move-in address", "Not linked"],
@@ -104,7 +114,7 @@ describe("exporting an Inspection", () => {
   test("is named after the Inspection's type, Unit and start date", async () => {
     const { homeCheck, inspectionId } = await createTestHomeCheckWithInspection();
 
-    const exported = expectOk(await homeCheck.exportInspection(inspectionId));
+    const exported = await exportOf(homeCheck, inspectionId);
 
     expect(exported.fileName).toBe("home-check-move-in-7-jalan-kenari-3-2026-01-05.zip");
   });
@@ -121,7 +131,7 @@ describe("exporting an Inspection", () => {
     const toilet = expectOk(await homeCheck.addItem(bathroom.id, { catalogItemId: "toilet" })).item;
     expectOk(await homeCheck.addVideo(toilet.id, new Blob(["flush fails"], { type: "video/mp4" }), 5));
 
-    const { zip } = await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip);
+    const { zip } = await unzipExport((await exportOf(homeCheck, inspectionId)).zip);
 
     const media = zip.file(/^media\//);
     expect(
@@ -150,7 +160,7 @@ describe("exporting an Inspection", () => {
     );
     expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE", evidenceIds: [await noteOf(homeCheck, itemId)] }));
 
-    const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip);
+    const { workbook } = await unzipExport((await exportOf(homeCheck, inspectionId)).zip);
 
     const leading = ["7, Jalan Kenari 3, 47100 Puchong, Selangor", "Move-in", "5 Jan 2026", "Aisyah", "Bedroom", "Wardrobe – Left"];
     expect(rowsOf(workbook, "Defects")).toEqual([
@@ -209,7 +219,7 @@ describe("exporting an Inspection", () => {
     // Confirmed onto the hand-added hinge Defect, which stays manual.
     expectOk(await homeCheck.confirmAiSuggestion(hinge.id, { severity: "Minor" }));
 
-    const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip);
+    const { workbook } = await unzipExport((await exportOf(homeCheck, inspectionId)).zip);
 
     const sourceAndConfidence = rowsOf(workbook, "Defects").map((row) => [row[7], row[12], row[13]]);
     expect(sourceAndConfidence).toEqual([
@@ -239,7 +249,7 @@ describe("exporting an Inspection", () => {
     expectOk(await homeCheck.correctAiSuggestion(hinge.id, { severity: "Minor", defectTypeCode: "GM-CRACK" }));
     expectOk(await homeCheck.rejectAiSuggestion(stain.id));
 
-    const { zip, workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip);
+    const { zip, workbook } = await unzipExport((await exportOf(homeCheck, inspectionId)).zip);
 
     const wardrobePhoto = { text: "01-bedroom-01-wardrobe-01.jpg", hyperlink: "media/01-bedroom-01-wardrobe-01.jpg" };
     const windowPhoto = { text: "01-bedroom-02-window-01.jpg", hyperlink: "media/01-bedroom-02-window-01.jpg" };
@@ -264,7 +274,7 @@ describe("exporting an Inspection", () => {
   test("has an AI Suggestions sheet with only its header when the AI suggested nothing", async () => {
     const { homeCheck, inspectionId } = await createTestHomeCheckWithInspection();
 
-    const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip);
+    const { workbook } = await unzipExport((await exportOf(homeCheck, inspectionId)).zip);
 
     expect(rowsOf(workbook, "AI Suggestions")).toEqual([
       ["Area", "Item", "Photo", "Suggested Defect Type code", "Confidence", "Outcome", "Corrected Defect Type code"],
@@ -283,7 +293,7 @@ describe("exporting an Inspection", () => {
     const unprocessed = expectOk(await homeCheck.addPhoto(window.id, new Blob(["cracked pane"], { type: "image/jpeg" }))).evidence;
     expectOk(await homeCheck.addDefect(window.id, { defectTypeCode: "GM-CRACK", evidenceIds: [unprocessed.id] }));
 
-    const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip);
+    const { workbook } = await unzipExport((await exportOf(homeCheck, inspectionId)).zip);
 
     // The window's photo has no thumbnail yet, so its original stands in.
     expect(imagesOf(workbook, "Defects")).toEqual([
@@ -304,7 +314,7 @@ describe("the look of an export's workbook", () => {
         evidenceIds: [photo.id],
       }),
     );
-    return (await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip)).workbook;
+    return (await unzipExport((await exportOf(homeCheck, inspectionId)).zip)).workbook;
   }
 
   function sheet(workbook: ExcelJS.Workbook, name: string) {
@@ -394,7 +404,7 @@ describe("the links in an export", () => {
       expectOk(await homeCheck.addDefect(item.id, { defectTypeCode: "SF-STAIN", evidenceIds: [photo.id, video.id] }));
     }
 
-    const { zip, workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip);
+    const { zip, workbook } = await unzipExport((await exportOf(homeCheck, inspectionId)).zip);
 
     const links = hyperlinksOf(workbook);
     expect(links).toHaveLength(4);
@@ -407,8 +417,16 @@ describe("the links in an export", () => {
 });
 
 describe("the last export of an Inspection", () => {
-  test("is recorded on a Draft, and again each time, while it stays a Draft", async () => {
-    const { homeCheck, environment, inspectionId } = await createTestHomeCheckWithInspection();
+  test("is refused for a Draft, which is not exported until it is Completed", async () => {
+    const { homeCheck, inspectionId } = await createTestHomeCheckWithItem();
+
+    expect(await homeCheck.exportInspection(inspectionId)).toEqual({ ok: false, reason: "inspection-not-completed" });
+    expect(await homeCheck.getInspection(inspectionId)).not.toHaveProperty("lastExportedAt");
+  });
+
+  test("is recorded again each time a Completed Inspection is exported", async () => {
+    const { homeCheck, environment, inspectionId } = await createTestHomeCheckWithItem();
+    expectOk(await homeCheck.completeInspection(inspectionId));
     environment.setNow(new Date("2026-01-05T10:00:00.000Z"));
     expectOk(await homeCheck.exportInspection(inspectionId));
     environment.setNow(new Date("2026-01-05T10:30:00.000Z"));
@@ -416,7 +434,7 @@ describe("the last export of an Inspection", () => {
     expectOk(await homeCheck.exportInspection(inspectionId));
 
     expect(await homeCheck.getInspection(inspectionId)).toMatchObject({
-      status: "draft",
+      status: "completed",
       lastExportedAt: "2026-01-05T10:30:00.000Z",
     });
   });

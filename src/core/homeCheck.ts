@@ -65,6 +65,8 @@ const inspectionNotFound = { ok: false, reason: "inspection-not-found" } as cons
 const inspectionCompleted = { ok: false, reason: "inspection-completed" } as const;
 /** An Inspection with no Areas records nothing, so it can't be completed. */
 const noAreas = { ok: false, reason: "no-areas" } as const;
+/** Only a Completed Inspection is exported, so an export is always of a finished record. */
+const inspectionNotCompleted = { ok: false, reason: "inspection-not-completed" } as const;
 const areaNotFound = { ok: false, reason: "area-not-found" } as const;
 const itemNotFound = { ok: false, reason: "item-not-found" } as const;
 const itemNameRequired = { ok: false, reason: "item-name-required" } as const;
@@ -534,10 +536,11 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       };
     },
 
-    /** The Inspection as a zip of `inspection.xlsx` and its media, Draft or Completed. Records when it was exported. */
+    /** A Completed Inspection as a zip of `inspection.xlsx` and its media. Records when it was exported. */
     async exportInspection(id: string) {
       const inspection = await storage.getInspection(id);
       if (!inspection) return inspectionNotFound;
+      if (inspection.status !== "completed") return inspectionNotCompleted;
       const areas = await Promise.all(
         (await storage.listAreas(id)).map(async (area) => ({
           area,

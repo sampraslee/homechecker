@@ -181,7 +181,8 @@ describe("the Inspection list", () => {
   });
 
   test("shows when an Inspection was last exported", async () => {
-    const { homeCheck, environment, inspectionId } = await createTestHomeCheckWithInspection();
+    const { homeCheck, environment, inspectionId } = await createTestHomeCheckWithItem();
+    expectOk(await homeCheck.completeInspection(inspectionId));
     environment.setNow(new Date("2026-01-05T10:30:00.000Z"));
     expectOk(await homeCheck.exportInspection(inspectionId));
     environment.setNow(new Date("2026-01-06T08:00:00.000Z"));

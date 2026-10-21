@@ -1,6 +1,7 @@
 import { createContext, useEffect, useState } from "react";
 import type { InspectionType } from "../core";
 import { AreaScreen } from "./AreaScreen";
+import { CompleteInspectionScreen } from "./CompleteInspectionScreen";
 import { InspectionListScreen } from "./InspectionListScreen";
 import { InspectionScreen } from "./InspectionScreen";
 import { ItemScreen } from "./ItemScreen";
@@ -13,6 +14,8 @@ export type Screen =
   /** `type`: the Inspection to start, taken from the list tab the Inspector was on. */
   | { name: "start"; type: InspectionType }
   | { name: "inspection"; id: string }
+  /** The Complete this Inspection page, and Export once it is done. */
+  | { name: "complete"; id: string }
   /** `addingItem`: opened straight after the Area was added, so Add Item is already open. */
   | { name: "area"; id: string; addingItem?: boolean }
   /** `recordingDefect`: opened straight after the Item was added, so Record a Defect is already open. */
@@ -73,6 +76,8 @@ function CurrentScreen({ screen, navigate }: { screen: Screen; navigate: Navigat
       return <StartInspectionScreen type={screen.type} navigate={navigate} />;
     case "inspection":
       return <InspectionScreen id={screen.id} navigate={navigate} />;
+    case "complete":
+      return <CompleteInspectionScreen id={screen.id} navigate={navigate} />;
     case "area":
       return <AreaScreen id={screen.id} addingItem={screen.addingItem} navigate={navigate} />;
     case "item":
