@@ -1527,22 +1527,57 @@ button:active:not(:disabled) {
   margin-top: 0;
 }
 
-/* An Inspection card, spaced by hierarchy: status, then the address with its type and date held close, then the export line. */
+/* The Move-ins | Move-outs switch: plain text with an underline on the current one. */
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.tabs button {
+  min-height: 2.75rem;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+.tabs button[aria-selected="true"] {
+  color: inherit;
+  border-bottom-color: var(--teal-deep);
+}
+
+/* An Inspection card: the building's photo on top, then the Unit, its building and the Defect count. */
 .inspection-card {
-  padding-block: var(--space-4);
-}
-
-.inspection-card .grow {
   gap: var(--space-3);
+  padding: var(--space-3);
 }
 
-.card-badge {
-  justify-self: start;
+.building-photo {
+  display: block;
+  aspect-ratio: 16 / 9;
+  padding: var(--space-3);
+  border-radius: var(--r-control);
+  background: var(--line-soft);
+}
+
+.building-photo .badge {
+  background: var(--surface);
 }
 
 .card-heading {
   display: grid;
   gap: var(--space-1);
+  padding-inline: var(--space-1);
+}
+
+.more-info {
+  justify-self: start;
+  color: var(--teal-deep);
+  font-weight: 600;
+  text-decoration: underline;
 }
 
 /* A status message led by a small icon, which sits on the first line of the text. */

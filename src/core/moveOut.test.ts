@@ -204,6 +204,7 @@ describe("the Move-in picker", () => {
         status: "draft",
         address: { unitNumber: "9", street: "Jalan Kenari 5", postcode: "47100", city: "Puchong", state: "Selangor" },
         addressLine: "9, Jalan Kenari 5, 47100 Puchong, Selangor",
+        defectCount: 0,
         startedAt: "2026-02-10T03:00:00.000Z",
       },
       {
@@ -212,6 +213,7 @@ describe("the Move-in picker", () => {
         status: "completed",
         address: expect.objectContaining({ unitNumber: "7", city: "Puchong" }),
         addressLine: "7, Jalan Kenari 3, 47100 Puchong, Selangor",
+        defectCount: 0,
         startedAt: "2026-01-05T09:00:00.000Z",
       },
     ]);

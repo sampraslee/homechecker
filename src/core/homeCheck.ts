@@ -148,6 +148,29 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     return (await storage.getInspection(inspectionId))?.status === "completed";
   }
 
+  async function defectsInInspection(inspectionId: string): Promise<number> {
+    const areas = await storage.listAreas(inspectionId);
+    const items = (await Promise.all(areas.map((area) => storage.listItems(area.id)))).flat();
+    const perItem = await Promise.all(items.map(async (item) => (await storage.listDefects(item.id)).length));
+    return perItem.reduce((total, count) => total + count, 0);
+  }
+
+  /** Summaries for the Inspection list and Move-in picker, sorted newest first. */
+  async function summarise(inspections: Inspection[]): Promise<InspectionSummary[]> {
+    return Promise.all(
+      newestFirst(inspections).map(async ({ id, type, status, startedAt, lastExportedAt, address }) => ({
+        id,
+        type,
+        status,
+        addressLine: formatAddress(address),
+        address,
+        startedAt,
+        defectCount: await defectsInInspection(id),
+        ...(lastExportedAt && { lastExportedAt }),
+      })),
+    );
+  }
+
   async function withDefectCount(item: Item): Promise<ItemView> {
     return toItemView(item, (await storage.listDefects(item.id)).length);
   }
@@ -1034,19 +1057,6 @@ type OperationResult = { [Op in keyof HomeCheck]: Awaited<ReturnType<HomeCheck[O
 
 /** Every reason a core operation can refuse. */
 export type RefusalReason = Extract<OperationResult, { ok: false }>["reason"];
-
-/** Summaries for the Inspection list and Move-in picker, sorted newest first. */
-function summarise(inspections: Inspection[]): InspectionSummary[] {
-  return newestFirst(inspections).map(({ id, type, status, startedAt, lastExportedAt, address }) => ({
-    id,
-    type,
-    status,
-    addressLine: formatAddress(address),
-    address,
-    startedAt,
-    ...(lastExportedAt && { lastExportedAt }),
-  }));
-}
 
 function newestFirst(inspections: Inspection[]): Inspection[] {
   return inspections.sort((a, b) => b.startedAt.localeCompare(a.startedAt));

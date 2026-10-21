@@ -1,19 +1,31 @@
 import { useEffect, useState } from "react";
-import { ChevronRight, Plus, Settings, TriangleAlert } from "lucide-react";
-import type { InspectionSummary } from "../core";
+import { Plus, Settings, TriangleAlert } from "lucide-react";
+import type { InspectionSummary, InspectionType } from "../core";
 import type { Navigate } from "./App";
 import { Band } from "./Band";
 import { Dock } from "./Dock";
-import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel, shortAddress } from "./format";
+import { formatDate, inspectionStatusLabel, shortAddress } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
+
+const TABS: { type: InspectionType; label: string; empty: string }[] = [
+  { type: "move-in", label: "Move-ins", empty: "No Move-ins on this phone yet. Start one when you reach the Unit." },
+  { type: "move-out", label: "Move-outs", empty: "No Move-outs on this phone yet." },
+];
+
+/** Kept across visits, so coming back from a Move-out lands on Move-outs again. */
+let lastTab: InspectionType = "move-in";
 
 export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
   const homeCheck = useHomeCheck();
   const [inspections, setInspections] = useState<InspectionSummary[] | null>(null);
+  const [tab, setTab] = useState(lastTab);
 
   useEffect(() => {
     homeCheck.listInspections().then(setInspections);
   }, [homeCheck]);
+
+  const shown = inspections?.filter((inspection) => inspection.type === tab);
+  const activeTab = TABS.find((each) => each.type === tab)!;
 
   return (
     <main className="screen">
@@ -28,36 +40,45 @@ export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
         }
       />
 
-      {inspections?.length === 0 && <p className="muted spaced">No Inspections on this phone yet. Start one when you reach the Unit.</p>}
+      <div className="tabs" role="tablist">
+        {TABS.map(({ type, label }) => (
+          <button
+            key={type}
+            type="button"
+            role="tab"
+            aria-selected={tab === type}
+            onClick={() => {
+              lastTab = type;
+              setTab(type);
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-      <ul className="cards">
-        {inspections?.map((inspection) => (
+      {shown?.length === 0 && <p className="muted spaced">{activeTab.empty}</p>}
+
+      <ul className="cards" role="tabpanel">
+        {shown?.map((inspection) => (
           <li key={inspection.id}>
-            <button type="button" className="card item-card inspection-card" onClick={() => navigate({ name: "inspection", id: inspection.id })}>
-              <span className="grow">
-                {/* Status first, so Drafts and Completed ones are told apart at a glance; then the address. */}
-                <span className={`badge ${inspection.status} card-badge`}>{inspectionStatusLabel[inspection.status]}</span>
-                {/* The address and its type and date read as one block. */}
-                {/* The short address is what the Inspector looks for; the city tells two "A-12-3"s apart (UX-034). */}
-                <span className="card-heading">
-                  <strong>{shortAddress(inspection.address)}</strong>
-                  <span className="muted">
-                    {inspection.address.postcode} {inspection.address.city}
-                  </span>
-                  <span className="muted">
-                    {inspectionTypeLabel[inspection.type]}, {formatDate(inspection.startedAt)}
-                  </span>
-                </span>
-                {inspection.lastExportedAt ? (
-                  <span className="muted defect-meta">Exported {formatDateTime(inspection.lastExportedAt)}</span>
-                ) : (
-                  <span className="unexported">
-                    <TriangleAlert className="status-icon" aria-hidden="true" />
-                    Only on this phone. Export to keep a copy.
-                  </span>
-                )}
+            <button type="button" className="card inspection-card" onClick={() => navigate({ name: "inspection", id: inspection.id })}>
+              {/* A gray box stands in for the photo of the building until one can be taken. */}
+              <span className="building-photo">
+                <span className={`badge ${inspection.status}`}>{inspectionStatusLabel[inspection.status]}</span>
               </span>
-              <ChevronRight className="chevron" aria-hidden="true" />
+              <span className="card-heading">
+                <strong>{shortAddress(inspection.address)}</strong>
+                <span className="muted">Inspected on {formatDate(inspection.startedAt)}</span>
+                <span className="muted">{inspection.defectCount === 1 ? "1 Defect" : `${inspection.defectCount} Defects`}</span>
+                <span className="more-info">More info</span>
+              </span>
+              {inspection.status === "completed" && !inspection.lastExportedAt && (
+                <span className="unexported">
+                  <TriangleAlert className="status-icon" aria-hidden="true" />
+                  Only on this phone. Export to keep a copy.
+                </span>
+              )}
             </button>
           </li>
         ))}

@@ -78,6 +78,8 @@ export type Settings = {
 /** Unset `lastExportedAt` flags an Inspection never exported, so only on this phone. */
 export type InspectionSummary = Pick<Inspection, "id" | "type" | "status" | "startedAt" | "lastExportedAt" | "address"> & {
   addressLine: string;
+  /** Defects recorded across all the Inspection's Areas and Items. */
+  defectCount: number;
 };
 
 export type Area = {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { createTestHomeCheck, createTestHomeCheckWithInspection, expectOk } from "../testing/homeCheck";
+import { createTestHomeCheck, createTestHomeCheckWithInspection, createTestHomeCheckWithItem, expectOk } from "../testing/homeCheck";
 
 const address = {
   unitNumber: "A-12-3",
@@ -42,6 +42,19 @@ describe("starting a Move-in Inspection", () => {
 });
 
 describe("the Inspection list", () => {
+  test("counts the Defects recorded across an Inspection's Areas and Items", async () => {
+    const { homeCheck, areaId, itemId } = await createTestHomeCheckWithItem();
+    const mirror = expectOk(await homeCheck.addItem(areaId, { catalogItemId: "wardrobe", shortName: "Left" })).item;
+    for (const id of [itemId, mirror.id]) {
+      const photo = expectOk(await homeCheck.addPhoto(id, new Blob(["photo"]))).evidence;
+      expectOk(await homeCheck.addDefect(id, { defectTypeCode: "SF-SCRATCH", evidenceIds: [photo.id] }));
+    }
+
+    const [summary] = await homeCheck.listInspections();
+
+    expect(summary.defectCount).toBe(2);
+  });
+
   test("shows each Inspection's type, address, date and status, newest first", async () => {
     const { homeCheck, environment } = createTestHomeCheck();
     await homeCheck.setInspectorName("Aisyah");
@@ -64,6 +77,7 @@ describe("the Inspection list", () => {
         address: { unitNumber: "7", street: "Jalan Kenari 3", postcode: "47100", city: "Puchong", state: "Selangor" },
         addressLine: "7, Jalan Kenari 3, 47100 Puchong, Selangor",
         startedAt: "2026-01-06T14:30:00.000Z",
+        defectCount: 0,
       },
       {
         type: "move-in",
@@ -71,6 +85,7 @@ describe("the Inspection list", () => {
         address: expect.objectContaining({ unitNumber: "A-12-3", city: "Kuala Lumpur" }),
         addressLine: "A-12-3, Residensi Harmoni, Jalan Ampang, Taman U-Thant, 50450 Kuala Lumpur, W.P. Kuala Lumpur",
         startedAt: "2026-01-05T09:00:00.000Z",
+        defectCount: 0,
       },
     ]);
     expect(list[0].id).toBe(second.ok && second.inspection.id);
