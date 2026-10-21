@@ -11,3 +11,7 @@
 - [x] Leaving before this step leaves the Defects saved and marked "Severity needed"
 - [x] Saved screen lists the Defects with Severity, with Record another Defect and Done
 - [x] Record another Defect starts again at step 1 with an empty Evidence list
+
+## Outcome
+
+Built as a separate step, then changed after a prototype comparison (`prototype/severity-in-step-2`): Severity is now chosen in step 2 beside each Defect Type and is required there, and the separate Severity step is removed. The flow is two steps plus the Saved screen.

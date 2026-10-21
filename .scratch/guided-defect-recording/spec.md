@@ -19,18 +19,25 @@ The Item screen stays as the hub for reviewing and editing. The guided flow is h
 1. **Which Area?** Tap a room on a generic placeholder floor plan, pick another standard Area, or type a custom name. The plan is a shortcut only: it stores nothing and is marked as a prototype placeholder.
 2. **Name it.** Prefilled and editable ("Bedroom", then "Bedroom 2" if one exists). Then land in the new Area, ready to add Items. Adding Items is unchanged.
 
-### Record a Defect (3 steps, then Saved)
+### Record a Defect (2 steps, then Saved)
 
 Started from the Item screen, and automatically after an Item is added. Unavailable on a Completed Inspection.
 
-1. **Evidence.** At least one piece of any kind (photo, video, note) before Next.
+1. **Evidence.** At least one piece of any kind (photo, video, note) before Next. What was captured shows first, above the capture buttons.
 2. **Defect Types.** One piece of Evidence at a time ("Evidence 2 of 4").
-   - A piece can take one or more Defect Types, or **No Defect here** (ADR 0003, 0006).
-   - Existing AI Suggestions for a photo show first as one-tap choices above the normal picker.
+   - A piece can take one or more Defect Types, or **No Defect here** (ADR 0003, 0006). A Defect Type can be taken off again.
+   - Each Defect Type appears as a card with **Minor / Moderate / Major**, nothing preselected, no on-screen definitions. Next is disabled until every Defect on the piece has a Severity.
+   - Existing AI Suggestions for a photo show first as one-tap choices above the normal picker. Choosing one makes the Defect, and its card asks for the Severity.
    - AI is not a blocking step. While online and the photo's suggestions are pending, show "Looking for suggestions…". After 10 seconds, replace it with "Suggestions are taking longer than usual. Carry on and they'll appear in the AI Suggestions list." Offline, show a quiet note instead of a spinner. The picker is never blocked. Late suggestions land in the Item's AI Suggestions list as today.
-3. **Severity.** Minor, Moderate or Major for each Defect made in the flow. Nothing preselected, no on-screen definitions.
+   - The photo is shown square (1:1).
 
-A **Saved** screen lists the Defects just recorded with their Severity, offering **Record another Defect** (back to step 1, empty) and **Done** (back to the Item screen).
+A **Saved** screen lists the Defects just recorded with their Severity, offering **Done** (back to the Item screen) and **Record another Defect** (back to step 1, empty).
+
+Chosen after trying two options on a prototype (`prototype/severity-in-step-2`): Severity asked in step 2 and required there, with no separate Severity step. The alternative, optional in step 2 with a step 3 for leftovers, was dropped because it let Defects slip through unrated.
+
+### Evidence list on the Item screen
+
+Each card slides left to show **Delete**. Delete confirms in the card, naming what else goes (Defects whose only Evidence it is, AI Suggestions and their reviews).
 
 ## Rules
 
