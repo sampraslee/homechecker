@@ -1493,25 +1493,21 @@ button:active:not(:disabled) {
   white-space: nowrap;
 }
 
-/* The Item's Dock: Photo, Video, Note and Done, icon above label. */
-.dock-tiles {
+/* Photo, Video and Note under Record a Defect, icon above label. */
+.capture-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 
-.dock-tiles > button {
+.capture-tiles > button {
   flex-direction: column;
   gap: var(--space-1);
   min-height: 4rem;
   padding: var(--space-2) var(--space-1);
   font-size: var(--text-sm);
   font-weight: 600;
-}
-
-.dock .dock-tiles > .primary {
-  min-height: 4rem;
-  font-size: var(--text-sm);
 }
 
 /* A search box with its icon inside, for long pick lists (UX-006). */

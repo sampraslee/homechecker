@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
-import { Camera, Check, NotebookPen, Plus, Video } from "lucide-react";
+import { Camera, ChevronLeft, NotebookPen, Plus, Video } from "lucide-react";
 import {
   isMedia,
   isNote,
@@ -327,6 +327,23 @@ export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navi
           Record a Defect
         </button>
       )}
+      {/* Evidence that needs no Defect, such as an overview photo, is captured here (ADR 0003, 0006). */}
+      {editable && (
+        <div className="capture-tiles">
+          <button type="button" className="secondary" disabled={saving} onClick={() => cameraInput.current?.click()}>
+            <Camera aria-hidden="true" />
+            {saving ? "Saving…" : "Photo"}
+          </button>
+          <button type="button" className="secondary" disabled={saving} onClick={recordVideo}>
+            <Video aria-hidden="true" />
+            Video
+          </button>
+          <button type="button" className="secondary" disabled={notePanel !== null} onClick={addNote}>
+            <NotebookPen aria-hidden="true" />
+            Note
+          </button>
+        </div>
+      )}
       {moveIn && (
         <MoveInLine
           record={moveIn}
@@ -509,30 +526,11 @@ export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navi
           )
         }
         action={
-          // Every way to capture Evidence, and Done, in one bar in thumb reach.
-          <div className="dock-tiles">
-            {editable && (
-              <>
-                <button type="button" className="primary" disabled={saving} onClick={() => cameraInput.current?.click()}>
-                  <Camera aria-hidden="true" />
-                  {saving ? "Saving…" : "Photo"}
-                </button>
-                <button type="button" className="secondary" disabled={saving} onClick={recordVideo}>
-                  <Video aria-hidden="true" />
-                  Video
-                </button>
-                <button type="button" className="secondary" disabled={notePanel !== null} onClick={addNote}>
-                  <NotebookPen aria-hidden="true" />
-                  Note
-                </button>
-              </>
-            )}
-            {/* Finished with this Item: back to the Area's Items. */}
-            <button type="button" className="secondary" onClick={() => navigate({ name: "area", id: item.areaId }, { up: true })}>
-              <Check aria-hidden="true" />
-              Done
-            </button>
-          </div>
+          // Capturing is in the Evidence section, so the bar only goes back to the Area's Items.
+          <button type="button" className="secondary" onClick={() => navigate({ name: "area", id: item.areaId }, { up: true })}>
+            <ChevronLeft aria-hidden="true" />
+            Back
+          </button>
         }
       />
 

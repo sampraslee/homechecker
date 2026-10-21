@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] Bottom bar and its Done button removed; `Back` returns to the Area
-- [ ] Photo, Video and Note capture in the Evidence and Defects section
-- [ ] Evidence with no Defect can still be captured (ADR 0006)
-- [ ] Capture buttons hidden on a Completed Inspection, as today
+- [x] Bottom bar and its Done button removed; `Back` returns to the Area
+- [x] Photo, Video and Note capture in the Evidence and Defects section
+- [x] Evidence with no Defect can still be captured (ADR 0006)
+- [x] Capture buttons hidden on a Completed Inspection, as today
