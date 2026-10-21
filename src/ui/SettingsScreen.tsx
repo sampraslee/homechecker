@@ -1,16 +1,34 @@
 import { useEffect, useState } from "react";
-import { Check, ShieldCheck, TriangleAlert } from "lucide-react";
+import { Check, FlaskConical, ShieldCheck, TriangleAlert } from "lucide-react";
 import type { Settings, StorageDurability } from "../core";
 import type { Navigate } from "./App";
 import { Band } from "./Band";
 import { Dock } from "./Dock";
 import { useHomeCheck } from "./homeCheckContext";
 import { InspectorNameForm } from "./InspectorNameForm";
+import { loadSampleInspections } from "./sampleData";
 
 export function SettingsScreen({ navigate }: { navigate: Navigate }) {
   const homeCheck = useHomeCheck();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [saved, setSaved] = useState(false);
+  const [loadingSamples, setLoadingSamples] = useState(false);
+  const [samplesLoaded, setSamplesLoaded] = useState(false);
+  const [sampleError, setSampleError] = useState<string | null>(null);
+
+  async function loadSamples() {
+    setLoadingSamples(true);
+    setSampleError(null);
+    try {
+      await loadSampleInspections(homeCheck);
+      setSamplesLoaded(true);
+      setSettings(await homeCheck.getSettings());
+    } catch {
+      setSampleError("The sample Inspections could not be added. Some may have been added before it stopped.");
+    } finally {
+      setLoadingSamples(false);
+    }
+  }
 
   useEffect(() => {
     homeCheck.getSettings().then(setSettings);
@@ -32,6 +50,23 @@ export function SettingsScreen({ navigate }: { navigate: Navigate }) {
         </p>
       )}
       {settings && <StorageDurabilityNotice durability={settings.storageDurability} />}
+      <section>
+        <div className="section-head">
+          <h2>Sample data</h2>
+        </div>
+        <p className="muted">Adds three sample Inspections to try the app with. Delete them from their own screen.</p>
+        <button type="button" className="secondary" onClick={loadSamples} disabled={loadingSamples}>
+          <FlaskConical aria-hidden="true" />
+          {loadingSamples ? "Adding…" : "Load sample Inspections"}
+        </button>
+        {samplesLoaded && (
+          <p className="status-text kept" role="status">
+            <Check className="status-icon" aria-hidden="true" />
+            Added three sample Inspections.
+          </p>
+        )}
+        {sampleError && <p className="error" role="alert">{sampleError}</p>}
+      </section>
       <Dock />
     </main>
   );
