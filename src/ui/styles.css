@@ -1898,3 +1898,9 @@ body:has(.sheet-backdrop) .dock {
   width: 100%;
   margin-bottom: var(--space-4);
 }
+
+/* A chip that isn't a button, such as a Defect Type already given to this Evidence, centres its text like one. */
+span.chip {
+  display: inline-flex;
+  align-items: center;
+}

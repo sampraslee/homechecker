@@ -17,6 +17,7 @@ import { Band } from "./Band";
 import { LockedNotice } from "./LockedNotice";
 import { Dock } from "./Dock";
 import { DefectEditor, DefectTypePicker, type PickedDefectType } from "./DefectPanels";
+import { assignDefectType } from "./assignDefectType";
 import { countEvidence, refusalMessage, unitAndType } from "./format";
 import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
@@ -158,32 +159,23 @@ export function ItemScreen({ id, navigate, recordingDefect = false }: { id: stri
    */
   async function pickDefectType(defectType: PickedDefectType, evidenceId: string) {
     setError(null);
-    const existing = defects.find((defect) => defect.defectTypeCode === defectType.code);
-    if (existing) {
-      if (existing.evidenceIds.includes(evidenceId)) return setDefectPanel(alreadyRecorded(existing.id, defectType));
-      const linked = await homeCheck.editDefect(existing.id, { evidenceIds: [...existing.evidenceIds, evidenceId] });
-      if (linked.ok) {
-        setDefectPanel(null);
+    const assigned = await assignDefectType(homeCheck, id, defectType, evidenceId);
+    switch (assigned.kind) {
+      case "already-linked":
+        return setDefectPanel(alreadyRecorded(assigned.defectId, defectType));
+      case "needs-note":
+        return setDefectPanel({ mode: "add", defectType, evidenceId });
+      case "refused":
+        return setError(refusalMessage[assigned.reason]);
+      case "linked":
         showFlash({ text: `Linked to ${defectType.name}.` });
-        load();
-      } else {
-        setError(refusalMessage[linked.reason]);
-      }
-      return;
+        break;
+      case "added":
+        showFlash({ text: `Added ${defectType.name}.`, undo: () => undoDefect(assigned.defect.id, defectType.name) });
+        break;
     }
-    if (defectType.noteRequired) return setDefectPanel({ mode: "add", defectType, evidenceId });
-    const result = await homeCheck.addDefect(id, { defectTypeCode: defectType.code, evidenceIds: [evidenceId] });
-    if (result.ok) {
-      setDefectPanel(null);
-      showFlash({ text: `Added ${defectType.name}.`, undo: () => undoDefect(result.defect.id, defectType.name) });
-      load();
-    } else if (result.reason === "defect-type-already-recorded") {
-      setDefectPanel(alreadyRecorded(result.existingDefectId, defectType));
-    } else if (result.reason === "note-required") {
-      setDefectPanel({ mode: "add", defectType, evidenceId });
-    } else {
-      setError(refusalMessage[result.reason]);
-    }
+    setDefectPanel(null);
+    load();
   }
 
   async function undoDefect(defectId: string, name: string) {

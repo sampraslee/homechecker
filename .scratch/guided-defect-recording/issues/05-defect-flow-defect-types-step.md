@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] Shows one piece of Evidence at a time with an "Evidence n of N" count
-- [ ] Each piece can take several Defect Types or No Defect here; notes and videos included
-- [ ] Picking an already-recorded Defect Type links the Evidence to that Defect
-- [ ] Defects are written as soon as they are assigned, so an interruption loses nothing
-- [ ] Defect Types that require a note still ask for it
+- [x] Shows one piece of Evidence at a time with an "Evidence n of N" count
+- [x] Each piece can take several Defect Types or No Defect here; notes and videos included
+- [x] Picking an already-recorded Defect Type links the Evidence to that Defect
+- [x] Defects are written as soon as they are assigned, so an interruption loses nothing. Until ticket 07 builds Severity, the flow ends after the last piece, and the new Defects show "Severity needed"
+- [x] Defect Types that require a note still ask for it
