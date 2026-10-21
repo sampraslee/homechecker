@@ -49,17 +49,14 @@ const MAX_SHOWN_SUGGESTIONS = 4;
 
 type StartResult = Awaited<ReturnType<HomeCheck["startMoveIn"]> | ReturnType<HomeCheck["startMoveOut"]>>;
 
-export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
+export function StartInspectionScreen({ type, navigate }: { type: InspectionType; navigate: Navigate }) {
   const homeCheck = useHomeCheck();
   const [hasName, setHasName] = useState<boolean | null>(null);
-  /** The Move-in / Move-out choice is its own first screen, so nothing else shows until one is picked. */
-  const [typeChosen, setTypeChosen] = useState(false);
-  const [type, setType] = useState<InspectionType>("move-in");
   const [moveIns, setMoveIns] = useState<InspectionSummary[] | null>(null);
   /** A Move-out for a Unit whose Move-in isn't on this phone. */
   const [typingMoveOutAddress, setTypingMoveOutAddress] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
-  /** Kept here, not in the form, so going back to change Move-in or Move-out keeps what was typed. */
+  /** Kept here, not in the form, so what was typed survives switching between the Move-in list and typing an address. */
   const [address, setAddress] = useState(emptyAddress);
 
   useEffect(() => {
@@ -85,56 +82,13 @@ export function StartInspectionScreen({ navigate }: { navigate: Navigate }) {
   const pickingMoveIn = type === "move-out" && !typingMoveOutAddress && moveIns !== null && moveIns.length > 0;
   const typingAddress = hasName === true && (type === "move-in" || (!pickingMoveIn && moveIns !== null));
 
-  function chooseType(each: InspectionType) {
-    setType(each);
-    setRefusal(null);
-    setTypeChosen(true);
-  }
-
-  /** Up to the Move-in / Move-out screen, keeping any typed address. */
-  function backToType() {
-    setTypeChosen(false);
-    setTypingMoveOutAddress(false);
-    setRefusal(null);
-  }
-
-  /** Past the Move-in / Move-out screen, back goes to it, not to the list. */
-  const insideStart = hasName === true && typeChosen;
-
-  // The Move-in / Move-out choice, as its own screen before the address.
-  if (hasName === true && !typeChosen) {
-    return (
-      <main className="screen">
-        <Band navigate={navigate} back={{ to: { name: "list" }, label: "Inspections" }} title="Start an Inspection" />
-        {/* The screen asks one thing, so it says so (UX-035). */}
-        <h2 className="type-question">What are you inspecting?</h2>
-        <ul className="cards">
-          {(["move-in", "move-out"] as const).map((each) => (
-            <li key={each}>
-              <button type="button" className="card item-card" onClick={() => chooseType(each)}>
-                <span className="grow">
-                  <strong>{inspectionTypeLabel[each]}</strong>
-                  <span className="summary">{each === "move-in" ? "Before a tenant moves in" : "After a tenant moves out"}</span>
-                </span>
-                <ChevronRight className="chevron" aria-hidden="true" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      </main>
-    );
-  }
-
   return (
     <main className="screen">
       <Band
         navigate={navigate}
-        back={insideStart ? { onBack: backToType, label: "Move-in or Move-out" } : { to: { name: "list" }, label: "Inspections" }}
+        back={{ to: { name: "list" }, label: "Inspections" }}
         title={`Start ${inspectionTypeLabel[type]}`}
       />
-      {/* The phone's back gesture does the same. */}
-      {insideStart && <BackCloses onBack={backToType} />}
-
       {hasName === false && (
         <section className="prompt">
           <p>Enter your name first. Each Inspection records who carried it out.</p>

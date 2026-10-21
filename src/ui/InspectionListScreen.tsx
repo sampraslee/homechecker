@@ -4,7 +4,7 @@ import type { InspectionSummary, InspectionType } from "../core";
 import type { Navigate } from "./App";
 import { Band } from "./Band";
 import { Dock } from "./Dock";
-import { formatDate, inspectionStatusLabel, shortAddress } from "./format";
+import { formatDate, inspectionStatusLabel, inspectionTypeLabel, shortAddress } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 
 const TABS: { type: InspectionType; label: string; empty: string }[] = [
@@ -85,10 +85,11 @@ export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
       </ul>
 
       <Dock
+        floating
         action={
-          <button type="button" className="primary" onClick={() => navigate({ name: "start" })}>
+          <button type="button" className="primary" onClick={() => navigate({ name: "start", type: tab })}>
             <Plus aria-hidden="true" />
-            Start Inspection
+            New {inspectionTypeLabel[tab]}
           </button>
         }
       />

@@ -1,4 +1,5 @@
 import { createContext, useEffect, useState } from "react";
+import type { InspectionType } from "../core";
 import { AreaScreen } from "./AreaScreen";
 import { InspectionListScreen } from "./InspectionListScreen";
 import { InspectionScreen } from "./InspectionScreen";
@@ -9,7 +10,8 @@ import { StartInspectionScreen } from "./StartInspectionScreen";
 
 export type Screen =
   | { name: "list" }
-  | { name: "start" }
+  /** `type`: the Inspection to start, taken from the list tab the Inspector was on. */
+  | { name: "start"; type: InspectionType }
   | { name: "inspection"; id: string }
   /** `addingItem`: opened straight after the Area was added, so Add Item is already open. */
   | { name: "area"; id: string; addingItem?: boolean }
@@ -68,7 +70,7 @@ function CurrentScreen({ screen, navigate }: { screen: Screen; navigate: Navigat
     case "list":
       return <InspectionListScreen navigate={navigate} />;
     case "start":
-      return <StartInspectionScreen navigate={navigate} />;
+      return <StartInspectionScreen type={screen.type} navigate={navigate} />;
     case "inspection":
       return <InspectionScreen id={screen.id} navigate={navigate} />;
     case "area":

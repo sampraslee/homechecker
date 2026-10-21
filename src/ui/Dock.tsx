@@ -34,7 +34,8 @@ export function StorageNote({ exported }: { exported: boolean }) {
  * The bottom of every screen, in thumb reach: a passing message, whether the phone is offline, how many photos
  * wait for AI, and the screen's main button.
  */
-export function Dock({ message, action }: { message?: ReactNode; action?: ReactNode }) {
+/** `floating`: no bar, just the screen's button small at the bottom right, over the content. */
+export function Dock({ message, action, floating = false }: { message?: ReactNode; action?: ReactNode; floating?: boolean }) {
   const homeCheck = useHomeCheck();
   const [waiting, setWaiting] = useState(0);
   const dock = useRef<HTMLElement>(null);
@@ -71,7 +72,7 @@ export function Dock({ message, action }: { message?: ReactNode; action?: ReactN
   useEffect(() => homeCheck.onOnlineChange(setOnline), [homeCheck]);
 
   return (
-    <footer className={inFlow ? "dock in-flow" : "dock"} ref={dock}>
+    <footer className={["dock", inFlow && "in-flow", floating && "floating"].filter(Boolean).join(" ")} ref={dock}>
       <div className="dock-inner">
         {message}
         {/* Left out when there's nothing to say, so the Dock stays short. */}

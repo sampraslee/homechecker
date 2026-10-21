@@ -121,7 +121,7 @@ describe("the phone's back gesture", () => {
 
   test("can't return to a replaced screen, such as Start Inspection", () => {
     const { history, navigation, last } = setUp();
-    navigation.go({ name: "start" });
+    navigation.go({ name: "start", type: "move-in" });
     navigation.go({ name: "inspection", id: "i1" }, { replace: true });
 
     history.back();
