@@ -1904,3 +1904,16 @@ span.chip {
   display: inline-flex;
   align-items: center;
 }
+
+/* A Defect Type on the Evidence being assigned: tapping it takes it off, so the cross sits after the name. */
+.chip.removable {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chip.removable svg {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+}

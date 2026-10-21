@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
-import { Camera, ChevronLeft, ChevronRight, NotebookPen, Plus, Video } from "lucide-react";
+import { Camera, ChevronLeft, ChevronRight, NotebookPen, Plus, Video, X } from "lucide-react";
 import { isMedia, isNote, type DefectView, type Evidence, type ItemView } from "../core";
 import type { Navigate } from "./App";
 import { assignDefectType } from "./assignDefectType";
@@ -110,6 +110,21 @@ export function RecordDefectFlow({
     else onClose();
   }
 
+  /**
+   * Takes this Defect Type off the piece of Evidence. A Defect always has Evidence (ADR 0006), so if this was its only
+   * piece the Defect goes; otherwise the Evidence is just unlinked.
+   */
+  async function removeType(defect: DefectView) {
+    setError(null);
+    const remaining = defect.evidenceIds.filter((id) => id !== piece.id);
+    const result =
+      remaining.length === 0
+        ? await homeCheck.removeDefect(defect.id)
+        : await homeCheck.editDefect(defect.id, { evidenceIds: remaining });
+    if (!result.ok) setError(refusalMessage[result.reason]);
+    load();
+  }
+
   async function pickType(defectType: PickedDefectType) {
     setPicking(false);
     setError(null);
@@ -152,9 +167,17 @@ export function RecordDefectFlow({
             {assigned.length > 0 && (
               <div className="chips">
                 {assigned.map((defect) => (
-                  <span key={defect.id} className="chip defect-chip" title={defect.defectTypeName}>
+                  <button
+                    key={defect.id}
+                    type="button"
+                    className="chip defect-chip removable"
+                    aria-label={`Remove ${defect.defectTypeName}`}
+                    title={defect.defectTypeName}
+                    onClick={() => removeType(defect)}
+                  >
                     {defect.defectTypeName}
-                  </span>
+                    <X aria-hidden="true" />
+                  </button>
                 ))}
               </div>
             )}
@@ -166,7 +189,30 @@ export function RecordDefectFlow({
           </>
         ) : (
           <>
-            <p className="muted">Add a photo, video or note that shows the problem.</p>
+            {/* What has been captured sits first, where it can't be missed; the prompt shows until there is something. */}
+            {captured.length > 0 ? (
+              <>
+                <h3>Captured for this Defect</h3>
+                <ul className="thumbnails">
+                  {captured.filter(isMedia).map((media) => (
+                    <li key={media.id}>
+                      <span className={`thumbnail ${media.kind}`}>
+                        <MediaThumbnail evidence={media} />
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <ul className="cards">
+                  {captured.filter(isNote).map((note) => (
+                    <li key={note.id} className="card note-card">
+                      {note.text}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="muted">Add a photo, video or note that shows the problem.</p>
+            )}
 
             <ul className="cards">
               <li>
@@ -200,28 +246,6 @@ export function RecordDefectFlow({
             </ul>
 
             {error && <p className="error" role="alert">{error}</p>}
-
-            {captured.length > 0 && (
-              <>
-                <h3>Captured for this Defect</h3>
-                <ul className="thumbnails">
-                  {captured.filter(isMedia).map((media) => (
-                    <li key={media.id}>
-                      <span className={`thumbnail ${media.kind}`}>
-                        <MediaThumbnail evidence={media} />
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <ul className="cards">
-                  {captured.filter(isNote).map((note) => (
-                    <li key={note.id} className="card note-card">
-                      {note.text}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
           </>
         )}
       </div>
