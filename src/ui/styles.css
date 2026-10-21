@@ -1985,3 +1985,70 @@ span.chip {
   display: grid;
   gap: var(--space-2);
 }
+
+/* Swipe a row left to show Delete: the red button sits underneath and the card slides over it. */
+.swipe-row {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-card);
+}
+
+.swipe-delete {
+  position: absolute;
+  inset: 0 0 0 auto;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-1);
+  /* The same width the row slides by. */
+  width: 96px;
+  border: 0;
+  border-radius: 0;
+  background: var(--danger);
+  color: #fff;
+  font-weight: 600;
+}
+
+.swipe-face {
+  position: relative;
+  /* Sideways drags are the row's; up and down still scroll the page. */
+  touch-action: pan-y;
+  transition: transform 0.18s ease-out;
+}
+
+.swipe-face.dragging {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swipe-face {
+    transition: none;
+  }
+}
+
+/* The photo being assigned a Defect Type in the flow: square, and small enough that the buttons below it stay in view on a phone. */
+.flow-photo {
+  display: block;
+  position: relative;
+  width: min(100%, 12rem);
+  aspect-ratio: 1 / 1;
+  margin-inline: auto;
+  overflow: hidden;
+  border-radius: var(--r-control);
+  background: var(--line-soft);
+}
+
+.flow-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The delete confirmation takes the whole card, not the photo's narrow column. */
+.evidence-card.confirm-card {
+  display: block;
+}
+
+.evidence-card.confirm-card h2 {
+  margin-top: 0;
+}

@@ -267,7 +267,7 @@ export function RecordDefectFlow({
             </p>
             <div key={piece.id} className="evidence-subject">
               {isMedia(piece) ? (
-                <span className="ai-group-photo">
+                <span className="flow-photo">
                   <MediaThumbnail evidence={piece} />
                 </span>
               ) : (

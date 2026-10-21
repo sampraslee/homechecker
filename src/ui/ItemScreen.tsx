@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { Camera, Check, NotebookPen, Plus, Video } from "lucide-react";
 import {
   isMedia,
@@ -25,6 +25,7 @@ import { MediaImage, MediaThumbnail, useMediaUrl } from "./MediaImage";
 import { useAiChanges } from "./useAiChanges";
 import { useArrivals } from "./useArrivals";
 import { RecordDefectFlow } from "./RecordDefectFlow";
+import { SwipeToDelete } from "./SwipeToDelete";
 import { useLocked } from "./useLocked";
 import { VideoRecorder } from "./VideoRecorder";
 
@@ -79,6 +80,8 @@ export function ItemScreen({ id, navigate, recordingDefect = false }: { id: stri
   /** Undo stays while the Inspector is touching or focused on it, however long that takes. */
   const [flashHeld, setFlashHeld] = useState(false);
   const [viewing, setViewing] = useState<MediaEvidence | null>(null);
+  /** The piece of Evidence the Inspector swiped Delete on, shown with what else would go. */
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
   const locked = useLocked(item?.inspectionId);
@@ -185,6 +188,14 @@ export function ItemScreen({ id, navigate, recordingDefect = false }: { id: stri
       setFlash(null);
       setError(refusalMessage[result.reason]);
     }
+    load();
+  }
+
+  async function deleteEvidence(evidenceId: string) {
+    const result = await homeCheck.deleteEvidence(evidenceId);
+    setConfirmingDelete(null);
+    if (result.ok) showFlash({ text: "Deleted." });
+    else setError(refusalMessage[result.reason]);
     load();
   }
 
@@ -329,42 +340,70 @@ export function ItemScreen({ id, navigate, recordingDefect = false }: { id: stri
         {evidence.map((each) => {
           const supports = defects.filter((defect) => defect.evidenceIds.includes(each.id));
           return (
-            <li key={each.id} className={`evidence-card${isNote(each) ? " note" : ""}${arrived.has(each.id) ? " arrived" : ""}`}>
-              {isMedia(each) ? (
-                <button type="button" className={`evidence-thumb ${each.kind}`} onClick={() => setViewing(each)} aria-label={`Open ${each.kind}`}>
-                  <MediaThumbnail evidence={each} />
-                </button>
-              ) : editable ? (
-                <button
-                  type="button"
-                  className="evidence-thumb note"
-                  onClick={() => setNotePanel({ mode: "edit", note: each })}
-                  aria-label={`Edit note: ${each.text}`}
-                >
-                  <NotebookPen aria-hidden="true" />
-                </button>
+            <li key={each.id}>
+              {confirmingDelete === each.id ? (
+                <div className="evidence-card confirm-card" role="group" aria-label={`Delete this ${each.kind}?`}>
+                  <div className="evidence-card-body">
+                    <h2>Delete this {each.kind}?</h2>
+                    {deletionConsequences(each, defects, aiSuggestions).map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
+                    <p>It can't be undone.</p>
+                    <div className="button-row">
+                      <button type="button" className="secondary" onClick={() => setConfirmingDelete(null)}>
+                        Keep {each.kind}
+                      </button>
+                      <button type="button" className="danger-button" onClick={() => deleteEvidence(each.id)}>
+                        Delete {each.kind}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <span className="evidence-thumb note">
-                  <NotebookPen aria-hidden="true" />
-                </span>
-              )}
-              <div className="evidence-card-body">
-                {isNote(each) && <p className="evidence-note-text">{each.text}</p>}
-                <div className="chips">
-                  {supports.map(defectChip)}
-                  {editable && (
+                <EvidenceRow
+                  deletable={editable}
+                  label={`Delete ${isNote(each) ? `note: ${each.text}` : each.kind}`}
+                  onDelete={() => setConfirmingDelete(each.id)}
+                >
+                  <div className={`evidence-card${isNote(each) ? " note" : ""}${arrived.has(each.id) ? " arrived" : ""}`}>
+                  {isMedia(each) ? (
+                    <button type="button" className={`evidence-thumb ${each.kind}`} onClick={() => setViewing(each)} aria-label={`Open ${each.kind}`}>
+                      <MediaThumbnail evidence={each} />
+                    </button>
+                  ) : editable ? (
                     <button
                       type="button"
-                      className="chip assign-chip"
-                      onClick={() => setDefectPanel({ mode: "pick", evidenceId: each.id })}
-                      aria-label={`Assign a Defect Type to ${isNote(each) ? `note: ${each.text}` : each.kind}`}
+                      className="evidence-thumb note"
+                      onClick={() => setNotePanel({ mode: "edit", note: each })}
+                      aria-label={`Edit note: ${each.text}`}
                     >
-                      <Plus aria-hidden="true" />
-                      {supports.length === 0 ? "Assign" : "Add"}
+                      <NotebookPen aria-hidden="true" />
                     </button>
+                  ) : (
+                    <span className="evidence-thumb note">
+                      <NotebookPen aria-hidden="true" />
+                    </span>
                   )}
-                </div>
-              </div>
+                  <div className="evidence-card-body">
+                    {isNote(each) && <p className="evidence-note-text">{each.text}</p>}
+                    <div className="chips">
+                      {supports.map(defectChip)}
+                      {editable && (
+                        <button
+                          type="button"
+                          className="chip assign-chip"
+                          onClick={() => setDefectPanel({ mode: "pick", evidenceId: each.id })}
+                          aria-label={`Assign a Defect Type to ${isNote(each) ? `note: ${each.text}` : each.kind}`}
+                        >
+                          <Plus aria-hidden="true" />
+                          {supports.length === 0 ? "Assign" : "Add"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  </div>
+                </EvidenceRow>
+              )}
             </li>
           );
         })}
@@ -520,6 +559,17 @@ export function ItemScreen({ id, navigate, recordingDefect = false }: { id: stri
         />
       )}
     </main>
+  );
+}
+
+/** A piece of Evidence's card, which slides left to show Delete while the Inspection can still change. */
+function EvidenceRow({ deletable, label, onDelete, children }: { deletable: boolean; label: string; onDelete: () => void; children: ReactNode }) {
+  return deletable ? (
+    <SwipeToDelete label={label} onDelete={onDelete}>
+      {children}
+    </SwipeToDelete>
+  ) : (
+    <>{children}</>
   );
 }
 
