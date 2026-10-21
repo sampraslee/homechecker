@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronRight, DoorOpen, Lock, Plus, Share, Sparkles, Trash2 } from "lucide-react";
-import { formatAddress, type AiWorkLeft, type AreaSource, type AreaView, type Inspection, type InspectionTotals, type UnreviewedAiSuggestionView } from "../core";
+import { formatAddress, type AiWorkLeft, type AreaView, type Inspection, type InspectionTotals, type UnreviewedAiSuggestionView } from "../core";
 import type { Navigate } from "./App";
+import { AddAreaFlow } from "./AddAreaFlow";
 import { Band } from "./Band";
 import { LockedNotice } from "./LockedNotice";
 import { Dock, StorageNote } from "./Dock";
@@ -55,6 +56,11 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
         <Dock />
       </main>
     );
+  }
+
+  // Adding an Area takes the whole screen, a step at a time.
+  if (adding && !locked) {
+    return <AddAreaFlow inspectionId={id} unit={formatAddress(inspection.address)} navigate={navigate} onCancel={() => setAdding(false)} />;
   }
 
   return (
@@ -137,15 +143,6 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
           </li>
         ))}
       </ul>
-
-      {!locked && adding && (
-        <AddAreaPanel
-          inspectionId={id}
-          // Straight into the new Area, ready to add its Items.
-          onAdded={(areaId) => navigate({ name: "area", id: areaId, addingItem: true })}
-          onCancel={() => setAdding(false)}
-        />
-      )}
 
       {/* The end of an Inspection, together: export, complete, and (set apart) delete. */}
       <div className="section-head">
@@ -435,6 +432,14 @@ function CompletePanel({
           {totals.evidence === 0 && (
             <p className="notice">This Inspection has no Evidence: no photos, videos or notes. Check that this is right before you complete it.</p>
           )}
+          {totals.defectsWithoutSeverity > 0 && (
+            <p className="notice">
+              {totals.defectsWithoutSeverity === 1
+                ? "1 Defect has no Severity."
+                : `${totals.defectsWithoutSeverity} Defects have no Severity.`}{" "}
+              You can still complete, or keep editing to set them.
+            </p>
+          )}
           {aiWork && (aiWork.waitingForAi > 0 || aiWork.unreviewedAiSuggestions > 0) && (
             <p>
               Photos waiting for AI: {aiWork.waitingForAi}
@@ -459,71 +464,6 @@ function CompletePanel({
           </button>
         )}
       </div>
-    </section>
-  );
-}
-
-function AddAreaPanel({
-  inspectionId,
-  onAdded,
-  onCancel,
-}: {
-  inspectionId: string;
-  onAdded: (areaId: string) => void;
-  onCancel: () => void;
-}) {
-  const homeCheck = useHomeCheck();
-  useBackCloses(onCancel);
-  const [standardAreas, setStandardAreas] = useState<{ id: string; name: string }[]>([]);
-  const [customName, setCustomName] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const panel = useRef<HTMLElement>(null);
-
-  // The panel opens below the Areas, often off screen.
-  useEffect(() => {
-    scrollIntoViewGently(panel.current);
-  }, []);
-
-  useEffect(() => {
-    homeCheck.listStandardAreas().then(setStandardAreas);
-  }, [homeCheck]);
-
-  async function add(source: AreaSource) {
-    const result = await homeCheck.addArea(inspectionId, source);
-    if (result.ok) onAdded(result.area.id);
-    else setError(refusalMessage[result.reason]);
-  }
-
-  function addCustom(event: FormEvent) {
-    event.preventDefault();
-    add({ customName });
-  }
-
-  return (
-    <section className="panel" ref={panel}>
-      <div className="card-row">
-        <h2>Add Area</h2>
-        <button type="button" className="link" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-      <div className="chips">
-        {standardAreas.map((area) => (
-          <button key={area.id} type="button" className="chip" onClick={() => add({ standardAreaId: area.id })}>
-            {area.name}
-          </button>
-        ))}
-      </div>
-      <form className="form" onSubmit={addCustom} noValidate>
-        <label>
-          Area not in the list
-          <input value={customName} onChange={(event) => setCustomName(event.target.value)} />
-          {error && <span className="error" role="alert">{error}</span>}
-        </label>
-        <button type="submit" className="secondary">
-          Add this Area
-        </button>
-      </form>
     </section>
   );
 }

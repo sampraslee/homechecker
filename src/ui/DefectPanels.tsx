@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Check, ChevronRight, Search } from "lucide-react";
-import { isMedia, isNote, type DefectCategory, type DefectChoices, type DefectType, type DefectView, type Evidence } from "../core";
+import { isMedia, isNote, SEVERITIES, type DefectCategory, type DefectChoices, type DefectType, type DefectView, type Evidence, type Severity } from "../core";
 import { refusalMessage } from "./format";
 import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
@@ -10,6 +10,19 @@ import { MediaThumbnail } from "./MediaImage";
 const SHEET_OUT_MS = 200;
 
 export type PickedDefectType = DefectType & { noteRequired: boolean };
+
+/** Minor, Moderate or Major for one Defect; nothing is preselected (ADR 0007). */
+export function SeverityPicker({ value, onChange }: { value: Severity | undefined; onChange: (severity: Severity) => void }) {
+  return (
+    <div role="group" aria-label="Severity" className="segmented severity-picker">
+      {SEVERITIES.map((each) => (
+        <button key={each} type="button" aria-pressed={value === each} onClick={() => onChange(each)}>
+          {each}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Defect Category, then Defect Type, in a bottom sheet over the screen (UX-025). The Item's relevant Categories come
@@ -224,6 +237,7 @@ export function DefectEditor({
   useBackCloses(onCancel);
   const [note, setNote] = useState(defect?.note ?? "");
   const [linked, setLinked] = useState<string[]>(defect?.evidenceIds ?? initialLinked ?? []);
+  const [severity, setSeverity] = useState<Severity | undefined>(defect?.severity);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -238,13 +252,13 @@ export function DefectEditor({
   async function save(event: FormEvent) {
     event.preventDefault();
     if (defect) {
-      const result = await homeCheck.editDefect(defect.id, { note, evidenceIds: linked });
+      const result = await homeCheck.editDefect(defect.id, { note, evidenceIds: linked, severity });
       if (result.ok) onSaved();
       else setError(refusalMessage[result.reason]);
       return;
     }
     if (!defectType) return;
-    const result = await homeCheck.addDefect(itemId, { defectTypeCode: defectType.code, note, evidenceIds: linked });
+    const result = await homeCheck.addDefect(itemId, { defectTypeCode: defectType.code, note, evidenceIds: linked, severity });
     if (result.ok) onSaved();
     else if (result.reason === "defect-type-already-recorded" && onDuplicate) onDuplicate(result.existingDefectId);
     else setError(refusalMessage[result.reason]);
@@ -282,6 +296,11 @@ export function DefectEditor({
             placeholder="e.g. three scratches, lower left"
           />
         </label>
+
+        <div>
+          <h3>Severity</h3>
+          <SeverityPicker value={severity} onChange={setSeverity} />
+        </div>
 
         <div>
           <h3>Linked Evidence</h3>

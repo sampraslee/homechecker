@@ -665,6 +665,11 @@ button:disabled {
   background: var(--surface);
 }
 
+.severity-picker {
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 0;
+}
+
 .segmented button {
   min-height: 2.75rem;
   border: 0;
@@ -1419,6 +1424,15 @@ button:active:not(:disabled) {
   background: var(--teal-tint);
 }
 
+.chip-severity {
+  font-weight: 400;
+}
+
+.chip-severity.needed {
+  color: var(--warn);
+  font-weight: 600;
+}
+
 /* From an AI Suggestion: blue marks AI. */
 .defect-chip.ai {
   border-color: var(--blue-deep);
@@ -1822,4 +1836,59 @@ body:has(.sheet-backdrop) .dock {
 /* The question on the Move-in / Move-out screen (UX-035). */
 .type-question {
   margin: var(--space-2) 0 0;
+}
+
+/* A chip the Inspector has picked in a choice list. */
+.chip[aria-pressed="true"] {
+  border-color: var(--teal-deep);
+  background: var(--teal-tint);
+  font-weight: 600;
+}
+
+.other-chip {
+  border-style: dashed;
+}
+
+/* The placeholder floor plan: five rooms as shortcuts to standard Areas. It stores nothing. */
+.plan {
+  position: relative;
+  aspect-ratio: 1.45 / 1;
+  /* Short enough that the other Areas stay in view below it. */
+  max-height: 36vh;
+  width: 100%;
+  border: 2px solid var(--ink);
+  border-radius: var(--r-control);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.plan-room {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  padding: var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: center;
+}
+
+.plan-room[aria-pressed="true"] {
+  border: 2px solid var(--teal-deep);
+  background: var(--teal-tint);
+  color: var(--teal-deep);
+}
+
+.plan-room.living { left: 0; top: 0; width: 48%; height: 44%; }
+.plan-room.master { right: 0; top: 0; width: 52%; height: 44%; }
+.plan-room.bedroom { left: 0; bottom: 0; width: 33%; height: 56%; }
+.plan-room.kitchen { left: 33%; bottom: 0; width: 34%; height: 56%; }
+.plan-room.bathroom { right: 0; bottom: 0; width: 33%; height: 56%; }
+
+.plan-note {
+  margin: var(--space-2) 0 var(--space-4);
+  text-align: center;
 }

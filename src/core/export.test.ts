@@ -144,6 +144,7 @@ describe("exporting an Inspection", () => {
       await homeCheck.addDefect(itemId, {
         defectTypeCode: "SF-SCRATCH",
         note: "Deep",
+        severity: "Major",
         evidenceIds: [photo.id, note.id, video.id],
       }),
     );
@@ -163,6 +164,7 @@ describe("exporting an Inspection", () => {
         "Defect Category",
         "Defect Type code",
         "Defect Type name",
+        "Severity",
         "Note",
         "Linked notes",
         "Source",
@@ -176,6 +178,7 @@ describe("exporting an Inspection", () => {
         "Surface & Finish",
         "SF-SCRATCH",
         "Scratched",
+        "Major",
         "Deep",
         "Worse near the handle",
         "Manual",
@@ -184,7 +187,7 @@ describe("exporting an Inspection", () => {
         { text: "01-bedroom-01-wardrobe-left-01.jpg", hyperlink: "media/01-bedroom-01-wardrobe-left-01.jpg" },
         { text: "01-bedroom-01-wardrobe-left-02.mp4", hyperlink: "media/01-bedroom-01-wardrobe-left-02.mp4" },
       ],
-      [...leading, "Cabinet / Furniture Specific", "CF-HINGE", "Hinge Fault", undefined, "seen", "Manual"],
+      [...leading, "Cabinet / Furniture Specific", "CF-HINGE", "Hinge Fault", undefined, undefined, "seen", "Manual"],
     ]);
   });
 
@@ -201,14 +204,14 @@ describe("exporting an Inspection", () => {
     expectOk(await homeCheck.addPhoto(itemId, new Blob(["drooping door"], { type: "image/jpeg" })));
     await homeCheck.processAiQueue();
     const [scratch, stain, hinge] = await homeCheck.listAiSuggestions(itemId);
-    expectOk(await homeCheck.confirmAiSuggestion(scratch.id));
-    expectOk(await homeCheck.correctAiSuggestion(stain.id, { defectTypeCode: "GM-CRACK" }));
+    expectOk(await homeCheck.confirmAiSuggestion(scratch.id, { severity: "Minor" }));
+    expectOk(await homeCheck.correctAiSuggestion(stain.id, { severity: "Minor", defectTypeCode: "GM-CRACK" }));
     // Confirmed onto the hand-added hinge Defect, which stays manual.
-    expectOk(await homeCheck.confirmAiSuggestion(hinge.id));
+    expectOk(await homeCheck.confirmAiSuggestion(hinge.id, { severity: "Minor" }));
 
     const { workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip);
 
-    const sourceAndConfidence = rowsOf(workbook, "Defects").map((row) => [row[7], row[11], row[12]]);
+    const sourceAndConfidence = rowsOf(workbook, "Defects").map((row) => [row[7], row[12], row[13]]);
     expect(sourceAndConfidence).toEqual([
       ["Defect Type code", "Source", "AI confidence"],
       ["CF-HINGE", "Manual", undefined],
@@ -232,8 +235,8 @@ describe("exporting an Inspection", () => {
     expectOk(await homeCheck.addPhoto(window.id, new Blob(["window pane"], { type: "image/jpeg" })));
     await homeCheck.processAiQueue();
     const [scratch, hinge, stain] = await homeCheck.listAiSuggestions(itemId);
-    expectOk(await homeCheck.confirmAiSuggestion(scratch.id));
-    expectOk(await homeCheck.correctAiSuggestion(hinge.id, { defectTypeCode: "GM-CRACK" }));
+    expectOk(await homeCheck.confirmAiSuggestion(scratch.id, { severity: "Minor" }));
+    expectOk(await homeCheck.correctAiSuggestion(hinge.id, { severity: "Minor", defectTypeCode: "GM-CRACK" }));
     expectOk(await homeCheck.rejectAiSuggestion(stain.id));
 
     const { zip, workbook } = await unzipExport(expectOk(await homeCheck.exportInspection(inspectionId)).zip);
@@ -249,7 +252,7 @@ describe("exporting an Inspection", () => {
     ]);
     expect(zip.file(wardrobePhoto.hyperlink)).not.toBeNull();
     expect(zip.file(windowPhoto.hyperlink)).not.toBeNull();
-    const sourceAndConfidence = rowsOf(workbook, "Defects").map((row) => [row[7], row[11], row[12]]);
+    const sourceAndConfidence = rowsOf(workbook, "Defects").map((row) => [row[7], row[12], row[13]]);
     expect(sourceAndConfidence).toEqual([
       ["Defect Type code", "Source", "AI confidence"],
       ["SF-STAIN", "Manual", undefined],
@@ -284,8 +287,8 @@ describe("exporting an Inspection", () => {
 
     // The window's photo has no thumbnail yet, so its original stands in.
     expect(imagesOf(workbook, "Defects")).toEqual([
-      { row: 2, column: 14, content: "thumbnail of scratched door" },
-      { row: 4, column: 14, content: "cracked pane" },
+      { row: 2, column: 15, content: "thumbnail of scratched door" },
+      { row: 4, column: 15, content: "cracked pane" },
     ]);
   });
 });

@@ -93,7 +93,8 @@ export type Area = {
 export type AreaView = Area & { itemCount: number };
 
 /** Where a new Area's name comes from. */
-export type AreaSource = { standardAreaId: string } | { customName: string };
+/** A standard Area, named as its default unless `name` is given, or a custom Area with its own name. */
+export type AreaSource = { standardAreaId: string; name?: string } | { customName: string };
 
 export type Item = {
   id: string;
@@ -168,6 +169,10 @@ export function isNote(evidence: Evidence): evidence is NoteEvidence {
 /** Where a Defect came from: added by hand, or from an AI Suggestion the Inspector confirmed or corrected. */
 export type DefectSource = "manual" | "ai-suggested";
 
+export const SEVERITIES = ["Minor", "Moderate", "Major"] as const;
+/** The Inspector's observed degree of a Defect. Never urgency, repair priority or cost (ADR 0007). */
+export type Severity = (typeof SEVERITIES)[number];
+
 export type Defect = {
   id: string;
   inspectionId: string;
@@ -179,6 +184,8 @@ export type Defect = {
   /** The AI Suggestion an "ai-suggested" Defect was made from. */
   aiSuggestionId?: string;
   note?: string;
+  /** Missing on a Defect made before Severity existed, or one left unfinished when the Inspector was interrupted. */
+  severity?: Severity;
   /** Evidence of the same Item that supports this Defect. */
   evidenceIds: string[];
   /** Order within the Item. */
@@ -189,10 +196,10 @@ export type Defect = {
 export type DefectView = Defect & { defectTypeName: string; categoryName: string; noteRequired: boolean };
 
 /** What the Inspector chose when adding a Defect. */
-export type DefectInput = { defectTypeCode: string; note?: string; evidenceIds?: string[] };
+export type DefectInput = { defectTypeCode: string; note?: string; evidenceIds?: string[]; severity?: Severity };
 
 /** What to change on a Defect; a blank note clears it. Its Defect Type never changes. */
-export type DefectChanges = { note?: string; evidenceIds?: string[] };
+export type DefectChanges = { note?: string; evidenceIds?: string[]; severity?: Severity };
 
 /** Defect Categories for an Item: its relevant ones first, then the rest. */
 export type DefectChoices = { shownFirst: DefectCategory[]; others: DefectCategory[] };
@@ -241,7 +248,13 @@ export type AiSuggestion = {
 };
 
 /** An AI Suggestion with the names of its Defect Type and Category, and of any corrected Defect Type, from the bundled Dictionary. */
-export type AiSuggestionView = AiSuggestion & { defectTypeName: string; categoryName: string; correctedDefectTypeName?: string };
+export type AiSuggestionView = AiSuggestion & {
+  defectTypeName: string;
+  categoryName: string;
+  correctedDefectTypeName?: string;
+  /** Whether confirming it as a new Defect needs a note. */
+  noteRequired: boolean;
+};
 
 /** An AI Suggestion still to review, with the names of the Area and Item it's on. */
 export type UnreviewedAiSuggestionView = AiSuggestionView & { areaName: string; itemName: string };
@@ -253,10 +266,17 @@ export type MoveInRecord = { defects: DefectView[]; media: MediaEvidence[] };
 export type AiWorkLeft = { waitingForAi: number; unreviewedAiSuggestions: number };
 
 /** How much an Inspection holds, counted across all its Areas and Items. */
-export type InspectionTotals = { areas: number; items: number; evidence: number; defects: number };
+export type InspectionTotals = {
+  areas: number;
+  items: number;
+  evidence: number;
+  defects: number;
+  /** Defects with no Severity yet, so the Inspector can finish them before completing. */
+  defectsWithoutSeverity: number;
+};
 
 /** What the Inspector adds when confirming an AI Suggestion: a note for a new Defect, needed for Other / Unknown. */
-export type AiConfirmInput = { note?: string };
+export type AiConfirmInput = { note?: string; severity?: Severity };
 
 /** The Defect Type the Inspector chose in place of the AI's, and a note for a new Defect. */
 export type AiCorrectionInput = AiConfirmInput & { defectTypeCode: string };

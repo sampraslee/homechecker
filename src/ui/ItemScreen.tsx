@@ -40,6 +40,11 @@ function alreadyRecorded(defectId: string, defectType: PickedDefectType): Defect
   return { mode: "edit", defectId, notice: `This Item already has ${defectType.name}. Add to this Defect instead.` };
 }
 
+/** The Severity after a Defect's name, or a reminder when it has none (ADR 0007). */
+export function severityMark(defect: DefectView) {
+  return <span className={`chip-severity${defect.severity ? "" : " needed"}`}> · {defect.severity ?? "Severity needed"}</span>;
+}
+
 /** A passing message in the Dock, with Undo when the last action can be taken back. */
 type Flash = { text: string; undo?: () => void };
 
@@ -265,10 +270,12 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         onClick={() => setDefectPanel({ mode: "edit", defectId: defect.id })}
       >
         {defect.defectTypeName}
+        {severityMark(defect)}
       </button>
     ) : (
       <span key={defect.id} className={className} title={defect.defectTypeName}>
         {defect.defectTypeName}
+        {severityMark(defect)}
       </span>
     );
   }
@@ -514,7 +521,7 @@ function MoveInLine({
   onToggle: () => void;
   onOpen: (media: MediaEvidence) => void;
 }) {
-  const names = record.defects.map((defect) => defect.defectTypeName).join(", ");
+  const names = record.defects.map((defect) => (defect.severity ? `${defect.defectTypeName} · ${defect.severity}` : defect.defectTypeName)).join(", ");
   const media = countEvidence(record.media);
   const text = (
     <>

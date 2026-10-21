@@ -70,6 +70,8 @@ export const refusalMessage: Record<RefusalReason, string> = {
   "evidence-not-on-item": "Only this Item's own Evidence can be linked.",
   "evidence-required": "A Defect needs Evidence. Record a photo, video or note, then assign the Defect Type to it.",
   "note-required": "Add a note describing what you see.",
+  "severity-required": "Choose a Severity: Minor, Moderate or Major.",
+  "unknown-severity": "Choose Minor, Moderate or Major.",
   "no-areas": "Can't complete an Inspection with no Areas. Add the Areas you inspected first.",
   "defect-not-found": "This Defect isn't on this phone.",
   "video-too-long": `This video is over ${VIDEO_TIME_LIMIT_SECONDS} seconds. Record a shorter one.`,

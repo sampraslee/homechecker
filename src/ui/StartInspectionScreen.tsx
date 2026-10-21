@@ -20,6 +20,7 @@ import { Dock } from "./Dock";
 import { formatDate, inspectionStatusLabel, inspectionTypeLabel, refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 import { InspectorNameForm } from "./InspectorNameForm";
+import { StepHeader } from "./StepHeader";
 
 const emptyAddress: UnitAddressInput = {
   unitNumber: "",
@@ -434,16 +435,7 @@ function AddressForm({
           </section>
         ) : (
           <>
-            {/* A segmented bar shows how far through the address the Inspector is. */}
-            <div className="steps" aria-hidden="true">
-              {ADDRESS_GROUPS.map((group, index) => (
-                <span key={group.title} className={index <= step ? "reached" : undefined} />
-              ))}
-            </div>
-            <p className="muted">
-              Step {step + 1} of {ADDRESS_GROUPS.length}
-            </p>
-            <h2>{ADDRESS_GROUPS[step].title}</h2>
+            <StepHeader titles={ADDRESS_GROUPS.map((group) => group.title)} step={step} />
             {ADDRESS_GROUPS[step].fields.map(renderField)}
           </>
         )}

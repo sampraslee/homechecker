@@ -36,8 +36,9 @@ import type {
   UnitAddressInput,
   UnreviewedAiSuggestionView,
   VideoEvidence,
+  Severity,
 } from "./model";
-import { AI_CONFIDENCES, isMedia, MAX_AI_SUGGESTIONS_PER_PHOTO, VIDEO_TIME_LIMIT_SECONDS } from "./model";
+import { AI_CONFIDENCES, isMedia, MAX_AI_SUGGESTIONS_PER_PHOTO, SEVERITIES, VIDEO_TIME_LIMIT_SECONDS } from "./model";
 import type { AiAnswer, AiClient, Environment, ImageProcessor, Storage } from "./ports";
 import {
   checkReferenceData,
@@ -68,6 +69,9 @@ const areaNotFound = { ok: false, reason: "area-not-found" } as const;
 const itemNotFound = { ok: false, reason: "item-not-found" } as const;
 const itemNameRequired = { ok: false, reason: "item-name-required" } as const;
 const noteRequired = { ok: false, reason: "note-required" } as const;
+/** A new Defect from an AI Suggestion needs a Severity (ADR 0007). */
+const severityRequired = { ok: false, reason: "severity-required" } as const;
+const unknownSeverity = { ok: false, reason: "unknown-severity" } as const;
 const evidenceNotOnItem = { ok: false, reason: "evidence-not-on-item" } as const;
 /** A Defect is made by assigning a Defect Type to Evidence, so it always has at least one piece. */
 const evidenceRequired = { ok: false, reason: "evidence-required" } as const;
@@ -221,6 +225,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       ...suggestion,
       defectTypeName: dictionaryEntry?.defectType.name ?? suggestion.defectTypeCode,
       categoryName: dictionaryEntry?.category.name ?? "Not in the bundled Defect Dictionary",
+      noteRequired: needsNote(suggestion.defectTypeCode),
       ...(correctedCode && {
         correctedDefectTypeName: findDefectType(referenceData, correctedCode)?.defectType.name ?? correctedCode,
       }),
@@ -237,16 +242,24 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
 
   /**
    * Records `defectTypeCode` on the suggestion's Item with its photo as Evidence: a new AI-suggested Defect,
-   * or the photo added to the Defect of that type the Item already has. `note` is only for a new Defect.
+   * or the photo added to the Defect of that type the Item already has. `note` and `severity` are only for a new Defect,
+   * which needs a Severity.
    * The suggestion counts as confirmed if `defectTypeCode` is its own, and as corrected otherwise.
    * Skips the Completed lock: late AI Suggestions may still add Defects.
    */
-  async function acceptAiSuggestion(suggestion: AiSuggestion, defectTypeCode: string, note: string | undefined) {
+  async function acceptAiSuggestion(
+    suggestion: AiSuggestion,
+    defectTypeCode: string,
+    note: string | undefined,
+    severity: Severity | undefined,
+  ) {
     if (!findDefectType(referenceData, defectTypeCode)) return unknownDefectType;
     const existing = await storage.listDefects(suggestion.itemId);
     const sameType = existing.find((other) => other.defectTypeCode === defectTypeCode);
     const trimmedNote = note?.trim();
     if (!sameType && needsNote(defectTypeCode) && !trimmedNote) return noteRequired;
+    if (!sameType && !severity) return severityRequired;
+    if (severity && !SEVERITIES.includes(severity)) return unknownSeverity;
     const defect: Defect = sameType
       ? withEvidence(sameType, suggestion.evidenceId)
       : {
@@ -258,6 +271,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
           source: "ai-suggested",
           aiSuggestionId: suggestion.id,
           ...(trimmedNote && { note: trimmedNote }),
+          severity,
           evidenceIds: [suggestion.evidenceId],
           position: nextPosition(existing),
         };
@@ -460,12 +474,16 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
 
     /** What completing would lock in, so the Inspector can spot an empty Inspection first. */
     async inspectionTotals(id: string): Promise<InspectionTotals> {
+      async function countDefects(itemId: string) {
+        const defects = await storage.listDefects(itemId);
+        return { defects: defects.length, defectsWithoutSeverity: defects.filter((defect) => !defect.severity).length };
+      }
       const areas = await storage.listAreas(id);
       const items = (await Promise.all(areas.map((area) => storage.listItems(area.id)))).flat();
       const perItem = await Promise.all(
         items.map(async (item) => ({
           evidence: (await storage.listEvidence(item.id)).length,
-          defects: (await storage.listDefects(item.id)).length,
+          ...(await countDefects(item.id)),
         })),
       );
       return {
@@ -473,6 +491,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
         items: items.length,
         evidence: perItem.reduce((total, counts) => total + counts.evidence, 0),
         defects: perItem.reduce((total, counts) => total + counts.defects, 0),
+        defectsWithoutSeverity: perItem.reduce((total, counts) => total + counts.defectsWithoutSeverity, 0),
       };
     },
 
@@ -527,6 +546,14 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       return referenceData.standardAreas.areas.map(({ id, name }) => ({ id, name }));
     },
 
+    /** The name a standard Area would get now: "Bedroom", or "Bedroom 2" if the Inspection already has one. */
+    async defaultAreaName(inspectionId: string, standardAreaId: string) {
+      const standardArea = findStandardArea(referenceData, standardAreaId);
+      if (!standardArea) return { ok: false as const, reason: "unknown-standard-area" as const };
+      const taken = (await storage.listAreas(inspectionId)).map((other) => other.name);
+      return { ok: true as const, name: firstFreeName(standardArea.name, taken) };
+    },
+
     async addArea(inspectionId: string, source: AreaSource) {
       const inspection = await storage.getInspection(inspectionId);
       if (!inspection) return inspectionNotFound;
@@ -539,8 +566,15 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       if ("standardAreaId" in source) {
         const standardArea = findStandardArea(referenceData, source.standardAreaId);
         if (!standardArea) return { ok: false as const, reason: "unknown-standard-area" as const };
-        name = firstFreeName(standardArea.name, takenNames);
         standardAreaId = standardArea.id;
+        const chosen = source.name?.trim();
+        if (chosen) {
+          const problem = areaNameProblem(chosen, takenNames);
+          if (problem) return { ok: false as const, reason: problem };
+          name = chosen;
+        } else {
+          name = firstFreeName(standardArea.name, takenNames);
+        }
       } else {
         name = source.customName.trim();
         const problem = areaNameProblem(name, takenNames);
@@ -807,6 +841,8 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       if (evidenceIds.length === 0) return evidenceRequired;
       const note = input.note?.trim();
       if (needsNote(input.defectTypeCode) && !note) return noteRequired;
+      // Optional here: the guided flow makes the Defect first and asks for its Severity next, so nothing captured is lost.
+      if (input.severity && !SEVERITIES.includes(input.severity)) return unknownSeverity;
       const defect: Defect = {
         id: newId(),
         inspectionId: item.inspectionId,
@@ -815,6 +851,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
         dictionaryVersion: referenceData.defectDictionary.version,
         source: "manual",
         ...(note && { note }),
+        ...(input.severity && { severity: input.severity }),
         evidenceIds,
         position: nextPosition(existing),
       };
@@ -836,7 +873,8 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       const { note: oldNote, ...rest } = defect;
       const note = changes.note === undefined ? oldNote : changes.note.trim();
       if (needsNote(defect.defectTypeCode) && !note) return noteRequired;
-      const edited: Defect = { ...rest, ...(note && { note }), evidenceIds };
+      if (changes.severity && !SEVERITIES.includes(changes.severity)) return unknownSeverity;
+      const edited: Defect = { ...rest, ...(note && { note }), evidenceIds, severity: changes.severity ?? defect.severity };
       await storage.putDefect(edited);
       return { ok: true as const, defect: toDefectView(edited) };
     },
@@ -945,14 +983,14 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async confirmAiSuggestion(suggestionId: string, confirmation: AiConfirmInput = {}) {
       const found = await findUnreviewed(suggestionId);
       if (!found.ok) return found;
-      return acceptAiSuggestion(found.suggestion, found.suggestion.defectTypeCode, confirmation.note);
+      return acceptAiSuggestion(found.suggestion, found.suggestion.defectTypeCode, confirmation.note, confirmation.severity);
     },
 
     /** Records the Defect Type the Inspector chose in place of the AI's, with the photo as Evidence. Choosing the AI's own counts as confirming. */
     async correctAiSuggestion(suggestionId: string, correction: AiCorrectionInput) {
       const found = await findUnreviewed(suggestionId);
       if (!found.ok) return found;
-      return acceptAiSuggestion(found.suggestion, correction.defectTypeCode, correction.note);
+      return acceptAiSuggestion(found.suggestion, correction.defectTypeCode, correction.note, correction.severity);
     },
 
     /** Records that the AI Suggestion is wrong; no Defect is made. */

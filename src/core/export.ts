@@ -93,6 +93,7 @@ export async function buildExportZip(content: ExportContent): Promise<Uint8Array
             defect.categoryName,
             defect.defectTypeCode,
             defect.defectTypeName,
+            defect.severity ?? null,
             defect.note ?? null,
             notes.join("\n") || null,
             defectSourceLabel[defect.source],
@@ -118,6 +119,7 @@ export async function buildExportZip(content: ExportContent): Promise<Uint8Array
     "Defect Category",
     "Defect Type code",
     "Defect Type name",
+    "Severity",
     "Note",
     "Linked notes",
     "Source",
@@ -242,8 +244,8 @@ const aiOutcomeLabel: Record<AiSuggestionOutcome, string> = {
   rejected: "Rejected",
 };
 
-/** The Defects sheet's 1-based column for the embedded photo, after the thirteen text columns before it. */
-const PHOTO_COLUMN = 14;
+/** The Defects sheet's 1-based column for the embedded photo, after the fourteen text columns before it. */
+const PHOTO_COLUMN = 15;
 /** An embedded thumbnail fits in a square this many pixels a side. */
 const THUMBNAIL_BOX_PIXELS = 120;
 const POINTS_PER_PIXEL = 0.75;

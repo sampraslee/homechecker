@@ -230,7 +230,7 @@ describe("what the Move-in recorded, shown on a Move-out Item", () => {
     const setup = await createTestHomeCheckWithItem();
     const { homeCheck, inspectionId: moveInId, areaId, itemId } = setup;
     const photo = expectOk(await homeCheck.addPhoto(itemId, new Blob(["scratched door"]))).evidence;
-    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [photo.id] }));
+    expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [photo.id], severity: "Major" }));
     expectOk(await homeCheck.addItem(areaId, { catalogItemId: "window", shortName: "left" }));
     const right = expectOk(await homeCheck.addItem(areaId, { catalogItemId: "window", shortName: "right" })).item;
     expectOk(await homeCheck.addDefect(right.id, { defectTypeCode: "SF-STAIN", evidenceIds: [await noteOf(homeCheck, right.id)] }));
@@ -248,6 +248,14 @@ describe("what the Move-in recorded, shown on a Move-out Item", () => {
 
     expect(record?.defects.map((defect) => defect.defectTypeCode)).toEqual(["SF-SCRATCH"]);
     expect(record?.media.map((media) => media.id)).toEqual([photoId]);
+  });
+
+  test("carries each Defect's Severity for reference", async () => {
+    const { homeCheck, moveOutItem } = await moveInAndMoveOut();
+
+    const defects = (await homeCheck.moveInRecord(moveOutItem("Wardrobe")))?.defects;
+
+    expect(defects?.map((defect) => defect.severity)).toEqual(["Major"]);
   });
 
   test("tells Items apart by their short name", async () => {

@@ -31,7 +31,7 @@ describe("confirming an AI Suggestion", () => {
     const { homeCheck, itemId, photoId, suggestions, environment } = await photoWithSuggestions();
     environment.setNow(new Date("2026-01-05T09:10:00.000Z"));
 
-    const confirmed = await homeCheck.confirmAiSuggestion(suggestions[0].id);
+    const confirmed = await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" });
 
     expect(confirmed.ok).toBe(true);
     expect(await homeCheck.listDefects(itemId)).toMatchObject([
@@ -57,7 +57,7 @@ describe("confirming an AI Suggestion for a Defect Type the Item already has", (
       await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", note: "by the handle", evidenceIds: [note.id] }),
     ).defect;
 
-    const confirmed = expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id));
+    const confirmed = expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" }));
 
     expect(confirmed.defect.id).toBe(existing.id);
     expect(await homeCheck.listDefects(itemId)).toEqual([
@@ -70,7 +70,7 @@ describe("confirming an AI Suggestion for a Defect Type the Item already has", (
     const { homeCheck, itemId, photoId, suggestions } = await photoWithSuggestions();
     const existing = expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [photoId] })).defect;
 
-    await homeCheck.confirmAiSuggestion(suggestions[0].id);
+    await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" });
 
     expect(await homeCheck.listDefects(itemId)).toEqual([existing]);
   });
@@ -96,7 +96,7 @@ describe("correcting an AI Suggestion", () => {
     const { homeCheck, itemId, photoId, suggestions, environment } = await photoWithSuggestions();
     environment.setNow(new Date("2026-01-05T09:11:00.000Z"));
 
-    const corrected = await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "CF-HINGE" });
+    const corrected = await homeCheck.correctAiSuggestion(suggestions[0].id, { severity: "Minor", defectTypeCode: "CF-HINGE" });
 
     expect(corrected.ok).toBe(true);
     expect(await homeCheck.listDefects(itemId)).toMatchObject([
@@ -118,7 +118,7 @@ describe("correcting an AI Suggestion", () => {
     const proof = await noteOf(homeCheck, itemId);
     const existing = expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE", evidenceIds: [proof] })).defect;
 
-    const corrected = expectOk(await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "CF-HINGE" }));
+    const corrected = expectOk(await homeCheck.correctAiSuggestion(suggestions[0].id, { severity: "Minor", defectTypeCode: "CF-HINGE" }));
 
     expect(corrected.defect.id).toBe(existing.id);
     expect(await homeCheck.listDefects(itemId)).toEqual([{ ...existing, evidenceIds: [proof, photoId] }]);
@@ -127,7 +127,7 @@ describe("correcting an AI Suggestion", () => {
   test("to a code not in the Dictionary is refused and leaves the suggestion unreviewed", async () => {
     const { homeCheck, itemId, suggestions } = await photoWithSuggestions();
 
-    const corrected = await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "SF-SMUDGE" });
+    const corrected = await homeCheck.correctAiSuggestion(suggestions[0].id, { severity: "Minor", defectTypeCode: "SF-SMUDGE" });
 
     expect(corrected).toEqual({ ok: false, reason: "unknown-defect-type" });
     expect(await homeCheck.listAiSuggestions(itemId)).toMatchObject([{ outcome: "unreviewed" }]);
@@ -142,8 +142,8 @@ describe("once an AI Suggestion is reviewed", () => {
     await homeCheck.rejectAiSuggestion(suggestion.id);
 
     const refusals = [
-      await homeCheck.confirmAiSuggestion(suggestion.id),
-      await homeCheck.correctAiSuggestion(suggestion.id, { defectTypeCode: "CF-HINGE" }),
+      await homeCheck.confirmAiSuggestion(suggestion.id, { severity: "Minor" }),
+      await homeCheck.correctAiSuggestion(suggestion.id, { severity: "Minor", defectTypeCode: "CF-HINGE" }),
       await homeCheck.rejectAiSuggestion(suggestion.id),
     ];
 
@@ -159,10 +159,10 @@ describe("once an AI Suggestion is reviewed", () => {
       { code: "SF-SCRATCH", confidence: "Low" },
     ]);
     const [hinge, looseHinge, scratch] = suggestions;
-    const made = expectOk(await homeCheck.confirmAiSuggestion(hinge.id)).defect;
+    const made = expectOk(await homeCheck.confirmAiSuggestion(hinge.id, { severity: "Minor" })).defect;
 
     await homeCheck.rejectAiSuggestion(looseHinge.id);
-    await homeCheck.correctAiSuggestion(scratch.id, { defectTypeCode: "SF-STAIN" });
+    await homeCheck.correctAiSuggestion(scratch.id, { severity: "Minor", defectTypeCode: "SF-STAIN" });
 
     const [first, second] = await homeCheck.listDefects(itemId);
     expect(first).toEqual(made);
@@ -174,8 +174,8 @@ describe("Other / Unknown AI Suggestions", () => {
   test("confirming Unable to Determine needs a note, as adding it by hand does", async () => {
     const { homeCheck, itemId, suggestions } = await photoWithSuggestions([{ code: "OT-UNKNOWN", confidence: "Low" }]);
 
-    const withoutNote = await homeCheck.confirmAiSuggestion(suggestions[0].id);
-    const withNote = await homeCheck.confirmAiSuggestion(suggestions[0].id, { note: "  dark patch behind door  " });
+    const withoutNote = await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" });
+    const withNote = await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor", note: "  dark patch behind door  " });
 
     expect(withoutNote).toEqual({ ok: false, reason: "note-required" });
     expect(withNote.ok).toBe(true);
@@ -185,7 +185,7 @@ describe("Other / Unknown AI Suggestions", () => {
   test("correcting to Other Defect needs a note", async () => {
     const { homeCheck, suggestions } = await photoWithSuggestions();
 
-    const corrected = await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "OT-OTHER" });
+    const corrected = await homeCheck.correctAiSuggestion(suggestions[0].id, { severity: "Minor", defectTypeCode: "OT-OTHER" });
 
     expect(corrected).toEqual({ ok: false, reason: "note-required" });
   });
@@ -195,7 +195,7 @@ describe("Other / Unknown AI Suggestions", () => {
     const proof = await noteOf(homeCheck, itemId);
     expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "OT-UNKNOWN", note: "odd smell", evidenceIds: [proof] }));
 
-    const confirmed = await homeCheck.confirmAiSuggestion(suggestions[0].id);
+    const confirmed = await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" });
 
     expect(confirmed.ok).toBe(true);
     expect(await homeCheck.listDefects(itemId)).toMatchObject([{ note: "odd smell", evidenceIds: [proof, photoId] }]);
@@ -204,7 +204,7 @@ describe("Other / Unknown AI Suggestions", () => {
   test("a note given for an ordinary Defect Type is kept on the new Defect", async () => {
     const { homeCheck, itemId, suggestions } = await photoWithSuggestions();
 
-    await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "CF-HINGE", note: "top hinge" });
+    await homeCheck.correctAiSuggestion(suggestions[0].id, { severity: "Minor", defectTypeCode: "CF-HINGE", note: "top hinge" });
 
     expect(await homeCheck.listDefects(itemId)).toMatchObject([{ defectTypeCode: "CF-HINGE", note: "top hinge" }]);
   });
@@ -216,7 +216,7 @@ describe("on a Completed Inspection", () => {
     await homeCheck.completeInspection(inspectionId);
 
     const byHand = await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE", evidenceIds: [photoId] });
-    const confirmed = await homeCheck.confirmAiSuggestion(suggestions[0].id);
+    const confirmed = await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" });
 
     expect(byHand).toEqual({ ok: false, reason: "inspection-completed" });
     expect(confirmed.ok).toBe(true);
@@ -232,7 +232,7 @@ describe("on a Completed Inspection", () => {
     await homeCheck.processAiQueue();
     const [late] = await homeCheck.listAiSuggestions(itemId);
 
-    const corrected = await homeCheck.correctAiSuggestion(late.id, { defectTypeCode: "CF-HINGE" });
+    const corrected = await homeCheck.correctAiSuggestion(late.id, { severity: "Minor", defectTypeCode: "CF-HINGE" });
 
     expect(corrected.ok).toBe(true);
     expect(await homeCheck.listDefects(itemId)).toEqual([{ ...existing, evidenceIds: [proof, photo.id] }]);
@@ -246,7 +246,7 @@ describe("on a Completed Inspection", () => {
     await homeCheck.completeInspection(inspectionId);
 
     const rejected = await homeCheck.rejectAiSuggestion(suggestions[1].id);
-    const defect = expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id)).defect;
+    const defect = expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" })).defect;
     const edit = await homeCheck.editDefect(defect.id, { note: "changed later" });
     const removal = await homeCheck.removeDefect(defect.id);
 
@@ -301,7 +301,7 @@ describe("the check before completing", () => {
       { code: "SF-SCRATCH", confidence: "Low" },
     ]);
     const [hinge] = await homeCheck.listAiSuggestions(itemId);
-    await homeCheck.confirmAiSuggestion(hinge.id);
+    await homeCheck.confirmAiSuggestion(hinge.id, { severity: "Minor" });
     environment.setOnline(false);
     await homeCheck.addPhoto(itemId, new Blob(["second"], { type: "image/jpeg" }));
     await homeCheck.addPhoto(itemId, new Blob(["third"], { type: "image/jpeg" }));
@@ -323,7 +323,7 @@ describe("listeners for AI changes", () => {
     let changes = 0;
     homeCheck.onAiChange(() => changes++);
 
-    await homeCheck.confirmAiSuggestion(suggestions[0].id);
+    await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" });
     await homeCheck.rejectAiSuggestion(suggestions[1].id);
 
     expect(changes).toBe(2);
@@ -334,7 +334,7 @@ describe("correcting an AI Suggestion to the Defect Type it already suggested", 
   test("counts as confirming it", async () => {
     const { homeCheck, itemId, suggestions } = await photoWithSuggestions();
 
-    await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "SF-SCRATCH" });
+    await homeCheck.correctAiSuggestion(suggestions[0].id, { severity: "Minor", defectTypeCode: "SF-SCRATCH" });
 
     const [reviewed] = await homeCheck.listAiSuggestions(itemId);
     expect(reviewed.outcome).toBe("confirmed");
@@ -350,8 +350,8 @@ describe("what a review reports", () => {
     ]);
     expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [await noteOf(homeCheck, itemId)] }));
 
-    const made = expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id));
-    const linked = expectOk(await homeCheck.confirmAiSuggestion(suggestions[1].id));
+    const made = expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" }));
+    const linked = expectOk(await homeCheck.confirmAiSuggestion(suggestions[1].id, { severity: "Minor" }));
 
     expect({ made: made.addedToExisting, linked: linked.addedToExisting }).toEqual({ made: false, linked: true });
   });
@@ -360,7 +360,7 @@ describe("what a review reports", () => {
 describe("undoing an AI review", () => {
   test("after confirming, removes the Defect it made and leaves the suggestion unreviewed", async () => {
     const { homeCheck, itemId, suggestions } = await photoWithSuggestions();
-    expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id));
+    expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" }));
 
     expectOk(await homeCheck.undoAiReview(suggestions[0].id));
 
@@ -372,7 +372,7 @@ describe("undoing an AI review", () => {
 
   test("after correcting, removes the corrected Defect and the correction", async () => {
     const { homeCheck, itemId, suggestions } = await photoWithSuggestions();
-    expectOk(await homeCheck.correctAiSuggestion(suggestions[0].id, { defectTypeCode: "CF-HINGE" }));
+    expectOk(await homeCheck.correctAiSuggestion(suggestions[0].id, { severity: "Minor", defectTypeCode: "CF-HINGE" }));
 
     expectOk(await homeCheck.undoAiReview(suggestions[0].id));
 
@@ -395,7 +395,7 @@ describe("undoing an AI review", () => {
     const { homeCheck, itemId, suggestions } = await photoWithSuggestions();
     const note = expectOk(await homeCheck.addNote(itemId, "by the handle")).evidence;
     const existing = expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [note.id] })).defect;
-    expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id));
+    expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" }));
 
     expectOk(await homeCheck.undoAiReview(suggestions[0].id));
 
@@ -405,7 +405,7 @@ describe("undoing an AI review", () => {
   test("leaves a photo linked when it was linked before the review", async () => {
     const { homeCheck, itemId, photoId, suggestions } = await photoWithSuggestions();
     const existing = expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [photoId] })).defect;
-    expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id));
+    expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" }));
 
     expectOk(await homeCheck.undoAiReview(suggestions[0].id));
 
@@ -421,7 +421,7 @@ describe("undoing an AI review", () => {
   test("works on a Completed Inspection, as reviewing does", async () => {
     const { homeCheck, itemId, inspectionId, suggestions } = await photoWithSuggestions();
     expectOk(await homeCheck.completeInspection(inspectionId));
-    expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id));
+    expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" }));
 
     expectOk(await homeCheck.undoAiReview(suggestions[0].id));
 

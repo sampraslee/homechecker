@@ -133,3 +133,36 @@ describe("removing an Area", () => {
     expect(await homeCheck.listAreas(inspectionId)).toEqual([]);
   });
 });
+
+describe("naming a standard Area when adding it", () => {
+  test("offers the standard name, then the next free number once one exists", async () => {
+    const { homeCheck, inspectionId } = await draftInspection();
+
+    expect(await homeCheck.defaultAreaName(inspectionId, "bedroom")).toEqual({ ok: true, name: "Bedroom" });
+    await homeCheck.addArea(inspectionId, { standardAreaId: "bedroom" });
+    expect(await homeCheck.defaultAreaName(inspectionId, "bedroom")).toEqual({ ok: true, name: "Bedroom 2" });
+  });
+
+  test("keeps the standard Area but uses the name the Inspector typed", async () => {
+    const { homeCheck, inspectionId } = await draftInspection();
+
+    const added = await homeCheck.addArea(inspectionId, { standardAreaId: "bedroom", name: "  Bedroom – facing road " });
+
+    expect(added).toMatchObject({ ok: true, area: { name: "Bedroom – facing road", standardAreaId: "bedroom" } });
+  });
+
+  test("refuses a typed name another Area already has", async () => {
+    const { homeCheck, inspectionId } = await draftInspection();
+    await homeCheck.addArea(inspectionId, { standardAreaId: "bedroom" });
+
+    const result = await homeCheck.addArea(inspectionId, { standardAreaId: "bedroom", name: "bedroom" });
+
+    expect(result).toEqual({ ok: false, reason: "area-name-taken" });
+  });
+
+  test("does not know an unknown standard Area", async () => {
+    const { homeCheck, inspectionId } = await draftInspection();
+
+    expect(await homeCheck.defaultAreaName(inspectionId, "nowhere")).toEqual({ ok: false, reason: "unknown-standard-area" });
+  });
+});
