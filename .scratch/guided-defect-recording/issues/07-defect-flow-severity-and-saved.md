@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] Step 3 lists each Defect made in the flow once, with Minor / Moderate / Major and nothing preselected
-- [ ] Next is disabled until every listed Defect has a Severity
-- [ ] Leaving before this step leaves the Defects saved and marked "Severity needed"
-- [ ] Saved screen lists the Defects with Severity, with Record another Defect and Done
-- [ ] Record another Defect starts again at step 1 with an empty Evidence list
+- [x] Step 3 lists each Defect made in the flow once, with Minor / Moderate / Major and nothing preselected
+- [x] Next is disabled until every listed Defect has a Severity
+- [x] Leaving before this step leaves the Defects saved and marked "Severity needed"
+- [x] Saved screen lists the Defects with Severity, with Record another Defect and Done
+- [x] Record another Defect starts again at step 1 with an empty Evidence list

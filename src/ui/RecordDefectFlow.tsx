@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { Camera, ChevronLeft, ChevronRight, LoaderCircle, NotebookPen, Plus, Video, X } from "lucide-react";
-import { isMedia, isNote, type AiSuggestionView, type DefectView, type Evidence, type ItemView } from "../core";
+import { Camera, Check, ChevronLeft, ChevronRight, LoaderCircle, NotebookPen, Plus, Video, X } from "lucide-react";
+import { isMedia, isNote, type AiSuggestionView, type DefectView, type Evidence, type ItemView, type Severity } from "../core";
 import type { Navigate } from "./App";
 import { assignDefectType } from "./assignDefectType";
 import { BackCloses, useBackCloses } from "./backCloses";
 import { Band } from "./Band";
-import { DefectEditor, DefectTypePicker, type PickedDefectType } from "./DefectPanels";
+import { DefectEditor, DefectTypePicker, SeverityPicker, type PickedDefectType } from "./DefectPanels";
 import { Dock } from "./Dock";
 import { refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
@@ -16,6 +16,9 @@ import { useAiChanges } from "./useAiChanges";
 import { VideoRecorder } from "./VideoRecorder";
 
 const STEPS = ["Evidence", "Defect Types", "Severity"];
+
+/** The steps are 0, 1 and 2; after the last the flow shows what it recorded. */
+const SAVED = 3;
 
 /** How long the Inspector waits for AI Suggestions before being told to carry on without them. */
 const AI_WAIT_SECONDS = 10;
@@ -40,7 +43,7 @@ export function RecordDefectFlow({
   onClose: () => void;
 }) {
   const homeCheck = useHomeCheck();
-  /** 0: Evidence; 1: a Defect Type for each piece of Evidence. */
+  /** 0: Evidence; 1: a Defect Type for each piece of Evidence; 2: a Severity for each Defect; then the Saved screen. */
   const [step, setStep] = useState(0);
   /** The Evidence captured in step 1, fixed once step 2 starts, and which piece step 2 is on. */
   const [pieces, setPieces] = useState<Evidence[]>([]);
@@ -115,6 +118,8 @@ export function RecordDefectFlow({
   }, [waitingOnAi, waitingFor]);
   /** The Defects this piece of Evidence is assigned to. */
   const assigned = piece ? defects.filter((defect) => defect.evidenceIds.includes(piece.id)) : [];
+  /** Every Defect the flow's Evidence supports, once each, however many pieces share it. */
+  const flowDefects = defects.filter((defect) => defect.evidenceIds.some((id) => pieces.some((each) => each.id === id)));
 
   function startDefectTypes() {
     setPieces(captured);
@@ -130,11 +135,35 @@ export function RecordDefectFlow({
     else setStep(0);
   }
 
-  /** On to the next piece. Severity follows the last one (ticket 07); until it is built, the flow ends there. */
+  /** Back from Severity to the last piece of Evidence. */
+  function backFromSeverity() {
+    setError(null);
+    setIndex(pieces.length - 1);
+    setStep(1);
+  }
+
+  /** On to the next piece, then Severity for the Defects made; with none, straight to the end. */
   function nextPiece() {
     setError(null);
     if (index < pieces.length - 1) setIndex(index + 1);
-    else onClose();
+    else setStep(flowDefects.length > 0 ? 2 : SAVED);
+  }
+
+  /** Each tap is saved at once, so an interruption keeps the Severity chosen so far. */
+  async function chooseSeverity(defect: DefectView, severity: Severity) {
+    setError(null);
+    const result = await homeCheck.editDefect(defect.id, { severity });
+    if (!result.ok) setError(refusalMessage[result.reason]);
+    load();
+  }
+
+  /** Starts again at step 1 with nothing captured: what the Item holds now counts as already there. */
+  function recordAnother() {
+    setBefore(new Set(evidence.map((each) => each.id)));
+    setPieces([]);
+    setIndex(0);
+    setError(null);
+    setStep(0);
   }
 
   /**
@@ -176,7 +205,13 @@ export function RecordDefectFlow({
     <main className="screen">
       <Band
         navigate={navigate}
-        back={step === 0 ? { onBack: onClose, label: item.displayName } : { onBack: backFromTypes, label: index > 0 ? "Previous Evidence" : "Evidence" }}
+        back={
+          step === 0 || step === SAVED
+            ? { onBack: onClose, label: item.displayName }
+            : step === 2
+              ? { onBack: backFromSeverity, label: "Defect Types" }
+              : { onBack: backFromTypes, label: index > 0 ? "Previous Evidence" : "Evidence" }
+        }
         unit={unit}
         title="Record a Defect"
       >
@@ -185,10 +220,47 @@ export function RecordDefectFlow({
       {/* The phone's back gesture leaves the flow, as Back does; what was captured stays on the Item. */}
       <BackCloses onBack={onClose} />
       {step === 1 && <BackCloses key={index} onBack={backFromTypes} />}
+      {step === 2 && <BackCloses onBack={backFromSeverity} />}
 
       <div className="form spaced">
-        <StepHeader titles={STEPS} step={step} />
-        {step === 1 && piece ? (
+        {step < SAVED && <StepHeader titles={STEPS} step={step} />}
+        {step === SAVED ? (
+          <>
+            <div className="saved-mark">
+              <Check aria-hidden="true" />
+            </div>
+            <h2>{flowDefects.length === 0 ? "Nothing to record" : flowDefects.length === 1 ? "Defect saved" : "Defects saved"}</h2>
+            {flowDefects.length === 0 ? (
+              <p className="muted">No Defect was recorded. The Evidence stays on the Item.</p>
+            ) : (
+              <ul className="cards">
+                {flowDefects.map((defect) => (
+                  <li key={defect.id} className="card">
+                    <span className="card-row">
+                      <strong>{defect.defectTypeName}</strong>
+                      <span className="badge">{defect.severity ?? "Severity needed"}</span>
+                    </span>
+                    <span className="muted">{defect.categoryName}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        ) : step === 2 ? (
+          <>
+            <p className="muted">How bad is each Defect? Choose what you see.</p>
+            <ul className="cards">
+              {flowDefects.map((defect) => (
+                <li key={defect.id} className="card severity-card">
+                  <strong>{defect.defectTypeName}</strong>
+                  <span className="muted">{defect.categoryName}</span>
+                  <SeverityPicker value={defect.severity} onChange={(severity) => chooseSeverity(defect, severity)} />
+                </li>
+              ))}
+            </ul>
+            {error && <p className="error" role="alert">{error}</p>}
+          </>
+        ) : step === 1 && piece ? (
           <>
             <p className="muted">
               Evidence {index + 1} of {pieces.length}
@@ -379,7 +451,7 @@ export function RecordDefectFlow({
                 <ChevronRight aria-hidden="true" />
               </button>
             </div>
-          ) : (
+          ) : step === 1 ? (
             <div className="dock-actions">
               <button type="button" className="secondary" onClick={backFromTypes}>
                 <ChevronLeft aria-hidden="true" />
@@ -389,6 +461,28 @@ export function RecordDefectFlow({
               <button type="button" className="primary" onClick={nextPiece}>
                 {assigned.length === 0 ? "No Defect here" : index < pieces.length - 1 ? "Next Evidence" : "Next"}
                 <ChevronRight aria-hidden="true" />
+              </button>
+            </div>
+          ) : step === 2 ? (
+            <div className="dock-actions">
+              <button type="button" className="secondary" onClick={backFromSeverity}>
+                <ChevronLeft aria-hidden="true" />
+                Back
+              </button>
+              <button type="button" className="primary" disabled={flowDefects.some((defect) => !defect.severity)} onClick={() => setStep(SAVED)}>
+                Save
+                <Check aria-hidden="true" />
+              </button>
+            </div>
+          ) : (
+            <div className="dock-actions stacked">
+              <button type="button" className="secondary" onClick={recordAnother}>
+                <Plus aria-hidden="true" />
+                Record another Defect
+              </button>
+              <button type="button" className="primary" onClick={onClose}>
+                <Check aria-hidden="true" />
+                Done
               </button>
             </div>
           )
