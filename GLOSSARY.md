@@ -32,6 +32,10 @@ _Avoid_: Apartment, flat, premises
 A named space within a property being inspected, such as Master Bedroom or Kitchen.
 _Avoid_: Room, zone, location
 
+**Completed Area**:
+An Area the Inspector has marked as fully inspected during this Inspection, even if it holds no Items. It is a mark that the Area was looked at, not a claim that it has no Defects. Unlike a Completed Inspection it is not locked: adding to or changing the Area makes it no longer Completed. A Move-out's Areas never inherit it from the Move-in. The Inspection counts its Completed Areas.
+_Avoid_: Done Area, Finished Area, Signed-off Area
+
 **Item**:
 A thing within an Area that can carry Defects, such as a Wardrobe, Wall or Air Conditioner. Chosen from the Item Catalog; the same catalog entry may appear more than once in an Area, each with a short distinguishing name.
 _Avoid_: Asset, fixture, element
@@ -67,5 +71,5 @@ A photo, video, audio recording or text note captured for one Item to support on
 _Avoid_: Media, attachment, proof
 
 **AI Suggestion**:
-A Defect Type proposed by the vision model for a photo. It only becomes a Defect when a person confirms it, and is kept separately from the confirmed result.
+A Defect Type proposed by the vision model for a photo. It only becomes a Defect when a person confirms it, and is kept separately from the confirmed result. A rejected one is no longer shown to the Inspector but stays on record as rejected.
 _Avoid_: AI label, prediction, classification
