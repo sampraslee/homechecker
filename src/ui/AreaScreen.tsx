@@ -10,6 +10,7 @@ import { BackCloses, useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
 import { scrollIntoViewGently } from "./scroll";
 import { NameEditor } from "./NameEditor";
+import { useAiChanges } from "./useAiChanges";
 import { useLocked } from "./useLocked";
 
 /** An Item with what has been recorded on it, e.g. "4 photos, 1 Defect". */
@@ -46,9 +47,8 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
     );
   }, [homeCheck, id]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Also reloads as AI Suggestions arrive or are reviewed, so the "to review" badges on the Items stay right.
+  useAiChanges(load);
 
   if (area === undefined) return null;
   if (area === null) {
@@ -218,6 +218,7 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
               <button type="button" className="card item-card" onClick={() => navigate({ name: "item", id: item.id })}>
                 <span className="grow">
                   <strong>{item.displayName}</strong>
+                  {item.aiToReview > 0 && <span className="badge unreviewed card-badge">{item.aiToReview} to review</span>}
                   <span className="summary">{item.summary}</span>
                 </span>
                 <ChevronRight className="chevron" aria-hidden="true" />

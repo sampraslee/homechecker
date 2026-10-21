@@ -260,8 +260,8 @@ describe("on a Completed Inspection", () => {
 });
 
 describe("AI Suggestions still to review", () => {
-  test("are listed for the Inspection, Item by Item in Area order, with where each one is", async () => {
-    const { homeCheck, inspectionId, itemId, aiClient } = await createTestHomeCheckWithItem();
+  test("are counted on each Item and on its Area, leaving out reviewed ones", async () => {
+    const { homeCheck, inspectionId, areaId, itemId, aiClient } = await createTestHomeCheckWithItem();
     const bathroom = expectOk(await homeCheck.addArea(inspectionId, { standardAreaId: "bathroom" })).area;
     const toilet = expectOk(await homeCheck.addItem(bathroom.id, { catalogItemId: "toilet" })).item;
     aiClient.answer([{ code: "SN-TOILET-LOOSE", confidence: "Medium" }]);
@@ -273,23 +273,34 @@ describe("AI Suggestions still to review", () => {
     ]);
     await homeCheck.addPhoto(itemId, new Blob(["wardrobe"], { type: "image/jpeg" }));
     await homeCheck.processAiQueue();
+    expect((await homeCheck.getItem(itemId))?.aiToReview).toBe(2);
+
     const [hinge] = await homeCheck.listAiSuggestions(itemId);
     await homeCheck.rejectAiSuggestion(hinge.id);
 
-    const unreviewed = await homeCheck.listUnreviewedAiSuggestions(inspectionId);
-
-    expect(unreviewed.map((s) => [s.areaName, s.itemName, s.defectTypeName])).toEqual([
-      ["Bedroom", "Wardrobe", "Scratched"],
-      ["Bathroom", "Toilet", "Toilet Bowl Loose"],
+    expect((await homeCheck.getItem(itemId))?.aiToReview).toBe(1);
+    expect((await homeCheck.getItem(toilet.id))?.aiToReview).toBe(1);
+    const areas = await homeCheck.listAreas(inspectionId);
+    expect(areas.map(({ id, aiToReview }) => [id, aiToReview])).toEqual([
+      [areaId, 1],
+      [bathroom.id, 1],
     ]);
-    expect(unreviewed[0]).toMatchObject({ itemId, outcome: "unreviewed" });
+  });
+
+  test("a rejected suggestion stays on record as Rejected", async () => {
+    const { homeCheck, itemId } = await photoWithSuggestions();
+    const [suggestion] = await homeCheck.listAiSuggestions(itemId);
+
+    await homeCheck.rejectAiSuggestion(suggestion.id);
+
+    expect(await homeCheck.listAiSuggestions(itemId)).toMatchObject([{ id: suggestion.id, outcome: "rejected" }]);
   });
 
   test("leave out other Inspections' suggestions", async () => {
     const { homeCheck, itemId } = await photoWithSuggestions();
     const other = await anotherInspection(homeCheck);
 
-    expect(await homeCheck.listUnreviewedAiSuggestions(other.id)).toEqual([]);
+    expect(await homeCheck.listAreas(other.id)).toEqual([]);
     expect(await homeCheck.listAiSuggestions(itemId)).toHaveLength(1);
   });
 });

@@ -81,12 +81,12 @@ describe("starting a linked Move-out", () => {
     for (const area of await homeCheck.listAreas(moveOut.id)) {
       for (const item of await homeCheck.listItems(area.id)) {
         expect(item.defectCount).toBe(0);
+        expect(item.aiToReview).toBe(0);
         expect(await homeCheck.listDefects(item.id)).toEqual([]);
         expect(await homeCheck.listEvidence(item.id)).toEqual([]);
         expect(await homeCheck.listAiSuggestions(item.id)).toEqual([]);
       }
     }
-    expect(await homeCheck.listUnreviewedAiSuggestions(moveOut.id)).toEqual([]);
   });
 
   test("leaves the Move-in as it was, and the two change independently", async () => {

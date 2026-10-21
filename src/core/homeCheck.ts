@@ -34,7 +34,6 @@ import type {
   StorageDurability,
   UnitAddress,
   UnitAddressInput,
-  UnreviewedAiSuggestionView,
   VideoEvidence,
   Severity,
 } from "./model";
@@ -186,8 +185,9 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     );
   }
 
-  async function withDefectCount(item: Item): Promise<ItemView> {
-    return toItemView(item, (await storage.listDefects(item.id)).length);
+  async function withCounts(item: Item): Promise<ItemView> {
+    const toReview = (await storage.listAiSuggestions(item.id)).filter((suggestion) => suggestion.outcome === "unreviewed").length;
+    return toItemView(item, (await storage.listDefects(item.id)).length, toReview);
   }
 
   /** A code missing from the bundled Dictionary (recorded under an older version) shows as itself. */
@@ -331,19 +331,6 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     return suggestions
       .sort((a, b) => (photoOrder.get(a.evidenceId) ?? 0) - (photoOrder.get(b.evidenceId) ?? 0) || a.rank - b.rank)
       .map(toAiSuggestionView);
-  }
-
-  async function listUnreviewedAiSuggestions(inspectionId: string): Promise<UnreviewedAiSuggestionView[]> {
-    const unreviewed: UnreviewedAiSuggestionView[] = [];
-    for (const area of await storage.listAreas(inspectionId)) {
-      for (const item of await storage.listItems(area.id)) {
-        for (const suggestion of await listAiSuggestions(item.id)) {
-          if (suggestion.outcome !== "unreviewed") continue;
-          unreviewed.push({ ...suggestion, areaName: area.name, itemName: itemDisplayName(item) });
-        }
-      }
-    }
-    return unreviewed;
   }
 
   /** Sends one queued photo to the AI. A failure leaves it queued with one more attempt counted. */
@@ -673,7 +660,12 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
 
     async listAreas(inspectionId: string): Promise<AreaView[]> {
       const areas = await storage.listAreas(inspectionId);
-      return Promise.all(areas.map(async (area) => ({ ...area, itemCount: (await storage.listItems(area.id)).length })));
+      return Promise.all(
+        areas.map(async (area) => {
+          const items = await Promise.all((await storage.listItems(area.id)).map(withCounts));
+          return { ...area, itemCount: items.length, aiToReview: items.reduce((total, item) => total + item.aiToReview, 0) };
+        }),
+      );
     },
 
     async addItem(areaId: string, source: ItemSource) {
@@ -703,7 +695,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       };
       await storage.putItem(item);
       await clearAreaCompletion(areaId);
-      return { ok: true as const, item: toItemView(item, 0) };
+      return { ok: true as const, item: toItemView(item, 0, 0) };
     },
 
     /** Sets a catalog Item's short name (blank clears it), or an Other item's free-text name. */
@@ -721,7 +713,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
         renamed = { ...item, name: trimmed };
       }
       await storage.putItem(renamed);
-      return { ok: true as const, item: await withDefectCount(renamed) };
+      return { ok: true as const, item: await withCounts(renamed) };
     },
 
     /**
@@ -757,11 +749,11 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
 
     async getItem(itemId: string): Promise<ItemView | undefined> {
       const item = await storage.getItem(itemId);
-      return item && withDefectCount(item);
+      return item && withCounts(item);
     },
 
     async listItems(areaId: string): Promise<ItemView[]> {
-      return Promise.all((await storage.listItems(areaId)).map(withDefectCount));
+      return Promise.all((await storage.listItems(areaId)).map(withCounts));
     },
 
     /** Saves the original before making the smaller versions, so a capture is never lost. */
@@ -1030,15 +1022,16 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     /** The Item's AI Suggestions, photo by photo in capture order, each photo's in the AI's ranking. */
     listAiSuggestions,
 
-    /** The Inspection's AI Suggestions not yet confirmed, corrected or rejected, Area by Area and Item by Item. */
-    listUnreviewedAiSuggestions,
+
 
     /** What the Inspector is told before completing: AI work on this Inspection still to come or to review. */
     async aiWorkLeft(inspectionId: string): Promise<AiWorkLeft> {
       const queue = await storage.listAiQueue();
+      const items = (await Promise.all((await storage.listAreas(inspectionId)).map((area) => storage.listItems(area.id)))).flat();
+      const toReview = await Promise.all(items.map(async (item) => (await withCounts(item)).aiToReview));
       return {
         waitingForAi: queue.filter((entry) => entry.inspectionId === inspectionId).length,
-        unreviewedAiSuggestions: (await listUnreviewedAiSuggestions(inspectionId)).length,
+        unreviewedAiSuggestions: toReview.reduce((total, count) => total + count, 0),
       };
     },
 
@@ -1114,8 +1107,8 @@ function withEvidence(defect: Defect, evidenceId: string): Defect {
   return defect.evidenceIds.includes(evidenceId) ? defect : { ...defect, evidenceIds: [...defect.evidenceIds, evidenceId] };
 }
 
-function toItemView(item: Item, defectCount: number): ItemView {
-  return { ...item, displayName: itemDisplayName(item), defectCount };
+function toItemView(item: Item, defectCount: number, aiToReview: number): ItemView {
+  return { ...item, displayName: itemDisplayName(item), defectCount, aiToReview };
 }
 
 function itemDisplayName(item: Item): string {

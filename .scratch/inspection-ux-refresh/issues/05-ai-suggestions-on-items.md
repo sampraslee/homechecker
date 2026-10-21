@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] AI Suggestions section removed from the Move-in / Move-out screen
-- [ ] Item cards and Area cards show an "n to review" badge
-- [ ] A rejected suggestion disappears from the Item list; Export's AI Suggestions sheet still lists it as Rejected
-- [ ] Undo on reject still restores it while available
-- [ ] Core tests for badge counts and the rejected case
+- [x] AI Suggestions section removed from the Move-in / Move-out screen
+- [x] Item cards and Area cards show an "n to review" badge
+- [x] A rejected suggestion disappears from the Item list; Export's AI Suggestions sheet still lists it as Rejected
+- [x] Undo on reject still restores it while available
+- [x] Core tests for badge counts and the rejected case

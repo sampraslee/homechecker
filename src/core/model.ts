@@ -94,7 +94,8 @@ export type Area = {
   completedAt?: string;
 };
 
-export type AreaView = Area & { itemCount: number };
+/** `aiToReview`: AI Suggestions across the Area's Items that nobody has confirmed, corrected or rejected yet. */
+export type AreaView = Area & { itemCount: number; aiToReview: number };
 
 /** Where a new Area's name comes from. */
 /** A standard Area, named as its default unless `name` is given, or a custom Area with its own name. */
@@ -114,7 +115,8 @@ export type Item = {
   position: number;
 };
 
-export type ItemView = Item & { displayName: string; defectCount: number };
+/** `aiToReview`: the Item's AI Suggestions that nobody has confirmed, corrected or rejected yet. */
+export type ItemView = Item & { displayName: string; defectCount: number; aiToReview: number };
 
 /** A catalog Item (optionally with a short name), or an Other item with free text. */
 export type ItemSource = { catalogItemId: string; shortName?: string } | { otherName: string };
@@ -261,7 +263,6 @@ export type AiSuggestionView = AiSuggestion & {
 };
 
 /** An AI Suggestion still to review, with the names of the Area and Item it's on. */
-export type UnreviewedAiSuggestionView = AiSuggestionView & { areaName: string; itemName: string };
 
 /** What the linked Move-in recorded on the same Item, shown on a Move-out for reference only. */
 export type MoveInRecord = { defects: DefectView[]; media: MediaEvidence[] };

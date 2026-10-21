@@ -247,6 +247,8 @@ export function ItemScreen({ id, navigate, recordingDefect = false }: { id: stri
   }
 
   const photos = evidence.filter((e) => e.kind === "photo");
+  /** A rejected suggestion is out of the Inspector's way, but stays on record and in the export. */
+  const shownSuggestions = aiSuggestions.filter((suggestion) => suggestion.outcome !== "rejected");
   /** Evidence that no Defect uses yet: each waits for a Defect Type to be assigned to it. */
   const assignedIds = new Set(defects.flatMap((defect) => defect.evidenceIds));
   const unassigned = evidence.filter((each) => !assignedIds.has(each.id));
@@ -429,17 +431,17 @@ export function ItemScreen({ id, navigate, recordingDefect = false }: { id: stri
       )}
 
       {/* Straight after the photos they came from, so review happens while the Item is in front of the Inspector. */}
-      {(aiSuggestions.length > 0 || photos.length > 0) && (
+      {(shownSuggestions.length > 0 || photos.length > 0) && (
         <>
           <div className="section-head">
             <h2>AI Suggestions</h2>
-            <span className="count">{unreviewedCount(aiSuggestions)}</span>
+            <span className="count">{unreviewedCount(shownSuggestions)}</span>
           </div>
-          {aiSuggestions.length === 0 && <p className="muted">None yet. Photos go to the AI when the phone is online.</p>}
+          {shownSuggestions.length === 0 && <p className="muted">None yet. Photos go to the AI when the phone is online.</p>}
           <AiSuggestionList
             itemId={id}
             itemName={item.name}
-            suggestions={aiSuggestions}
+            suggestions={shownSuggestions}
             arrived={arrived}
             defects={defects}
             onReviewed={(message, suggestionId) => {

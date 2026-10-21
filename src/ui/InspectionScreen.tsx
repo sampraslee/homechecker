@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronRight, DoorOpen, Lock, Plus, Sparkles, Trash2 } from "lucide-react";
-import { formatAddress, type AreaView, type Inspection, type InspectionTotals, type UnreviewedAiSuggestionView } from "../core";
+import { ChevronRight, DoorOpen, Lock, Plus, Trash2 } from "lucide-react";
+import { formatAddress, type AreaView, type Inspection, type InspectionTotals } from "../core";
 import type { Navigate } from "./App";
 import { AddAreaFlow } from "./AddAreaFlow";
 import { Band } from "./Band";
@@ -18,7 +18,6 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
   const [inspection, setInspection] = useState<Inspection | null | undefined>(undefined);
   const [areas, setAreas] = useState<AreaView[]>([]);
   const [adding, setAdding] = useState(false);
-  const [toReview, setToReview] = useState<UnreviewedAiSuggestionView[]>([]);
   /** `null`: the linked Move-in was deleted from this phone. */
   const [linkedMoveIn, setLinkedMoveIn] = useState<Inspection | null | undefined>(undefined);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -31,16 +30,15 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
 
   useEffect(() => {
     loadInspection();
-    loadAreas();
-  }, [loadInspection, loadAreas]);
+  }, [loadInspection]);
 
   const linkedMoveInId = inspection?.linkedMoveInId;
   useEffect(() => {
     if (linkedMoveInId) homeCheck.getInspection(linkedMoveInId).then((found) => setLinkedMoveIn(found ?? null));
   }, [homeCheck, linkedMoveInId]);
 
-  // Also reloads as AI Suggestions arrive or are reviewed.
-  useAiChanges(useCallback(() => homeCheck.listUnreviewedAiSuggestions(id).then(setToReview), [homeCheck, id]));
+  // The "to review" badges on the Areas follow AI Suggestions as they arrive or are reviewed.
+  useAiChanges(loadAreas);
 
   const locked = inspection?.status === "completed";
 
@@ -94,31 +92,6 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
         </p>
       )}
 
-      {toReview.length > 0 && (
-        <>
-          <div className="section-head">
-            <h2>AI Suggestions</h2>
-            <span className="count">{toReview.length} to review</span>
-          </div>
-          <ul className="cards">
-            {toReview.map((suggestion) => (
-              <li key={suggestion.id}>
-                <button type="button" className="card item-card ai-suggestion" onClick={() => navigate({ name: "item", id: suggestion.itemId })}>
-                  <Sparkles className="row-icon ai" aria-hidden="true" />
-                  <span className="grow">
-                    <strong>{suggestion.defectTypeName}</strong>
-                    <span className="summary">
-                      {suggestion.itemName} in {suggestion.areaName}
-                    </span>
-                  </span>
-                  <ChevronRight className="chevron" aria-hidden="true" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
       <div className="section-head">
         <h2>Areas</h2>
         <span className="count">{areas.length > 0 && `${areas.filter((area) => area.completedAt).length} of ${areas.length} Completed`}</span>
@@ -134,6 +107,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
               <span className="grow">
                 <strong>{area.name}</strong>
                 {area.completedAt && <span className="badge completed card-badge">Completed</span>}
+                {area.aiToReview > 0 && <span className="badge unreviewed card-badge">{area.aiToReview} to review</span>}
                 <span className="summary">{area.itemCount === 0 ? "No Items yet" : area.itemCount === 1 ? "1 Item" : `${area.itemCount} Items`}</span>
               </span>
               <ChevronRight className="chevron" aria-hidden="true" />
