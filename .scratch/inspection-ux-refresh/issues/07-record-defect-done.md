@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] Last piece of Evidence: `Done` replaces `Next`; earlier pieces keep "Next Evidence"
-- [ ] `Done` saves and returns to the Item screen with a "Defect saved" toast
-- [ ] Saved screen and its "Record another Defect" action are removed
-- [ ] Component or core tests updated
+- [x] Last piece of Evidence: `Done` replaces `Next`; earlier pieces keep "Next Evidence"
+- [x] `Done` saves and returns to the Item screen with a "Defect saved" toast
+- [x] Saved screen and its "Record another Defect" action are removed
+- [x] Component or core tests updated

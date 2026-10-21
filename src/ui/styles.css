@@ -2030,23 +2030,6 @@ span.chip {
   margin: 0 0 var(--space-2);
 }
 
-/* The Saved screen's tick, in the same calm teal as the rest of the flow. */
-.saved-mark {
-  display: grid;
-  place-items: center;
-  width: 3rem;
-  height: 3rem;
-  margin-bottom: var(--space-3);
-  border-radius: var(--r-pill);
-  background: var(--teal-tint);
-  color: var(--teal-deep);
-}
-
-.saved-mark svg {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-
 /* One Defect asking for its Severity: name, Category, then the three choices. */
 .severity-card {
   display: grid;

@@ -238,9 +238,10 @@ export function ItemScreen({ id, navigate, recordingDefect = false }: { id: stri
         unit={place?.unit}
         areaName={place?.areaName}
         navigate={navigate}
-        onClose={() => {
+        onClose={(message) => {
           setRecordingFlow(false);
           load();
+          if (message) showFlash({ text: message });
         }}
       />
     );
