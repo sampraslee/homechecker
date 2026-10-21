@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] New Item path has three steps: Add Item, Evidence, Defect Types; an existing Item keeps two
-- [ ] The Item is created when its first piece of Evidence is saved; quitting earlier leaves no Item
-- [ ] "All other Items" is collapsed by default
-- [ ] Step indicator and Back keep what was entered
-- [ ] Core tests for creation timing and the abandoned case
+- [x] New Item path has three steps: Add Item, Evidence, Defect Types; an existing Item keeps two
+- [x] The Item is created when its first piece of Evidence is saved; quitting earlier leaves no Item
+- [x] "All other Items" is collapsed by default
+- [x] Step indicator and Back keep what was entered
+- [x] Core tests for creation timing and the abandoned case

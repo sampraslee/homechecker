@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { Check, ChevronRight, Pencil, Plus, Search, Trash2 } from "lucide-react";
-import type { Area, CatalogItem, Evidence, Inspection, ItemChoices, ItemSource, ItemView } from "../core";
+import { useCallback, useState } from "react";
+import { Check, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
+import type { Area, Evidence, Inspection, ItemView } from "../core";
 import type { Navigate } from "./App";
 import { Band } from "./Band";
 import { LockedNotice } from "./LockedNotice";
 import { Dock } from "./Dock";
 import { countEvidence, inspectionTypeLabel, refusalMessage, unitAndType } from "./format";
-import { BackCloses, useBackCloses } from "./backCloses";
+import { BackCloses } from "./backCloses";
+import { RecordDefectFlow } from "./RecordDefectFlow";
 import { useHomeCheck } from "./homeCheckContext";
-import { scrollIntoViewGently } from "./scroll";
 import { NameEditor } from "./NameEditor";
 import { useAiChanges } from "./useAiChanges";
 import { useLocked } from "./useLocked";
@@ -62,6 +62,24 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
   }
 
   const backToInspection = { name: "inspection", id: area.inspectionId } as const;
+
+  // Adding an Item is the first step of recording a Defect on it, and takes the whole screen.
+  if (picking && editable) {
+    return (
+      <RecordDefectFlow
+        newItemIn={id}
+        unit={inspection ? unitAndType(inspection) : undefined}
+        areaName={area.name}
+        navigate={navigate}
+        onClose={(message, itemId) => {
+          setPicking(false);
+          load();
+          // Evidence was saved, so the Item exists: carry on in it.
+          if (itemId) navigate({ name: "item", id: itemId, saved: message });
+        }}
+      />
+    );
+  }
 
   async function removeArea() {
     const result = await homeCheck.removeArea(id);
@@ -228,21 +246,10 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
         ))}
       </ul>
 
-      {editable && picking && (
-        <ItemPicker
-          areaId={id}
-          areaName={area.name}
-          // Straight into the new Item, ready to record its first Defect.
-          onAdded={(itemId) => navigate({ name: "item", id: itemId, recordingDefect: true })}
-          onCancel={() => setPicking(false)}
-        />
-      )}
-
       <Dock
         action={
           editable &&
-          !editing &&
-          !picking && (
+          !editing && (
             <div className="dock-actions">
               <button type="button" className="primary" onClick={() => setPicking(true)}>
                 <Plus aria-hidden="true" />
@@ -265,114 +272,4 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
 function itemSummary(evidence: Evidence[], defectCount: number): string {
   const defects = defectCount === 0 ? "" : defectCount === 1 ? "1 Defect" : `${defectCount} Defects`;
   return [countEvidence(evidence), defects].filter(Boolean).join(", ") || "Nothing recorded yet";
-}
-
-function ItemPicker({
-  areaId,
-  areaName,
-  onAdded,
-  onCancel,
-}: {
-  areaId: string;
-  areaName: string;
-  onAdded: (itemId: string) => void;
-  onCancel: () => void;
-}) {
-  const homeCheck = useHomeCheck();
-  useBackCloses(onCancel);
-  const [choices, setChoices] = useState<ItemChoices | null>(null);
-  const [shortName, setShortName] = useState("");
-  const [otherName, setOtherName] = useState("");
-  /** Narrows the long Item list to names containing what's typed (UX-006). */
-  const [query, setQuery] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const panel = useRef<HTMLElement>(null);
-
-  // The picker opens below the Area's Items, often off screen.
-  useEffect(() => {
-    scrollIntoViewGently(panel.current);
-  }, []);
-
-  useEffect(() => {
-    homeCheck.itemChoices(areaId).then((result) => {
-      if (result.ok) setChoices(result);
-    });
-  }, [homeCheck, areaId]);
-
-  async function add(source: ItemSource) {
-    const result = await homeCheck.addItem(areaId, source);
-    if (result.ok) onAdded(result.item.id);
-    else setError(refusalMessage[result.reason]);
-  }
-
-  function addOther(event: FormEvent) {
-    event.preventDefault();
-    add({ otherName });
-  }
-
-  /** While searching: the matches from both lists, usual ones first; `null` when the search is empty. */
-  const wanted = query.trim().toLowerCase();
-  const searched = !choices || !wanted
-    ? null
-    : [...choices.shownFirst, ...choices.others].filter((item) => item.name.toLowerCase().includes(wanted));
-
-  const chips = (items: CatalogItem[]) => (
-    <div className="chips">
-      {items.map((item) => (
-        <button key={item.id} type="button" className="chip" onClick={() => add({ catalogItemId: item.id, shortName })}>
-          {item.name}
-        </button>
-      ))}
-    </div>
-  );
-
-  return (
-    <section className="panel" ref={panel}>
-      <div className="card-row">
-        <h2>Add Item</h2>
-        <button type="button" className="link" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-      <label className="form">
-        Short name (optional), e.g. "left"
-        <input value={shortName} onChange={(event) => setShortName(event.target.value)} />
-      </label>
-      <label className="form search-field">
-        Find an Item
-        <span className="search-input">
-          <Search aria-hidden="true" />
-          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="e.g. window" />
-        </span>
-      </label>
-      {choices && searched !== null && (
-        <>
-          <h3>{searched.length === 0 ? "No Item matches" : "Matching Items"}</h3>
-          {searched.length === 0 ? <p className="muted">Add it below as an Item not in the list.</p> : chips(searched)}
-        </>
-      )}
-      {choices && searched === null && choices.shownFirst.length > 0 && (
-        <>
-          <h3>Usual in {areaName}</h3>
-          {chips(choices.shownFirst)}
-        </>
-      )}
-      {choices && searched === null && (
-        <>
-          <h3>{choices.shownFirst.length > 0 ? "All other Items" : "All Items"}</h3>
-          {chips(choices.others)}
-        </>
-      )}
-      <form className="form" onSubmit={addOther} noValidate>
-        <label>
-          Item not in the list
-          <input value={otherName} onChange={(event) => setOtherName(event.target.value)} />
-          {error && <span className="error" role="alert">{error}</span>}
-        </label>
-        <button type="submit" className="secondary">
-          Add this Item
-        </button>
-      </form>
-    </section>
-  );
 }

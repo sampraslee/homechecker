@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { Camera, Check, ChevronLeft, ChevronRight, LoaderCircle, NotebookPen, Plus, Video, X } from "lucide-react";
-import { isMedia, isNote, type AiSuggestionView, type DefectView, type Evidence, type ItemView, type Severity } from "../core";
+import { isMedia, isNote, type AiSuggestionView, type DefectView, type Evidence, type ItemSource, type ItemView, type Severity } from "../core";
 import type { Navigate } from "./App";
 import { assignDefectType } from "./assignDefectType";
 import { BackCloses, useBackCloses } from "./backCloses";
@@ -9,6 +9,8 @@ import { DefectEditor, DefectTypePicker, SeverityPicker, type PickedDefectType }
 import { Dock } from "./Dock";
 import { refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
+import { createLazyItem } from "./lazyItem";
+import { ItemPicker } from "./ItemPicker";
 import { MediaThumbnail } from "./MediaImage";
 import { NoteEditor } from "./ItemScreen";
 import { StepHeader } from "./StepHeader";
@@ -17,32 +19,47 @@ import { VideoRecorder } from "./VideoRecorder";
 
 const STEPS = ["Evidence", "Defect Types"];
 
+/** For a new Item, choosing it comes first. */
+const STEPS_FOR_NEW_ITEM = ["Add Item", ...STEPS];
+
+type Stage = "item" | "evidence" | "types";
+
 /** How long the Inspector waits for AI Suggestions before being told to carry on without them. */
 const AI_WAIT_SECONDS = 10;
 
 /**
  * Recording a Defect as a guided flow: Evidence, then a Defect Type and its Severity for each piece (ADR 0006, 0007).
- * Step 1 gathers the Evidence for this Defect. Evidence already on the Item stays on the Item screen, so every run
- * starts empty.
+ * The Evidence step gathers the Evidence for this Defect. Evidence already on the Item stays on the Item screen, so
+ * every run starts empty.
+ *
+ * On an existing Item (`item`) that is two steps. For a new Item (`newItemIn`, the Area's id) choosing the Item comes
+ * first, and the Item is only created when its first Evidence is saved: quitting before then leaves nothing behind.
  */
 export function RecordDefectFlow({
-  item,
+  item: existingItem,
+  newItemIn,
   unit,
   areaName,
   navigate,
   onClose,
 }: {
-  item: ItemView;
+  item?: ItemView;
+  newItemIn?: string;
   unit?: string;
   areaName?: string;
   navigate: Navigate;
-  /** Back to the Item screen, keeping everything captured; `message` says what was saved, once the flow is done. */
-  onClose: (message?: string) => void;
+  /** Back to where the flow started, keeping everything captured. `message` says what was saved, once the flow is done; `itemId` is the new Item, if one was made. */
+  onClose: (message?: string, itemId?: string) => void;
 }) {
   const homeCheck = useHomeCheck();
-  /** 0: Evidence; 1: a Defect Type and its Severity for each piece of Evidence. */
-  const [step, setStep] = useState(0);
-  /** The Evidence captured in step 1, fixed once step 2 starts, and which piece step 2 is on. */
+  const [stage, setStage] = useState<Stage>(newItemIn ? "item" : "evidence");
+  /** The Item chosen in the first step of a new-Item flow, with how it reads, and the Item once it is created. */
+  const [chosen, setChosen] = useState<{ lazy: ReturnType<typeof createLazyItem>; name: string; shortName: string } | null>(null);
+  const [createdItem, setCreatedItem] = useState<ItemView | null>(null);
+  const item = existingItem ?? createdItem;
+  /** Until the first Evidence is saved a new Item can still be swapped for another. */
+  const canChangeItem = Boolean(newItemIn) && !item;
+  /** The Evidence captured in the Evidence step, fixed once Defect Types starts, and which piece that is on. */
   const [pieces, setPieces] = useState<Evidence[]>([]);
   const [index, setIndex] = useState(0);
   const [defects, setDefects] = useState<DefectView[]>([]);
@@ -67,20 +84,47 @@ export function RecordDefectFlow({
   const [notingSuggestion, setNotingSuggestion] = useState<AiSuggestionView | null>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
 
+  const itemId = item?.id;
+  /**
+   * Read when loading, not captured by it: the panels and captures that call `load` were made before a new Item
+   * existed, so a copy of the id taken then would be empty.
+   */
+  const itemIdRef = useRef(itemId);
+  itemIdRef.current = itemId;
   const load = useCallback(async () => {
-    const all = await homeCheck.listEvidence(item.id);
-    setBefore((known) => known ?? new Set(all.map((each) => each.id)));
+    const itemId = itemIdRef.current;
+    if (!itemId) return;
+    const all = await homeCheck.listEvidence(itemId);
+    // A new Item held nothing when the flow opened, so everything on it was captured here.
+    setBefore((known) => known ?? new Set(newItemIn ? [] : all.map((each) => each.id)));
     setEvidence(all);
-    setDefects(await homeCheck.listDefects(item.id));
-    setSuggestions(await homeCheck.listAiSuggestions(item.id));
+    setDefects(await homeCheck.listDefects(itemId));
+    setSuggestions(await homeCheck.listAiSuggestions(itemId));
     setWaitingForAi(new Set((await homeCheck.listWaitingForAi()).map((entry) => entry.evidenceId)));
-  }, [homeCheck, item.id]);
+  }, [homeCheck, newItemIn]);
 
   // Also reloads as AI Suggestions arrive while a piece of Evidence is open.
   useAiChanges(load);
+  useEffect(() => {
+    if (createdItem) load();
+  }, [createdItem, load]);
   useEffect(() => homeCheck.onOnlineChange(setOnline), [homeCheck]);
 
   const captured = before ? evidence.filter((each) => !before.has(each.id)) : [];
+
+  /** The Item's id, creating a new Item first if this is its first Evidence. `null` (with the error shown) if it can't be made. */
+  async function ensureItemId(): Promise<string | null> {
+    if (existingItem) return existingItem.id;
+    if (!chosen) return null;
+    const result = await chosen.lazy.ensure();
+    if (!result.ok) {
+      setError(refusalMessage[result.reason]);
+      return null;
+    }
+    itemIdRef.current = result.item.id;
+    setCreatedItem(result.item);
+    return result.item.id;
+  }
 
   async function capture(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
@@ -89,8 +133,10 @@ export function RecordDefectFlow({
     setSaving(true);
     setError(null);
     try {
+      const id = await ensureItemId();
+      if (!id) return;
       for (const file of files) {
-        const result = await homeCheck.addPhoto(item.id, file);
+        const result = await homeCheck.addPhoto(id, file);
         if (!result.ok) setError(refusalMessage[result.reason]);
       }
     } finally {
@@ -100,10 +146,12 @@ export function RecordDefectFlow({
   }
 
   const piece = pieces[index];
+  /** Where the Inspector is among the steps: a new Item has Add Item before Evidence. */
+  const stepIndex = stage === "item" ? 0 : (newItemIn ? 1 : 0) + (stage === "types" ? 1 : 0);
   const lastPiece = index === pieces.length - 1;
   /** The AI's suggestions for this photo that the Inspector hasn't answered. */
   const suggested = piece ? suggestions.filter((each) => each.evidenceId === piece.id && each.outcome === "unreviewed") : [];
-  const waiting = !!piece && step === 1 && suggested.length === 0 && waitingForAi.has(piece.id);
+  const waiting = !!piece && stage === "types" && suggested.length === 0 && waitingForAi.has(piece.id);
 
   // The wait is counted per photo, and only while the phone can reach the AI.
   const waitingOnAi = waiting && online;
@@ -125,14 +173,31 @@ export function RecordDefectFlow({
     setPieces(captured);
     setIndex(0);
     setError(null);
-    setStep(1);
+    setStage("types");
   }
 
   /** Back one piece, or to the Evidence step from the first. */
   function backFromTypes() {
     setError(null);
     if (index > 0) setIndex(index - 1);
-    else setStep(0);
+    else setStage("evidence");
+  }
+
+  /** Back from the Evidence step of a new Item to choosing it again, as long as nothing has been saved. */
+  function backToItem() {
+    setError(null);
+    setStage("item");
+  }
+
+  function chooseItem(source: ItemSource, name: string) {
+    setChosen({ lazy: createLazyItem(homeCheck, newItemIn!, source), name, shortName: "shortName" in source ? (source.shortName ?? "") : "" });
+    setError(null);
+    setStage("evidence");
+  }
+
+  /** Leaves the flow, taking along the new Item if the Evidence saved so far made one. */
+  function leave(message?: string) {
+    onClose(message, existingItem ? undefined : item?.id);
   }
 
   /** On to the next piece; after the last, back to the Item with what was saved. */
@@ -140,7 +205,7 @@ export function RecordDefectFlow({
     setError(null);
     if (index < pieces.length - 1) return setIndex(index + 1);
     const count = flowDefects.length;
-    onClose(count === 0 ? undefined : count === 1 ? "Defect saved." : `${count} Defects saved.`);
+    leave(count === 0 ? undefined : count === 1 ? "Defect saved." : `${count} Defects saved.`);
   }
 
   /** Each tap is saved at once, so an interruption keeps the Severity chosen so far (ADR 0007). */
@@ -180,7 +245,7 @@ export function RecordDefectFlow({
   async function pickType(defectType: PickedDefectType) {
     setPicking(false);
     setError(null);
-    const result = await assignDefectType(homeCheck, item.id, defectType, piece.id);
+    const result = await assignDefectType(homeCheck, item!.id, defectType, piece.id);
     if (result.kind === "needs-note") setNoting(defectType);
     else if (result.kind === "refused") setError(refusalMessage[result.reason]);
     load();
@@ -191,22 +256,27 @@ export function RecordDefectFlow({
       <Band
         navigate={navigate}
         back={
-          step === 0
-            ? { onBack: () => onClose(), label: item.displayName }
-            : { onBack: backFromTypes, label: index > 0 ? "Previous Evidence" : "Evidence" }
+          stage === "types"
+            ? { onBack: backFromTypes, label: index > 0 ? "Previous Evidence" : "Evidence" }
+            : stage === "evidence" && canChangeItem
+              ? { onBack: backToItem, label: "Add Item" }
+              : { onBack: () => leave(), label: existingItem?.displayName ?? "Area" }
         }
         unit={unit}
         title="Record a Defect"
       >
-        {areaName && <p className="unit">{areaName}</p>}
+        {areaName && <p className="unit">{chosen && newItemIn ? `${areaName} · ${item?.displayName ?? chosen.name}` : areaName}</p>}
       </Band>
       {/* The phone's back gesture leaves the flow, as Back does; what was captured stays on the Item. */}
-      <BackCloses onBack={() => onClose()} />
-      {step === 1 && <BackCloses key={index} onBack={backFromTypes} />}
+      <BackCloses onBack={() => leave()} />
+      {stage === "evidence" && canChangeItem && <BackCloses onBack={backToItem} />}
+      {stage === "types" && <BackCloses key={index} onBack={backFromTypes} />}
 
       <div className="form spaced">
-        <StepHeader titles={STEPS} step={step} />
-        {step === 1 && piece ? (
+        <StepHeader titles={newItemIn ? STEPS_FOR_NEW_ITEM : STEPS} step={stepIndex} />
+        {stage === "item" ? (
+          <ItemPicker areaId={newItemIn!} areaName={areaName ?? "this Area"} initialShortName={chosen?.shortName} onPicked={chooseItem} />
+        ) : stage === "types" && piece ? (
           <>
             <p className="muted">
               Evidence {index + 1} of {pieces.length}
@@ -341,8 +411,8 @@ export function RecordDefectFlow({
       <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={capture} />
       {picking && piece && (
         <DefectTypePicker
-          itemId={item.id}
-          itemName={item.name}
+          itemId={item!.id}
+          itemName={item!.name}
           title="Choose a Defect Type"
           recordedCodes={defects.map((defect) => defect.defectTypeCode)}
           onPicked={pickType}
@@ -355,7 +425,7 @@ export function RecordDefectFlow({
       {noting && piece && (
         <DefectEditor
           key={noting.code}
-          itemId={item.id}
+          itemId={item!.id}
           evidence={evidence}
           defectType={noting}
           initialLinked={[piece.id]}
@@ -369,7 +439,7 @@ export function RecordDefectFlow({
       )}
       {writingNote && (
         <NoteEditor
-          itemId={item.id}
+          itemId={ensureItemId}
           defects={[]}
           onSaved={() => {
             setWritingNote(false);
@@ -380,7 +450,7 @@ export function RecordDefectFlow({
       )}
       {recording && (
         <VideoRecorder
-          itemId={item.id}
+          itemId={ensureItemId}
           onSaved={() => {
             setRecording(false);
             load();
@@ -391,7 +461,7 @@ export function RecordDefectFlow({
 
       <Dock
         action={
-          step === 0 ? (
+          stage === "item" ? undefined : stage === "evidence" ? (
             <div className="dock-actions">
               <button type="button" className="primary" disabled={captured.length === 0} onClick={startDefectTypes}>
                 Next

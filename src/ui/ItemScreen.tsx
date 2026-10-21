@@ -57,7 +57,7 @@ const FLASH_SECONDS = 6;
 /** How long the message takes to slide out; matches the CSS. */
 const TOAST_OUT_MS = 120;
 
-export function ItemScreen({ id, navigate, recordingDefect = false }: { id: string; navigate: Navigate; recordingDefect?: boolean }) {
+export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navigate; saved?: string }) {
   const homeCheck = useHomeCheck();
   const [item, setItem] = useState<ItemView | null | undefined>(undefined);
   const [place, setPlace] = useState<{ areaName: string; unit: string } | null>(null);
@@ -71,9 +71,9 @@ export function ItemScreen({ id, navigate, recordingDefect = false }: { id: stri
   const [notePanel, setNotePanel] = useState<NotePanel | null>(null);
   const [recording, setRecording] = useState(false);
   /** The guided Record a Defect flow, open straight after an Item is added. */
-  const [recordingFlow, setRecordingFlow] = useState(recordingDefect);
+  const [recordingFlow, setRecordingFlow] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [flash, setFlash] = useState<Flash | null>(null);
+  const [flash, setFlash] = useState<Flash | null>(saved ? { text: saved } : null);
   /** The message is sliding out. */
   const [flashLeaving, setFlashLeaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -758,7 +758,8 @@ export function NoteEditor({
   onSaved,
   onCancel,
 }: {
-  itemId: string;
+  /** The Item's id, or a way to get it that makes a new Item first; `null` if it can't be made. */
+  itemId: string | (() => Promise<string | null>);
   note?: NoteEvidence;
   defects: DefectView[];
   onSaved: () => void;
@@ -772,7 +773,11 @@ export function NoteEditor({
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    const result = note ? await homeCheck.editNote(note.id, text) : await homeCheck.addNote(itemId, text);
+    // A new Item is only made for a note that will be saved.
+    if (!note && !text.trim()) return setError(refusalMessage["blank-note"]);
+    const id = typeof itemId === "function" ? await itemId() : itemId;
+    if (!note && !id) return;
+    const result = note ? await homeCheck.editNote(note.id, text) : await homeCheck.addNote(id!, text);
     if (result.ok) onSaved();
     else setError(refusalMessage[result.reason]);
   }

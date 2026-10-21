@@ -119,6 +119,17 @@ describe("the phone's back gesture", () => {
     expect(last()?.screen).toEqual({ name: "area", id: "a1" });
   });
 
+  test("returning to an Item doesn't show its old saved message again", () => {
+    const { history, navigation, last } = setUp();
+    navigation.go({ name: "item", id: "t1", saved: "Defect saved." });
+    expect(last()?.screen).toEqual({ name: "item", id: "t1", saved: "Defect saved." });
+    navigation.go({ name: "area", id: "a1" });
+
+    history.back();
+
+    expect(last()?.screen).toEqual({ name: "item", id: "t1" });
+  });
+
   test("can't return to a replaced screen, such as Start Inspection", () => {
     const { history, navigation, last } = setUp();
     navigation.go({ name: "start", type: "move-in" });

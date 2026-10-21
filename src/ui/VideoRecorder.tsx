@@ -23,7 +23,16 @@ function cameraProblem(): string | null {
  * (browsers otherwise default to 640×480) and leaves the bitrate to the browser; the recording
  * is never re-encoded. Closing while recording discards the recording.
  */
-export function VideoRecorder({ itemId, onSaved, onClose }: { itemId: string; onSaved: () => void; onClose: () => void }) {
+export function VideoRecorder({
+  itemId,
+  onSaved,
+  onClose,
+}: {
+  /** The Item's id, or a way to get it that makes a new Item first; `null` if it can't be made. */
+  itemId: string | (() => Promise<string | null>);
+  onSaved: () => void;
+  onClose: () => void;
+}) {
   const homeCheck = useHomeCheck();
   useBackCloses(onClose);
   const preview = useRef<HTMLVideoElement>(null);
@@ -105,7 +114,9 @@ export function VideoRecorder({ itemId, onSaved, onClose }: { itemId: string; on
       stopTracks(stream.current);
       const original = new Blob(chunks, { type: started.mimeType || chunks[0]?.type });
       try {
-        const result = await homeCheck.addVideo(itemId, original, durationSeconds);
+        const id = typeof itemId === "function" ? await itemId() : itemId;
+        if (!id) return;
+        const result = await homeCheck.addVideo(id, original, durationSeconds);
         if (result.ok) onSaved();
         else setError(refusalMessage[result.reason]);
       } finally {

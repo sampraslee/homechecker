@@ -22,9 +22,11 @@ function samePlace(a: Screen, b: Screen): boolean {
   return a.name === b.name && ("id" in a ? a.id : undefined) === ("id" in b ? b.id : undefined);
 }
 
-/** Only the place goes into history: coming back to an Area never reopens Add Item. */
+/** Only the place goes into history: coming back to an Area never reopens Add Item, nor an Item an old message. */
 function placeOnly(screen: Screen): Screen {
-  return screen.name === "area" ? { name: "area", id: screen.id } : screen;
+  if (screen.name === "area") return { name: "area", id: screen.id };
+  if (screen.name === "item") return { name: "item", id: screen.id };
+  return screen;
 }
 
 function indexOf(state: unknown): number | undefined {
