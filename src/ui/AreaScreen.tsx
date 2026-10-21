@@ -89,6 +89,14 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
     setError(null);
   }
 
+  async function toggleCompleted() {
+    if (!area) return;
+    const result = await homeCheck.setAreaCompleted(id, !area.completedAt);
+    if (!result.ok) return setError(refusalMessage[result.reason]);
+    setError(null);
+    load();
+  }
+
   return (
     <main className="screen">
       <Band
@@ -129,6 +137,7 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
             </button>
           </div>
         )}
+        {area.completedAt && <span className="badge completed">Completed</span>}
         {locked && <LockedNotice />}
       </Band>
 
@@ -233,10 +242,17 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
           editable &&
           !editing &&
           !picking && (
-            <button type="button" className="primary" onClick={() => setPicking(true)}>
-              <Plus aria-hidden="true" />
-              Add Item
-            </button>
+            <div className="dock-actions">
+              <button type="button" className="primary" onClick={() => setPicking(true)}>
+                <Plus aria-hidden="true" />
+                Add Item
+              </button>
+              {/* Marks the Area as fully inspected; pressing it again takes the mark off. */}
+              <button type="button" className="secondary" aria-pressed={Boolean(area.completedAt)} onClick={toggleCompleted}>
+                <Check aria-hidden="true" />
+                {area.completedAt ? "Completed" : "Complete"}
+              </button>
+            </div>
           )
         }
       />

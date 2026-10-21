@@ -162,6 +162,10 @@ button {
   color: var(--ink-muted);
 }
 
+.card-badge {
+  justify-self: start;
+}
+
 .badge.completed {
   background: var(--done-tint);
   color: var(--done);
@@ -880,6 +884,13 @@ body:has(:is(input, textarea, select):focus) .dock {
 .dock-actions > .secondary {
   flex: 1;
   min-height: 3.3rem;
+}
+
+/* A Completed Area: the same green as a Completed Inspection. */
+.dock-actions > .secondary[aria-pressed="true"] {
+  border-color: var(--done);
+  background: var(--done-tint);
+  color: var(--done);
 }
 
 /* Two actions of near-equal weight, stacked so a long label never wraps on a narrow phone; the main one sits on top. */

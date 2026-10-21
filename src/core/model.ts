@@ -90,6 +90,8 @@ export type Area = {
   standardAreaId: string | null;
   /** Order within the Inspection. */
   position: number;
+  /** Set while the Area is a Completed Area; cleared when anything in it changes. */
+  completedAt?: string;
 };
 
 export type AreaView = Area & { itemCount: number };
@@ -270,6 +272,8 @@ export type AiWorkLeft = { waitingForAi: number; unreviewedAiSuggestions: number
 /** How much an Inspection holds, counted across all its Areas and Items. */
 export type InspectionTotals = {
   areas: number;
+  /** How many of the Areas are Completed Areas. */
+  areasCompleted: number;
   items: number;
   evidence: number;
   defects: number;

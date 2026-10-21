@@ -148,6 +148,19 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     return (await storage.getInspection(inspectionId))?.status === "completed";
   }
 
+  /** A change inside an Area means "looked at everything" no longer holds, so it stops being Completed. Not once the Inspection is. */
+  async function clearAreaCompletion(areaId: string) {
+    const area = await storage.getArea(areaId);
+    if (!area?.completedAt || (await isLocked(area.inspectionId))) return;
+    const { completedAt: _completedAt, ...reopened } = area;
+    await storage.putArea(reopened);
+  }
+
+  async function clearCompletionOfItemsArea(itemId: string) {
+    const item = await storage.getItem(itemId);
+    if (item) await clearAreaCompletion(item.areaId);
+  }
+
   async function defectsInInspection(inspectionId: string): Promise<number> {
     const areas = await storage.listAreas(inspectionId);
     const items = (await Promise.all(areas.map((area) => storage.listItems(area.id)))).flat();
@@ -305,6 +318,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
         : { outcome: "corrected", correctedCode: defectTypeCode };
     const linked = !sameType?.evidenceIds.includes(suggestion.evidenceId) && { linkedDefectId: defect.id };
     await storage.saveAiReview({ ...suggestion, ...outcome, ...linked, reviewedAt: environment.now().toISOString() }, defect);
+    await clearCompletionOfItemsArea(suggestion.itemId);
     aiChanged();
     return { ok: true as const, defect: toDefectView(defect), addedToExisting: !!sameType };
   }
@@ -512,6 +526,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       );
       return {
         areas: areas.length,
+        areasCompleted: areas.filter((area) => area.completedAt).length,
         items: items.length,
         evidence: perItem.reduce((total, counts) => total + counts.evidence, 0),
         defects: perItem.reduce((total, counts) => total + counts.defects, 0),
@@ -629,6 +644,17 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       return { ok: true as const, area: renamed };
     },
 
+    /** Marks the Area as fully inspected, or takes the mark off. An Area with no Items can be marked. */
+    async setAreaCompleted(areaId: string, completed: boolean) {
+      const area = await storage.getArea(areaId);
+      if (!area) return areaNotFound;
+      if (await isLocked(area.inspectionId)) return inspectionCompleted;
+      const { completedAt: _completedAt, ...rest } = area;
+      const updated: Area = completed ? { ...rest, completedAt: environment.now().toISOString() } : rest;
+      await storage.putArea(updated);
+      return { ok: true as const, area: updated };
+    },
+
     async removeArea(areaId: string) {
       const area = await storage.getArea(areaId);
       if (!area) return areaNotFound;
@@ -673,6 +699,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
         position: nextPosition(existing),
       };
       await storage.putItem(item);
+      await clearAreaCompletion(areaId);
       return { ok: true as const, item: toItemView(item, 0) };
     },
 
@@ -709,6 +736,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
         return { ok: false as const, reason: "item-has-evidence" as const };
       }
       if (await deleteItemAndContents(itemId)) aiChanged();
+      await clearAreaCompletion(item.areaId);
       return { ok: true as const };
     },
 
@@ -746,6 +774,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
         attempts: 0,
       };
       await storage.putEvidence(evidence, { original }, queued);
+      await clearAreaCompletion(item.areaId);
       aiChanged();
       const photo = await makeSmallerVersions(evidence, original);
       if (aiQueueStarted) void processAiQueue();
@@ -766,6 +795,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
         processed: false,
       };
       await storage.putEvidence(evidence, { original });
+      await clearAreaCompletion(item.areaId);
       return { ok: true as const, evidence: await makeSmallerVersions(evidence, original) };
     },
 
@@ -777,6 +807,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       if (!trimmed) return blankNote;
       const evidence: NoteEvidence = { ...(await newEvidence(item)), kind: "note", text: trimmed };
       await storage.putEvidence(evidence, {});
+      await clearAreaCompletion(item.areaId);
       return { ok: true as const, evidence };
     },
 
@@ -789,6 +820,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       if (!trimmed) return blankNote;
       const edited: NoteEvidence = { ...evidence, text: trimmed };
       await storage.putEvidence(edited, {});
+      await clearCompletionOfItemsArea(evidence.itemId);
       return { ok: true as const, evidence: edited };
     },
 
@@ -821,6 +853,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
         else await storage.putDefect({ ...defect, evidenceIds: remaining });
       }
       await storage.deleteEvidence(evidenceId);
+      await clearCompletionOfItemsArea(evidence.itemId);
       if (evidence.kind === "photo") aiChanged();
       return { ok: true as const };
     },
@@ -880,6 +913,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
         position: nextPosition(existing),
       };
       await storage.putDefect(defect);
+      await clearCompletionOfItemsArea(itemId);
       return { ok: true as const, defect: toDefectView(defect) };
     },
 
@@ -900,6 +934,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       if (changes.severity && !SEVERITIES.includes(changes.severity)) return unknownSeverity;
       const edited: Defect = { ...rest, ...(note && { note }), evidenceIds, severity: changes.severity ?? defect.severity };
       await storage.putDefect(edited);
+      await clearCompletionOfItemsArea(defect.itemId);
       return { ok: true as const, defect: toDefectView(edited) };
     },
 
@@ -908,6 +943,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
       if (!defect) return defectNotFound;
       if (await isLocked(defect.inspectionId)) return inspectionCompleted;
       await storage.deleteDefect(defectId);
+      await clearCompletionOfItemsArea(defect.itemId);
       return { ok: true as const };
     },
 
@@ -1045,6 +1081,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
           ? { deleteId: defect.id }
           : { put: { ...defect, evidenceIds: others } });
       await storage.undoAiReview(unreviewed, change);
+      await clearCompletionOfItemsArea(suggestion.itemId);
       aiChanged();
       return { ok: true as const };
     },

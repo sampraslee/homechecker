@@ -124,7 +124,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
 
       <div className="section-head">
         <h2>Areas</h2>
-        <span className="count">{areas.length > 0 && areas.length}</span>
+        <span className="count">{areas.length > 0 && `${areas.filter((area) => area.completedAt).length} of ${areas.length} Completed`}</span>
       </div>
       {areas.length === 0 && (
         <p className="muted">{locked ? "No Areas." : "Add the rooms you'll inspect, starting from the front door."}</p>
@@ -136,6 +136,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
               <DoorOpen className="row-icon" aria-hidden="true" />
               <span className="grow">
                 <strong>{area.name}</strong>
+                {area.completedAt && <span className="badge completed card-badge">Completed</span>}
                 <span className="summary">{area.itemCount === 0 ? "No Items yet" : area.itemCount === 1 ? "1 Item" : `${area.itemCount} Items`}</span>
               </span>
               <ChevronRight className="chevron" aria-hidden="true" />

@@ -82,7 +82,7 @@ describe("completing an Inspection", () => {
     expectOk(await homeCheck.addNote(itemId, "Smells of damp"));
     expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "SF-SCRATCH", evidenceIds: [photo.id] }));
 
-    expect(await homeCheck.inspectionTotals(inspectionId)).toEqual({ areas: 2, items: 2, evidence: 2, defects: 1, defectsWithoutSeverity: 1 });
+    expect(await homeCheck.inspectionTotals(inspectionId)).toEqual({ areas: 2, areasCompleted: 0, items: 2, evidence: 2, defects: 1, defectsWithoutSeverity: 1 });
   });
 
   test("of an Inspection not on this phone is refused", async () => {
