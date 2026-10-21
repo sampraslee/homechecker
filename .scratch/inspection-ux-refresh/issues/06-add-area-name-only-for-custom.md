@@ -6,7 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] Picking a standard Area and tapping Next creates the Area with its default name ("Bedroom 2" when one exists) and lands in it
-- [ ] "Not in the list" goes on to the Name it step
-- [ ] Step indicator shows one step for standard Areas and two for custom
-- [ ] A standard Area can still be renamed afterwards
+- [x] Picking a standard Area and tapping Next creates the Area with its default name ("Bedroom 2" when one exists) and lands in it
+- [x] "Not in the list" goes on to the Name it step
+- [x] A standard Area whose name the Inspection already has (a second bathroom) also goes on to Name it, prefilled with the next free name ("Common Bathroom 2")
+- [x] Step indicator shows one step for standard Areas and two for custom
+- [x] A standard Area can still be renamed afterwards

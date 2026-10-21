@@ -9,6 +9,7 @@ import { refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 import { StepHeader } from "./StepHeader";
 
+/** A standard Area is added with its default name; only "Not in the list" goes on to name it. */
 const STEPS = ["Which Area?", "Name it"];
 
 const ADD_AREA_FORM_ID = "add-area-form";
@@ -28,11 +29,10 @@ const PLAN_ROOMS = [
 /** What the Inspector picked in step 1: a standard Area, or a name of their own. */
 type Choice = { kind: "standard"; id: string; name: string } | { kind: "other" };
 
-const choiceKey = (choice: Choice) => (choice.kind === "standard" ? choice.id : "other");
-
 /**
- * Adding an Area in two steps, one decision each: which Area, then what to call it. Lands in the new Area, ready to add
- * Items.
+ * Adding an Area: pick which one, and a standard Area is added at once with its standard name. If the Inspection
+ * already has an Area of that name (a second bathroom), or the Inspector picked "Not in the list", a second step asks
+ * what to call it. Lands in the new Area, ready to add Items.
  */
 export function AddAreaFlow({
   inspectionId,
@@ -50,20 +50,24 @@ export function AddAreaFlow({
   const [step, setStep] = useState(0);
   const [choice, setChoice] = useState<Choice | null>(null);
   const [name, setName] = useState("");
-  /** Which choice the name was filled in for, so going back and forward again keeps what was typed. */
+  /** Which standard Area the typed name belongs to, so going back and forward again keeps what was typed. */
   const [namedFor, setNamedFor] = useState<string | null>(null);
+  /** The name a picked standard Area would get, which differs from its standard name when the Inspection already has one. */
+  const [suggested, setSuggested] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     homeCheck.listStandardAreas().then(setStandardAreas);
   }, [homeCheck]);
 
-  async function next() {
-    if (!choice) return;
-    if (namedFor !== choiceKey(choice)) {
-      const suggested = choice.kind === "standard" ? await homeCheck.defaultAreaName(inspectionId, choice.id) : null;
-      setName(suggested?.ok ? suggested.name : "");
-      setNamedFor(choiceKey(choice));
+  /** A standard Area whose name is taken has to be named; so does one that isn't in the list. */
+  const needsName = choice?.kind === "other" || (choice?.kind === "standard" && suggested?.id === choice.id && suggested.name !== choice.name);
+
+  function next() {
+    // Starts from the suggestion, e.g. "Bathroom 2", unless a name for this very Area was already typed.
+    if (choice?.kind === "standard" && suggested?.id === choice.id && namedFor !== choice.id) {
+      setName(suggested.name);
+      setNamedFor(choice.id);
     }
     setError(null);
     setStep(1);
@@ -76,9 +80,10 @@ export function AddAreaFlow({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (step === 0) return next();
     if (!choice) return;
-    const source: AreaSource = choice.kind === "standard" ? { standardAreaId: choice.id, name } : { customName: name };
+    if (step === 0 && needsName) return next();
+    const source: AreaSource =
+      choice.kind === "other" ? { customName: name } : needsName ? { standardAreaId: choice.id, name } : { standardAreaId: choice.id };
     const result = await homeCheck.addArea(inspectionId, source);
     if (result.ok) navigate({ name: "area", id: result.area.id, addingItem: true }, { replace: true });
     else setError(refusalMessage[result.reason]);
@@ -86,16 +91,26 @@ export function AddAreaFlow({
 
   const planIds: string[] = PLAN_ROOMS.map((room) => room.id);
   const nameOf = (id: string) => standardAreas.find((area) => area.id === id)?.name ?? id;
-  const pick = (id: string) => setChoice({ kind: "standard", id, name: nameOf(id) });
+  function pick(id: string) {
+    setChoice({ kind: "standard", id, name: nameOf(id) });
+    homeCheck.defaultAreaName(inspectionId, id).then((result) => setSuggested(result.ok ? { id, name: result.name } : null));
+  }
   const picked = (id: string) => choice?.kind === "standard" && choice.id === id;
 
   const nav =
     step === 0 ? (
       <div className="dock-actions">
-        <button type="submit" form={ADD_AREA_FORM_ID} className="primary" disabled={!choice}>
-          Next
-          <ChevronRight aria-hidden="true" />
-        </button>
+        {choice && !needsName ? (
+          <button type="submit" form={ADD_AREA_FORM_ID} className="primary" disabled={choice.kind === "standard" && suggested?.id !== choice.id}>
+            <Check aria-hidden="true" />
+            Add Area
+          </button>
+        ) : (
+          <button type="submit" form={ADD_AREA_FORM_ID} className="primary" disabled={!choice}>
+            Next
+            <ChevronRight aria-hidden="true" />
+          </button>
+        )}
       </div>
     ) : (
       <div className="dock-actions">
@@ -123,7 +138,7 @@ export function AddAreaFlow({
       {step > 0 && <BackCloses key={step} onBack={back} />}
 
       <form id={ADD_AREA_FORM_ID} className="form spaced" onSubmit={submit} noValidate>
-        <StepHeader titles={STEPS} step={step} />
+        <StepHeader titles={needsName ? STEPS : STEPS.slice(0, 1)} step={step} />
         {step === 0 ? (
           <>
             <div className="plan" role="group" aria-label="Floor plan">
@@ -154,10 +169,17 @@ export function AddAreaFlow({
                 Not in the list
               </button>
             </div>
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
           </>
         ) : (
           <label>
-            {choice?.kind === "other" ? "What is this Area called?" : "Name of this Area"}
+            {choice?.kind === "standard"
+              ? `There is already a ${choice.name}. What is this one called?`
+              : "What is this Area called?"}
             <input value={name} onChange={(event) => setName(event.target.value)} autoFocus aria-invalid={Boolean(error)} />
             {error && (
               <span className="error" role="alert">

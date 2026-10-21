@@ -26,7 +26,7 @@ The Inspections list mixes Move-ins and Move-outs and says little about each Ins
 - Export exists only for a Completed Inspection. On a Completed Inspection the `Complete Inspection` button becomes `Export`. A Draft cannot be exported.
 
 ### Add Area
-Step 2, `Name it`, appears only when the Inspector picked "Not in the list". A standard Area takes its default name ("Bedroom", then "Bedroom 2") and can be renamed later.
+Step 2, `Name it`, appears only when the Inspector picked "Not in the list", or picked a standard Area whose name the Inspection already has (a second bathroom). There it is prefilled with the next free name ("Common Bathroom 2") for the Inspector to keep or change. Any other standard Area is added at once under its standard name and can be renamed later.
 
 ### Add Item and Record a Defect
 - When the Inspector adds a **new** Item, `Add Item` is step 1 of Record a Defect, so the flow has three steps. Recording a Defect on an existing Item skips it and keeps its two steps (Evidence, then Defect Types).
