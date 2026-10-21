@@ -23,6 +23,7 @@ import { useHomeCheck } from "./homeCheckContext";
 import { MediaImage, MediaThumbnail, useMediaUrl } from "./MediaImage";
 import { useAiChanges } from "./useAiChanges";
 import { useArrivals } from "./useArrivals";
+import { RecordDefectFlow } from "./RecordDefectFlow";
 import { useLocked } from "./useLocked";
 import { VideoRecorder } from "./VideoRecorder";
 
@@ -54,7 +55,7 @@ const FLASH_SECONDS = 6;
 /** How long the message takes to slide out; matches the CSS. */
 const TOAST_OUT_MS = 120;
 
-export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate }) {
+export function ItemScreen({ id, navigate, recordingDefect = false }: { id: string; navigate: Navigate; recordingDefect?: boolean }) {
   const homeCheck = useHomeCheck();
   const [item, setItem] = useState<ItemView | null | undefined>(undefined);
   const [place, setPlace] = useState<{ areaName: string; unit: string } | null>(null);
@@ -67,6 +68,8 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
   const [defectPanel, setDefectPanel] = useState<DefectPanel | null>(null);
   const [notePanel, setNotePanel] = useState<NotePanel | null>(null);
   const [recording, setRecording] = useState(false);
+  /** The guided Record a Defect flow, open straight after an Item is added. */
+  const [recordingFlow, setRecordingFlow] = useState(recordingDefect);
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState<Flash | null>(null);
   /** The message is sliding out. */
@@ -224,6 +227,22 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
     );
   }
 
+  // Recording a Defect takes the whole screen, a step at a time.
+  if (recordingFlow && editable) {
+    return (
+      <RecordDefectFlow
+        item={item}
+        unit={place?.unit}
+        areaName={place?.areaName}
+        navigate={navigate}
+        onClose={() => {
+          setRecordingFlow(false);
+          load();
+        }}
+      />
+    );
+  }
+
   const photos = evidence.filter((e) => e.kind === "photo");
   /** Evidence that no Defect uses yet: each waits for a Defect Type to be assigned to it. */
   const assignedIds = new Set(defects.flatMap((defect) => defect.evidenceIds));
@@ -296,6 +315,12 @@ export function ItemScreen({ id, navigate }: { id: string; navigate: Navigate })
         <h2>Evidence and Defects</h2>
         <span className="count">{counts.filter(Boolean).join(" · ")}</span>
       </div>
+      {editable && (
+        <button type="button" className="primary record-defect" onClick={() => setRecordingFlow(true)}>
+          <Plus aria-hidden="true" />
+          Record a Defect
+        </button>
+      )}
       {moveIn && (
         <MoveInLine
           record={moveIn}
@@ -681,7 +706,7 @@ function VideoPlayer({ evidenceId }: { evidenceId: string }) {
   return url && <video src={url} className="viewer-image square" controls playsInline />;
 }
 
-function NoteEditor({
+export function NoteEditor({
   itemId,
   note,
   defects,

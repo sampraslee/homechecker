@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] "Record a Defect" starts from the Item screen and straight after adding an Item
-- [ ] Step 1 captures photos, video and notes using the existing capture behaviour
-- [ ] Next is disabled until there is at least one piece of Evidence of any kind
-- [ ] Unavailable on a Completed Inspection
-- [ ] Back leaves the flow without losing captured Evidence
+- [x] "Record a Defect" starts from the Item screen and straight after adding an Item
+- [x] Step 1 captures photos, video and notes using the existing capture behaviour
+- [x] Next is disabled until there is at least one piece of Evidence of any kind captured in this flow (Evidence already on the Item does not count). Until ticket 05 builds step 2, Next returns to the Item screen
+- [x] Unavailable on a Completed Inspection
+- [x] Back leaves the flow without losing captured Evidence

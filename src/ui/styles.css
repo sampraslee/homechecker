@@ -1892,3 +1892,9 @@ body:has(.sheet-backdrop) .dock {
   margin: var(--space-2) 0 var(--space-4);
   text-align: center;
 }
+
+/* The Item screen's way into the guided flow, full width above the Evidence list. */
+.record-defect {
+  width: 100%;
+  margin-bottom: var(--space-4);
+}

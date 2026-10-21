@@ -13,7 +13,8 @@ export type Screen =
   | { name: "inspection"; id: string }
   /** `addingItem`: opened straight after the Area was added, so Add Item is already open. */
   | { name: "area"; id: string; addingItem?: boolean }
-  | { name: "item"; id: string }
+  /** `recordingDefect`: opened straight after the Item was added, so Record a Defect is already open. */
+  | { name: "item"; id: string; recordingDefect?: boolean }
   | { name: "settings" };
 
 /**
@@ -73,7 +74,7 @@ function CurrentScreen({ screen, navigate }: { screen: Screen; navigate: Navigat
     case "area":
       return <AreaScreen id={screen.id} addingItem={screen.addingItem} navigate={navigate} />;
     case "item":
-      return <ItemScreen id={screen.id} navigate={navigate} />;
+      return <ItemScreen id={screen.id} navigate={navigate} recordingDefect={screen.recordingDefect} />;
     case "settings":
       return <SettingsScreen navigate={navigate} />;
   }

@@ -222,8 +222,8 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
         <ItemPicker
           areaId={id}
           areaName={area.name}
-          // Straight into the new Item, ready to take its photos.
-          onAdded={(itemId) => navigate({ name: "item", id: itemId })}
+          // Straight into the new Item, ready to record its first Defect.
+          onAdded={(itemId) => navigate({ name: "item", id: itemId, recordingDefect: true })}
           onCancel={() => setPicking(false)}
         />
       )}
