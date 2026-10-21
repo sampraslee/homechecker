@@ -252,13 +252,14 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     defectTypeCode: string,
     note: string | undefined,
     severity: Severity | undefined,
+    withoutSeverity = false,
   ) {
     if (!findDefectType(referenceData, defectTypeCode)) return unknownDefectType;
     const existing = await storage.listDefects(suggestion.itemId);
     const sameType = existing.find((other) => other.defectTypeCode === defectTypeCode);
     const trimmedNote = note?.trim();
     if (!sameType && needsNote(defectTypeCode) && !trimmedNote) return noteRequired;
-    if (!sameType && !severity) return severityRequired;
+    if (!sameType && !severity && !withoutSeverity) return severityRequired;
     if (severity && !SEVERITIES.includes(severity)) return unknownSeverity;
     const defect: Defect = sameType
       ? withEvidence(sameType, suggestion.evidenceId)
@@ -271,7 +272,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
           source: "ai-suggested",
           aiSuggestionId: suggestion.id,
           ...(trimmedNote && { note: trimmedNote }),
-          severity,
+          ...(severity && { severity }),
           evidenceIds: [suggestion.evidenceId],
           position: nextPosition(existing),
         };
@@ -983,14 +984,14 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     async confirmAiSuggestion(suggestionId: string, confirmation: AiConfirmInput = {}) {
       const found = await findUnreviewed(suggestionId);
       if (!found.ok) return found;
-      return acceptAiSuggestion(found.suggestion, found.suggestion.defectTypeCode, confirmation.note, confirmation.severity);
+      return acceptAiSuggestion(found.suggestion, found.suggestion.defectTypeCode, confirmation.note, confirmation.severity, confirmation.withoutSeverity);
     },
 
     /** Records the Defect Type the Inspector chose in place of the AI's, with the photo as Evidence. Choosing the AI's own counts as confirming. */
     async correctAiSuggestion(suggestionId: string, correction: AiCorrectionInput) {
       const found = await findUnreviewed(suggestionId);
       if (!found.ok) return found;
-      return acceptAiSuggestion(found.suggestion, correction.defectTypeCode, correction.note, correction.severity);
+      return acceptAiSuggestion(found.suggestion, correction.defectTypeCode, correction.note, correction.severity, correction.withoutSeverity);
     },
 
     /** Records that the AI Suggestion is wrong; no Defect is made. */

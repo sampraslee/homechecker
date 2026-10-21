@@ -86,6 +86,17 @@ describe("confirming or correcting an AI Suggestion", () => {
     expect(await homeCheck.listAiSuggestions(itemId)).toMatchObject([{ outcome: "unreviewed" }]);
   });
 
+  test("makes the Defect with no Severity when the Severity is to be asked for afterwards", async () => {
+    const { homeCheck, itemId, suggestion } = await withSuggestion();
+
+    expectOk(await homeCheck.confirmAiSuggestion(suggestion.id, { withoutSeverity: true }));
+
+    const [defect] = await homeCheck.listDefects(itemId);
+    expect(defect).toMatchObject({ source: "ai-suggested", aiSuggestionId: suggestion.id });
+    expect(defect.severity).toBeUndefined();
+    expect(await homeCheck.listAiSuggestions(itemId)).toMatchObject([{ outcome: "confirmed" }]);
+  });
+
   test("gives the new Defect the Severity", async () => {
     const { homeCheck, itemId, suggestion } = await withSuggestion();
 

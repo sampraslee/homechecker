@@ -276,7 +276,12 @@ export type InspectionTotals = {
 };
 
 /** What the Inspector adds when confirming an AI Suggestion: a note for a new Defect, needed for Other / Unknown. */
-export type AiConfirmInput = { note?: string; severity?: Severity };
+export type AiConfirmInput = {
+  note?: string;
+  severity?: Severity;
+  /** Make the Defect now and give it a Severity afterwards, as the guided flow does in its Severity step. */
+  withoutSeverity?: boolean;
+};
 
 /** The Defect Type the Inspector chose in place of the AI's, and a note for a new Defect. */
 export type AiCorrectionInput = AiConfirmInput & { defectTypeCode: string };

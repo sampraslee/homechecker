@@ -1917,3 +1917,37 @@ span.chip {
   height: 1rem;
   flex: none;
 }
+
+/* AI Suggestions in the Defect flow: the loading row, and the note when the AI is slow or the phone is offline. */
+.ai-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.ai-status svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: none;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinning {
+    animation: none;
+  }
+}
+
+.ai-choices h3 {
+  margin: 0 0 var(--space-2);
+}

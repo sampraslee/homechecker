@@ -6,10 +6,10 @@
 
 **Status:** ready-for-agent
 
-- [ ] Existing AI Suggestions for the photo appear first as one-tap choices
-- [ ] Pending suggestions show a loading row only while online
-- [ ] After 10 seconds the loading row becomes the "taking longer than usual" message
-- [ ] Offline shows a note instead of a spinner
-- [ ] The picker is usable throughout
-- [ ] Choosing an AI Suggestion continues to Severity like any other Defect
-- [ ] Tests cover pending, timed-out, offline and already-arrived cases
+- [x] Existing AI Suggestions for the photo appear first as one-tap choices
+- [x] Pending suggestions show a loading row only while online
+- [x] After 10 seconds the loading row becomes the "taking longer than usual" message
+- [x] Offline shows a note instead of a spinner
+- [x] The picker is usable throughout
+- [x] Choosing an AI Suggestion makes the AI-suggested Defect at once, with its Severity to be asked in step 3 (core: `withoutSeverity`), like any other Defect
+- [ ] Tests cover pending, timed-out, offline and already-arrived cases. The core part has a test (confirm now, Severity later); the screen states have no automated test because the repo has no UI test setup, and were checked by hand in the browser (loading row, 10-second message, offline note, arrived chips)

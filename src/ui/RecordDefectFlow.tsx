@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
-import { Camera, ChevronLeft, ChevronRight, NotebookPen, Plus, Video, X } from "lucide-react";
-import { isMedia, isNote, type DefectView, type Evidence, type ItemView } from "../core";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { Camera, ChevronLeft, ChevronRight, LoaderCircle, NotebookPen, Plus, Video, X } from "lucide-react";
+import { isMedia, isNote, type AiSuggestionView, type DefectView, type Evidence, type ItemView } from "../core";
 import type { Navigate } from "./App";
 import { assignDefectType } from "./assignDefectType";
-import { BackCloses } from "./backCloses";
+import { BackCloses, useBackCloses } from "./backCloses";
 import { Band } from "./Band";
 import { DefectEditor, DefectTypePicker, type PickedDefectType } from "./DefectPanels";
 import { Dock } from "./Dock";
@@ -12,9 +12,13 @@ import { useHomeCheck } from "./homeCheckContext";
 import { MediaThumbnail } from "./MediaImage";
 import { NoteEditor } from "./ItemScreen";
 import { StepHeader } from "./StepHeader";
+import { useAiChanges } from "./useAiChanges";
 import { VideoRecorder } from "./VideoRecorder";
 
 const STEPS = ["Evidence", "Defect Types", "Severity"];
+
+/** How long the Inspector waits for AI Suggestions before being told to carry on without them. */
+const AI_WAIT_SECONDS = 10;
 
 /**
  * Recording a Defect as a guided flow: Evidence, then a Defect Type for each piece, then a Severity (ADR 0006, 0007).
@@ -53,6 +57,14 @@ export function RecordDefectFlow({
   const [recording, setRecording] = useState(false);
   const [writingNote, setWritingNote] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<AiSuggestionView[]>([]);
+  /** Photos still waiting for the AI. */
+  const [waitingForAi, setWaitingForAi] = useState<Set<string>>(new Set());
+  const [online, setOnline] = useState(() => homeCheck.isOnline());
+  /** The AI took longer than `AI_WAIT_SECONDS` for the current photo. */
+  const [aiSlow, setAiSlow] = useState(false);
+  /** An AI Suggestion for a Defect Type that needs a note, waiting for the note. */
+  const [notingSuggestion, setNotingSuggestion] = useState<AiSuggestionView | null>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -60,11 +72,13 @@ export function RecordDefectFlow({
     setBefore((known) => known ?? new Set(all.map((each) => each.id)));
     setEvidence(all);
     setDefects(await homeCheck.listDefects(item.id));
+    setSuggestions(await homeCheck.listAiSuggestions(item.id));
+    setWaitingForAi(new Set((await homeCheck.listWaitingForAi()).map((entry) => entry.evidenceId)));
   }, [homeCheck, item.id]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Also reloads as AI Suggestions arrive while a piece of Evidence is open.
+  useAiChanges(load);
+  useEffect(() => homeCheck.onOnlineChange(setOnline), [homeCheck]);
 
   const captured = before ? evidence.filter((each) => !before.has(each.id)) : [];
 
@@ -86,6 +100,19 @@ export function RecordDefectFlow({
   }
 
   const piece = pieces[index];
+  /** The AI's suggestions for this photo that the Inspector hasn't answered. */
+  const suggested = piece ? suggestions.filter((each) => each.evidenceId === piece.id && each.outcome === "unreviewed") : [];
+  const waiting = !!piece && step === 1 && suggested.length === 0 && waitingForAi.has(piece.id);
+
+  // The wait is counted per photo, and only while the phone can reach the AI.
+  const waitingOnAi = waiting && online;
+  const waitingFor = piece?.id;
+  useEffect(() => {
+    setAiSlow(false);
+    if (!waitingOnAi) return;
+    const timer = setTimeout(() => setAiSlow(true), AI_WAIT_SECONDS * 1000);
+    return () => clearTimeout(timer);
+  }, [waitingOnAi, waitingFor]);
   /** The Defects this piece of Evidence is assigned to. */
   const assigned = piece ? defects.filter((defect) => defect.evidenceIds.includes(piece.id)) : [];
 
@@ -122,6 +149,17 @@ export function RecordDefectFlow({
         ? await homeCheck.removeDefect(defect.id)
         : await homeCheck.editDefect(defect.id, { evidenceIds: remaining });
     if (!result.ok) setError(refusalMessage[result.reason]);
+    load();
+  }
+
+  /** One tap makes the Defect from the AI's suggestion, marked AI-suggested; its Severity is asked for in step 3. */
+  async function acceptSuggestion(suggestion: AiSuggestionView, note?: string) {
+    setError(null);
+    const needsNote = suggestion.noteRequired && !defects.some((defect) => defect.defectTypeCode === suggestion.defectTypeCode);
+    if (needsNote && note === undefined) return setNotingSuggestion(suggestion);
+    const result = await homeCheck.confirmAiSuggestion(suggestion.id, { note, withoutSeverity: true });
+    if (result.ok) setNotingSuggestion(null);
+    else setError(refusalMessage[result.reason]);
     load();
   }
 
@@ -181,6 +219,37 @@ export function RecordDefectFlow({
                 ))}
               </div>
             )}
+            {suggested.length > 0 && (
+              <div className="ai-choices">
+                <h3>AI suggests</h3>
+                <div className="chips">
+                  {suggested.map((suggestion) => (
+                    <button
+                      key={suggestion.id}
+                      type="button"
+                      className="chip defect-chip ai"
+                      title={`${suggestion.defectTypeName}, ${suggestion.confidence.toLowerCase()} confidence`}
+                      onClick={() => acceptSuggestion(suggestion)}
+                    >
+                      {suggestion.defectTypeName}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {waiting &&
+              (!online ? (
+                <p className="muted ai-status">Offline. Suggestions will appear in the AI Suggestions list later.</p>
+              ) : aiSlow ? (
+                <p className="notice ai-status" role="status">
+                  Suggestions are taking longer than usual. Carry on and they'll appear in the AI Suggestions list.
+                </p>
+              ) : (
+                <p className="muted ai-status" role="status">
+                  <LoaderCircle className="spinning" aria-hidden="true" />
+                  Looking for suggestions…
+                </p>
+              ))}
             <button type="button" className="secondary" onClick={() => setPicking(true)}>
               <Plus aria-hidden="true" />
               {assigned.length === 0 ? "Choose a Defect Type" : "Add another Defect Type"}
@@ -261,6 +330,9 @@ export function RecordDefectFlow({
           onCancel={() => setPicking(false)}
         />
       )}
+      {notingSuggestion && (
+        <AiSuggestionNote suggestion={notingSuggestion} onSave={(note) => acceptSuggestion(notingSuggestion, note)} onCancel={() => setNotingSuggestion(null)} />
+      )}
       {noting && piece && (
         <DefectEditor
           key={noting.code}
@@ -323,5 +395,36 @@ export function RecordDefectFlow({
         }
       />
     </main>
+  );
+}
+
+/** The note a suggested Defect Type such as Other / Unknown needs before the Defect can be made. */
+function AiSuggestionNote({ suggestion, onSave, onCancel }: { suggestion: AiSuggestionView; onSave: (note: string) => void; onCancel: () => void }) {
+  useBackCloses(onCancel);
+  const [note, setNote] = useState("");
+
+  function save(event: FormEvent) {
+    event.preventDefault();
+    onSave(note);
+  }
+
+  return (
+    <section className="panel">
+      <div className="card-row">
+        <h2>{suggestion.defectTypeName}</h2>
+        <button type="button" className="link" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+      <form className="form" onSubmit={save} noValidate>
+        <label>
+          Note (required): describe what you see
+          <textarea className="note-input" value={note} onChange={(event) => setNote(event.target.value)} autoFocus />
+        </label>
+        <button type="submit" className="primary">
+          Add Defect
+        </button>
+      </form>
+    </section>
   );
 }
