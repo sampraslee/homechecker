@@ -4,6 +4,7 @@ import { formatAddress, type AreaView, type Inspection, type InspectionTotals } 
 import type { Navigate } from "./App";
 import { AddAreaFlow } from "./AddAreaFlow";
 import { Band } from "./Band";
+import { unitHeading } from "./unitHeading";
 import { LockedNotice } from "./LockedNotice";
 import { Dock } from "./Dock";
 import { ExportPanel } from "./ExportPanel";
@@ -63,7 +64,6 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
       <Band
         navigate={navigate}
         back={{ to: { name: "list" }, label: "Inspections" }}
-        unit={formatAddress(inspection.address)}
         title={inspectionTypeLabel[inspection.type]}
         // Completed shows as the "Completed · Locked" pill below, so the badge is only for a Draft.
         action={!locked && <span className={`badge ${inspection.status}`}>{inspectionStatusLabel[inspection.status]}</span>}
@@ -71,7 +71,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
         {locked && <LockedNotice />}
       </Band>
 
-      {/* Who and when, in one short line, so the Areas start near the top (UX-032). The full address is in the Band. */}
+      {/* Who and when, in one short line, so the Areas start near the top (UX-032). */}
       <p className="inspection-meta">
         {[
           inspection.inspectorName,
@@ -92,6 +92,7 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
         </p>
       )}
 
+      <h2 className="unit-heading">{unitHeading(inspection.address)}</h2>
       <div className="section-head">
         <h2>Areas</h2>
         <span className="count">{areas.length > 0 && `${areas.filter((area) => area.completedAt).length} of ${areas.length} Completed`}</span>
@@ -117,9 +118,11 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
       </ul>
 
       {/* The end of an Inspection: complete it (or, once Completed, export it), and delete it, set apart. */}
-      <div className="section-head">
-        <h2>{locked ? "Export" : "Finish"}</h2>
-      </div>
+      {locked && (
+        <div className="section-head">
+          <h2>Export</h2>
+        </div>
+      )}
       {locked ? (
         <ExportPanel
           inspectionId={id}
