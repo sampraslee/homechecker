@@ -113,8 +113,10 @@ The blueprint's section 3 label list is **superseded** by the coded Dictionary a
 For every photo, keep three versions:
 
 1. **Original** — kept, never overwritten or deleted by the app.
-2. **Evidence copy** — longest edge ~1920–2048 px, JPEG ~80–85% quality. Sent to the AI and used in the export.
+2. **Evidence copy** — longest edge 1024 px, JPEG ~80–85% quality. Sent to the AI only; it is not part of the export.
 3. **Thumbnail** — small, for fast display in the app and embedding in the Excel file.
+
+The export carries each photo's and video's original, unchanged.
 
 Videos are not compressed or re-encoded in the prototype; the original is kept, plus a thumbnail.
 

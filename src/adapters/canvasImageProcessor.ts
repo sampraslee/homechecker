@@ -1,6 +1,7 @@
+import { fitWithin } from "../core/fitWithin";
 import type { ImageProcessor } from "../core/ports";
 
-const EVIDENCE_COPY_LONGEST_EDGE = 2048;
+const EVIDENCE_COPY_LONGEST_EDGE = 1024;
 const EVIDENCE_COPY_QUALITY = 0.82;
 const THUMBNAIL_LONGEST_EDGE = 320;
 const THUMBNAIL_QUALITY = 0.7;
@@ -81,9 +82,7 @@ async function resizeToJpeg(
   longestEdge: number,
   quality: number,
 ): Promise<Blob> {
-  const scale = Math.min(1, longestEdge / Math.max(sourceWidth, sourceHeight));
-  const width = Math.round(sourceWidth * scale);
-  const height = Math.round(sourceHeight * scale);
+  const { width, height } = fitWithin({ width: sourceWidth, height: sourceHeight }, longestEdge);
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;

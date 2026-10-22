@@ -70,6 +70,18 @@ _Avoid_: Priority, risk, urgency, grade
 A photo, video, audio recording or text note captured for one Item to support one or more of that Item's Defects.
 _Avoid_: Media, attachment, proof
 
+**Original**:
+A photo or video exactly as the Inspector recorded it. Never compressed, changed or deleted by the app, and included in the export.
+_Avoid_: Full-size, raw, source
+
+**Evidence Copy**:
+A smaller version of a photo, made for AI analysis. Only photos have one; it is not included in the export.
+_Avoid_: AI copy, compressed copy, upload
+
+**Thumbnail**:
+A small preview of a photo or video, shown in the app and embedded in the spreadsheet.
+_Avoid_: Icon, preview image
+
 **AI Suggestion**:
 A Defect Type proposed by the vision model for a photo. It only becomes a Defect when a person confirms it, and is kept separately from the confirmed result. A rejected one is no longer shown to the Inspector but stays on record as rejected.
 _Avoid_: AI label, prediction, classification
