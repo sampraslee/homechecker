@@ -1552,12 +1552,52 @@ button:active:not(:disabled) {
 }
 
 /* The step line and its title sit close under the bar, as one heading block. */
-.form > .steps + .muted {
+.step-heading > .muted {
   margin: 0;
 }
 
-.form > .steps + .muted + h2 {
+.step-heading > h2 {
   margin-top: 0;
+}
+
+/* Above a footer the bar has no gap beneath it but the Dock's own. */
+.dock .steps {
+  margin-bottom: var(--space-1);
+}
+
+/* Back and Next on every step of a guided flow: an underlined link on the left, a dark button on the right. */
+.step-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.step-back {
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  min-height: 3rem;
+  padding: 0 var(--space-2);
+}
+
+.step-next {
+  min-height: 3rem;
+  padding: 0 var(--space-5);
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--ink);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+}
+
+.step-next:disabled {
+  background: var(--line-soft);
+  color: var(--ink-muted);
 }
 
 /* The Move-ins | Move-outs switch: plain text with an underline on the current one. */
