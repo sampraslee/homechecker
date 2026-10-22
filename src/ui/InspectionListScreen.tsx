@@ -4,8 +4,10 @@ import type { InspectionSummary, InspectionType } from "../core";
 import type { Navigate } from "./App";
 import { Band } from "./Band";
 import { Dock } from "./Dock";
-import { formatDate, inspectionStatusLabel, inspectionTypeLabel, shortAddress } from "./format";
+import { defectCountLabel } from "./defectCount";
+import { formatDate, inspectionStatusLabel, inspectionTypeLabel } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
+import { unitHeading } from "./unitHeading";
 
 const TABS: { type: InspectionType; label: string; empty: string }[] = [
   { type: "move-in", label: "Move-ins", empty: "No Move-ins on this phone yet. Start one when you reach the Unit." },
@@ -68,10 +70,12 @@ export function InspectionListScreen({ navigate }: { navigate: Navigate }) {
                 <span className={`badge ${inspection.status}`}>{inspectionStatusLabel[inspection.status]}</span>
               </span>
               <span className="card-heading">
-                <strong>{shortAddress(inspection.address)}</strong>
-                <span className="muted">Inspected on {formatDate(inspection.startedAt)}</span>
-                <span className="muted">{inspection.defectCount === 1 ? "1 Defect" : `${inspection.defectCount} Defects`}</span>
-                <span className="more-info">More info</span>
+                <strong className="card-title">{unitHeading(inspection.address)}</strong>
+                <span className="card-meta muted">
+                  <span>{formatDate(inspection.startedAt)}</span>
+                  <span className="meta-dot" aria-hidden="true" />
+                  <span className={inspection.defectCount > 0 ? "defect-count" : undefined}>{defectCountLabel(inspection.defectCount)}</span>
+                </span>
               </span>
               {inspection.status === "completed" && !inspection.lastExportedAt && (
                 <span className="unexported">
