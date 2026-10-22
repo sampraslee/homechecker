@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { Camera, Check, ChevronLeft, ChevronRight, LoaderCircle, NotebookPen, Plus, Video, X } from "lucide-react";
+import { Camera, ChevronRight, LoaderCircle, NotebookPen, Plus, Video, X } from "lucide-react";
 import { isMedia, isNote, type AiSuggestionView, type DefectView, type Evidence, type ItemSource, type ItemView, type Severity } from "../core";
 import type { Navigate } from "./App";
 import { assignDefectType } from "./assignDefectType";
@@ -13,7 +13,8 @@ import { createLazyItem } from "./lazyItem";
 import { ItemPicker } from "./ItemPicker";
 import { MediaThumbnail } from "./MediaImage";
 import { NoteEditor } from "./ItemScreen";
-import { StepHeader } from "./StepHeader";
+import { StepFooter } from "./StepFooter";
+import { StepBar, StepHeader } from "./StepHeader";
 import { useAiChanges } from "./useAiChanges";
 import { VideoRecorder } from "./VideoRecorder";
 
@@ -148,7 +149,7 @@ export function RecordDefectFlow({
   const piece = pieces[index];
   /** Where the Inspector is among the steps: a new Item has Add Item before Evidence. */
   const stepIndex = stage === "item" ? 0 : (newItemIn ? 1 : 0) + (stage === "types" ? 1 : 0);
-  const lastPiece = index === pieces.length - 1;
+  const titles = newItemIn ? STEPS_FOR_NEW_ITEM : STEPS;
   /** The AI's suggestions for this photo that the Inspector hasn't answered. */
   const suggested = piece ? suggestions.filter((each) => each.evidenceId === piece.id && each.outcome === "unreviewed") : [];
   const waiting = !!piece && stage === "types" && suggested.length === 0 && waitingForAi.has(piece.id);
@@ -181,6 +182,12 @@ export function RecordDefectFlow({
     setError(null);
     if (index > 0) setIndex(index - 1);
     else setStage("evidence");
+  }
+
+  /** Back from the Evidence step: to choosing the Item for a new one, otherwise out of the flow. */
+  function backFromEvidence() {
+    if (canChangeItem) backToItem();
+    else leave();
   }
 
   /** Back from the Evidence step of a new Item to choosing it again, as long as nothing has been saved. */
@@ -255,13 +262,6 @@ export function RecordDefectFlow({
     <main className="screen">
       <Band
         navigate={navigate}
-        back={
-          stage === "types"
-            ? { onBack: backFromTypes, label: index > 0 ? "Previous Evidence" : "Evidence" }
-            : stage === "evidence" && canChangeItem
-              ? { onBack: backToItem, label: "Add Item" }
-              : { onBack: () => leave(), label: existingItem?.displayName ?? "Area" }
-        }
         unit={unit}
         title="Record a Defect"
       >
@@ -273,7 +273,7 @@ export function RecordDefectFlow({
       {stage === "types" && <BackCloses key={index} onBack={backFromTypes} />}
 
       <div className="form spaced">
-        <StepHeader titles={newItemIn ? STEPS_FOR_NEW_ITEM : STEPS} step={stepIndex} />
+        <StepHeader titles={titles} step={stepIndex} bar={false} />
         {stage === "item" ? (
           <ItemPicker areaId={newItemIn!} areaName={areaName ?? "this Area"} initialShortName={chosen?.shortName} onPicked={chooseItem} />
         ) : stage === "types" && piece ? (
@@ -460,26 +460,13 @@ export function RecordDefectFlow({
       )}
 
       <Dock
+        message={<StepBar titles={titles} step={stepIndex} />}
         action={
           stage === "item" ? undefined : stage === "evidence" ? (
-            <div className="dock-actions">
-              <button type="button" className="primary" disabled={captured.length === 0} onClick={startDefectTypes}>
-                Next
-                <ChevronRight aria-hidden="true" />
-              </button>
-            </div>
+            <StepFooter onBack={backFromEvidence} onNext={startDefectTypes} nextDisabled={captured.length === 0} />
           ) : (
-            <div className="dock-actions">
-              <button type="button" className="secondary" onClick={backFromTypes}>
-                <ChevronLeft aria-hidden="true" />
-                Back
-              </button>
-              {/* A piece with a Defect Type moves on, or finishes on the last one; one without says it shows no Defect (ADR 0003, 0006). */}
-              <button type="button" className="primary" disabled={needsSeverity} onClick={nextPiece}>
-                {assigned.length === 0 ? "No Defect here" : lastPiece ? "Done" : "Next Evidence"}
-                {lastPiece && assigned.length > 0 ? <Check aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}
-              </button>
-            </div>
+            /* A piece with a Defect Type moves on, or finishes on the last one; one without is saved with no Defect (ADR 0003, 0006). */
+            <StepFooter onBack={backFromTypes} onNext={nextPiece} nextDisabled={needsSeverity} />
           )
         }
       />
