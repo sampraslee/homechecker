@@ -251,27 +251,43 @@ h3 {
   margin-top: var(--space-4);
 }
 
-/* The review of a Start Inspection address: each group's values, with an Edit under it. */
-.address-review-group {
-  margin-top: var(--space-4);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--line-soft);
+/* The Start Inspection address: all fields in one bordered block, divided by thin lines, after the one-page address form of INS-12. */
+.address-block {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  overflow: hidden;
 }
 
-.address-review dl {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: var(--space-1) var(--space-4);
+.address-block > * + * {
+  border-top: 1px solid var(--line);
+}
+
+.address-block > .suggestions {
   margin: 0;
+  border: 0;
+  border-radius: 0;
 }
 
-.address-review dt {
+.address-row label {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
   color: var(--ink-muted);
 }
 
-.address-review dd {
-  margin: 0;
-  overflow-wrap: anywhere;
+.form .address-row input,
+.form .address-row select {
+  min-height: 2.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-md);
+}
+
+.address-row:has([aria-invalid="true"]) {
+  box-shadow: inset 3px 0 0 var(--danger);
 }
 
 .secondary {
