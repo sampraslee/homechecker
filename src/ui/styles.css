@@ -1907,6 +1907,11 @@ body:has(.sheet-backdrop) .dock {
   font-size: var(--text-sm);
 }
 
+/* The Unit and building, as the heading above the Areas. */
+.unit-heading {
+  margin: var(--space-3) 0 0;
+}
+
 /* The storage line's icon sits on its first line when the text wraps (UX-034). */
 .unexported > .status-icon {
   margin-top: 0.15em;
