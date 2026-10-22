@@ -2159,3 +2159,37 @@ span.chip {
 .evidence-card.confirm-card h2 {
   margin-top: 0;
 }
+
+/* The usual Items for an Area: two-column icon cards (INS-05). Tapping selects; Next confirms. */
+.usual-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+button.usual-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 88px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+button.usual-item > .lucide {
+  color: var(--teal-deep);
+}
+
+button.usual-item[aria-pressed="true"] {
+  border: 2px solid var(--teal-deep);
+  padding: calc(var(--space-3) - 1px) calc(var(--space-4) - 1px);
+  background: var(--teal-tint);
+}
