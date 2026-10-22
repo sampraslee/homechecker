@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Search } from "lucide-react";
 import type { CatalogItem, ItemChoices, ItemSource } from "../core";
 import { refusalMessage } from "./format";
+import { itemIcon } from "./itemIcon";
 import { useHomeCheck } from "./homeCheckContext";
 
 /**
@@ -53,18 +54,30 @@ export function ItemPicker({
     ? null
     : [...choices.shownFirst, ...choices.others].filter((item) => item.name.toLowerCase().includes(wanted));
 
+  const isSelected = (item: CatalogItem) => Boolean(selected && "catalogItemId" in selected && selected.catalogItemId === item.id);
+
   const chips = (items: CatalogItem[]) => (
     <div className="chips">
       {items.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          className="chip"
-          aria-pressed={Boolean(selected && "catalogItemId" in selected && selected.catalogItemId === item.id)}
-          onClick={() => pickCatalogItem(item)}>
+        <button key={item.id} type="button" className="chip" aria-pressed={isSelected(item)} onClick={() => pickCatalogItem(item)}>
           {item.name}
         </button>
       ))}
+    </div>
+  );
+
+  /** The usual Items: two to a row, each with its icon and name. */
+  const cards = (items: CatalogItem[]) => (
+    <div className="usual-items">
+      {items.map((item) => {
+        const Icon = itemIcon(item.id);
+        return (
+          <button key={item.id} type="button" className="usual-item" aria-pressed={isSelected(item)} onClick={() => pickCatalogItem(item)}>
+            <Icon aria-hidden="true" />
+            <span>{item.name}</span>
+          </button>
+        );
+      })}
     </div>
   );
 
@@ -86,7 +99,7 @@ export function ItemPicker({
       {choices && searched === null && choices.shownFirst.length > 0 && (
         <>
           <h3>Usual in {areaName}</h3>
-          {chips(choices.shownFirst)}
+          {cards(choices.shownFirst)}
         </>
       )}
       {choices && searched === null && choices.shownFirst.length > 0 && (
