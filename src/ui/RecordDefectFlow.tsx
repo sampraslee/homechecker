@@ -55,7 +55,7 @@ export function RecordDefectFlow({
   const homeCheck = useHomeCheck();
   const [stage, setStage] = useState<Stage>(newItemIn ? "item" : "evidence");
   /** The Item chosen in the first step of a new-Item flow, with how it reads, and the Item once it is created. */
-  const [chosen, setChosen] = useState<{ lazy: ReturnType<typeof createLazyItem>; name: string; shortName: string } | null>(null);
+  const [chosen, setChosen] = useState<{ lazy: ReturnType<typeof createLazyItem>; name: string; source: ItemSource } | null>(null);
   const [createdItem, setCreatedItem] = useState<ItemView | null>(null);
   const item = existingItem ?? createdItem;
   /** Until the first Evidence is saved a new Item can still be swapped for another. */
@@ -197,7 +197,12 @@ export function RecordDefectFlow({
   }
 
   function chooseItem(source: ItemSource, name: string) {
-    setChosen({ lazy: createLazyItem(homeCheck, newItemIn!, source), name, shortName: "shortName" in source ? (source.shortName ?? "") : "" });
+    setChosen({ lazy: createLazyItem(homeCheck, newItemIn!, source), name, source });
+    setError(null);
+  }
+
+  /** `Next` on the Add Item step: on to Evidence with the Item chosen. */
+  function confirmItem() {
     setError(null);
     setStage("evidence");
   }
@@ -275,7 +280,7 @@ export function RecordDefectFlow({
       <div className="form spaced">
         <StepHeader titles={titles} step={stepIndex} bar={false} />
         {stage === "item" ? (
-          <ItemPicker areaId={newItemIn!} areaName={areaName ?? "this Area"} initialShortName={chosen?.shortName} onPicked={chooseItem} />
+          <ItemPicker areaId={newItemIn!} areaName={areaName ?? "this Area"} selected={chosen?.source} onPicked={chooseItem} />
         ) : stage === "types" && piece ? (
           <>
             <p className="muted">
@@ -462,7 +467,9 @@ export function RecordDefectFlow({
       <Dock
         message={<StepBar titles={titles} step={stepIndex} />}
         action={
-          stage === "item" ? undefined : stage === "evidence" ? (
+          stage === "item" ? (
+            <StepFooter onBack={() => leave()} onNext={confirmItem} nextDisabled={!chosen} />
+          ) : stage === "evidence" ? (
             <StepFooter onBack={backFromEvidence} onNext={startDefectTypes} nextDisabled={captured.length === 0} />
           ) : (
             /* A piece with a Defect Type moves on, or finishes on the last one; one without is saved with no Defect (ADR 0003, 0006). */

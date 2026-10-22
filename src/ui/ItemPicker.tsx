@@ -5,25 +5,24 @@ import { refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 
 /**
- * Step 1 of Record a Defect on a new Item: which Item in the Area. Choosing one doesn't create it yet; the flow does
- * that when the first Evidence is saved. `name` is how the Item will read, e.g. "Wardrobe – Left".
+ * Step 1 of Record a Defect on a new Item: which Item in the Area. Tapping one only selects it; `Next` in the flow
+ * confirms. Nothing is created until the first Evidence is saved. A new Item takes its catalog name.
  */
 export function ItemPicker({
   areaId,
   areaName,
-  initialShortName = "",
+  selected,
   onPicked,
 }: {
   areaId: string;
   areaName: string;
-  /** What was typed before going back to this step. */
-  initialShortName?: string;
+  /** The Item chosen so far, kept when going back to this step. */
+  selected?: ItemSource | null;
   onPicked: (source: ItemSource, name: string) => void;
 }) {
   const homeCheck = useHomeCheck();
   const [choices, setChoices] = useState<ItemChoices | null>(null);
-  const [shortName, setShortName] = useState(initialShortName);
-  const [otherName, setOtherName] = useState("");
+  const [otherName, setOtherName] = useState(selected && "otherName" in selected ? selected.otherName : "");
   /** Narrows the long Item list to names containing what's typed (UX-006). */
   const [query, setQuery] = useState("");
   /** "All other Items" is a long list, so it stays closed until the Inspector opens it (when there is a usual list above it). */
@@ -37,8 +36,8 @@ export function ItemPicker({
   }, [homeCheck, areaId]);
 
   function pickCatalogItem(item: CatalogItem) {
-    const short = shortName.trim();
-    onPicked({ catalogItemId: item.id, shortName: short }, short ? `${item.name} – ${short}` : item.name);
+    setError(null);
+    onPicked({ catalogItemId: item.id }, item.name);
   }
 
   function pickOther(event: FormEvent) {
@@ -57,7 +56,12 @@ export function ItemPicker({
   const chips = (items: CatalogItem[]) => (
     <div className="chips">
       {items.map((item) => (
-        <button key={item.id} type="button" className="chip" onClick={() => pickCatalogItem(item)}>
+        <button
+          key={item.id}
+          type="button"
+          className="chip"
+          aria-pressed={Boolean(selected && "catalogItemId" in selected && selected.catalogItemId === item.id)}
+          onClick={() => pickCatalogItem(item)}>
           {item.name}
         </button>
       ))}
@@ -66,10 +70,6 @@ export function ItemPicker({
 
   return (
     <>
-      <label className="form">
-        Short name (optional), e.g. "left"
-        <input value={shortName} onChange={(event) => setShortName(event.target.value)} />
-      </label>
       <label className="form search-field">
         Find an Item
         <span className="search-input">
