@@ -14,7 +14,7 @@
   --ink: #0f172a;
   --ink-muted: #475569;
   --on-night-muted: #cbd5e1;
-  --page: #f8fafc;
+  --page: #fefefe;
   --surface: #ffffff;
   --line: #8090a6; /* Card and input edges: 3:1, so they stay visible in glare */
   --line-soft: #e2e8f0;
@@ -136,7 +136,7 @@ button {
   width: 100%;
   text-align: left;
   padding: var(--space-4) var(--space-4);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-card);
   background: var(--surface);
   color: inherit;
@@ -1945,6 +1945,11 @@ body:has(.sheet-backdrop) .dock {
   margin: 0 0 var(--space-2);
   color: var(--ink-muted);
   font-size: var(--text-sm);
+}
+
+/* The Unit and building, as the heading above the Areas. */
+.unit-heading {
+  margin: var(--space-3) 0 0;
 }
 
 /* The storage line's icon sits on its first line when the text wraps (UX-034). */
