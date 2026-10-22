@@ -1,4 +1,4 @@
-/** The footer of a guided flow: `Back` as an underlined link on the left, `Next` as a dark button on the right. */
+/** The footer of a guided flow: `Back` as an underlined link on the left, `Next` as a deep teal button on the right. */
 export function StepFooter({ onBack, onNext, nextDisabled = false }: { onBack: () => void; onNext: () => void; nextDisabled?: boolean }) {
   return (
     <div className="step-footer">

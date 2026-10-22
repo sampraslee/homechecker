@@ -251,7 +251,7 @@ h3 {
   margin-top: var(--space-4);
 }
 
-/* The Start Inspection address: all fields in one bordered block, divided by thin lines, after the one-page address form of INS-12. */
+/* The Start Inspection address: all fields in one bordered block, divided by thin lines, as one page rather than field by field. */
 .address-block {
   border: 1px solid var(--line);
   border-radius: var(--r-card);
@@ -1567,12 +1567,16 @@ button:active:not(:disabled) {
   background: var(--teal-deep);
 }
 
-/* The step line and its title sit close under the bar, as one heading block. */
-.step-heading > .muted {
+/* The step line and its title sit close under the bar, as one heading block. Inside a form grid the parts keep the grid's own gaps. */
+.form > .step-heading {
+  display: contents;
+}
+
+:not(.form) > .step-heading > .muted {
   margin: 0;
 }
 
-.step-heading > h2 {
+:not(.form) > .step-heading > h2 {
   margin-top: 0;
 }
 
@@ -1581,7 +1585,7 @@ button:active:not(:disabled) {
   margin-bottom: var(--space-1);
 }
 
-/* Back and Next on every step of a guided flow: an underlined link on the left, a dark button on the right. */
+/* The footer of a guided flow: Back an underlined link on the left, Next a deep teal button on the right. */
 .step-footer {
   display: flex;
   align-items: center;
@@ -1605,15 +1609,10 @@ button:active:not(:disabled) {
   padding: 0 var(--space-5);
   border: 0;
   border-radius: var(--r-control);
-  background: var(--ink);
+  background: var(--teal-deep);
   color: #fff;
   font: inherit;
   font-weight: 700;
-}
-
-.step-next:disabled {
-  background: var(--line-soft);
-  color: var(--ink-muted);
 }
 
 /* The Move-ins | Move-outs switch: plain text with an underline on the current one. */
@@ -2160,7 +2159,7 @@ span.chip {
   margin-top: 0;
 }
 
-/* The usual Items for an Area: two-column icon cards (INS-05). Tapping selects; Next confirms. */
+/* The usual Items for an Area: two-column icon cards. Tapping selects; Next confirms. */
 .usual-items {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2175,7 +2174,7 @@ button.usual-item {
   gap: var(--space-3);
   min-height: 88px;
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-card);
   background: var(--surface);
   color: var(--ink);
@@ -2191,5 +2190,11 @@ button.usual-item > .lucide {
 button.usual-item[aria-pressed="true"] {
   border: 2px solid var(--teal-deep);
   padding: calc(var(--space-3) - 1px) calc(var(--space-4) - 1px);
+  background: var(--teal-tint);
+}
+
+/* The typed "Item not in the list" is the chosen Item: the same teal edge as a selected card. */
+.form input.chosen {
+  border: 2px solid var(--teal-deep);
   background: var(--teal-tint);
 }

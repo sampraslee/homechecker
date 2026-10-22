@@ -142,7 +142,7 @@ export function StartInspectionScreen({ type, navigate }: { type: InspectionType
                 key="move-out"
                 address={address}
                 setAddress={setAddress}
-                  onSubmit={async (address) => openOrExplain(await homeCheck.startMoveOut({ address }))}
+                onSubmit={async (address) => openOrExplain(await homeCheck.startMoveOut({ address }))}
               />
             </>
           )}
