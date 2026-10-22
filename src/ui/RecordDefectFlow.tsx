@@ -280,7 +280,7 @@ export function RecordDefectFlow({
       <div className="form spaced">
         <StepHeader titles={titles} step={stepIndex} bar={false} />
         {stage === "item" ? (
-          <ItemPicker areaId={newItemIn!} areaName={areaName ?? "this Area"} selected={chosen?.source} onPicked={chooseItem} />
+          <ItemPicker areaId={newItemIn!} areaName={areaName ?? "this Area"} selected={chosen?.source} onPicked={chooseItem} onCleared={() => setChosen(null)} />
         ) : stage === "types" && piece ? (
           <>
             <p className="muted">

@@ -1,7 +1,6 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import type { CatalogItem, ItemChoices, ItemSource } from "../core";
-import { refusalMessage } from "./format";
 import { itemIcon } from "./itemIcon";
 import { useHomeCheck } from "./homeCheckContext";
 
@@ -14,12 +13,15 @@ export function ItemPicker({
   areaName,
   selected,
   onPicked,
+  onCleared,
 }: {
   areaId: string;
   areaName: string;
   /** The Item chosen so far, kept when going back to this step. */
   selected?: ItemSource | null;
   onPicked: (source: ItemSource, name: string) => void;
+  /** The typed name was emptied, so no Item is chosen any more. */
+  onCleared: () => void;
 }) {
   const homeCheck = useHomeCheck();
   const [choices, setChoices] = useState<ItemChoices | null>(null);
@@ -28,7 +30,6 @@ export function ItemPicker({
   const [query, setQuery] = useState("");
   /** "All other Items" is a long list, so it stays closed until the Inspector opens it (when there is a usual list above it). */
   const [showOthers, setShowOthers] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     homeCheck.itemChoices(areaId).then((result) => {
@@ -37,16 +38,19 @@ export function ItemPicker({
   }, [homeCheck, areaId]);
 
   function pickCatalogItem(item: CatalogItem) {
-    setError(null);
+    setOtherName("");
     onPicked({ catalogItemId: item.id }, item.name);
   }
 
-  function pickOther(event: FormEvent) {
-    event.preventDefault();
-    const name = otherName.trim();
-    if (!name) return setError(refusalMessage["item-name-required"]);
-    onPicked({ otherName: name }, name);
+  /** A typed name is the chosen Item while it is not empty. */
+  function typeOther(value: string) {
+    setOtherName(value);
+    const name = value.trim();
+    if (name) onPicked({ otherName: name }, name);
+    else onCleared();
   }
+
+  const otherChosen = Boolean(selected && "otherName" in selected);
 
   /** While searching: the matches from both lists, usual ones first; `null` when the search is empty. */
   const wanted = query.trim().toLowerCase();
@@ -116,16 +120,12 @@ export function ItemPicker({
           {chips(choices.others)}
         </>
       )}
-      <form className="form" onSubmit={pickOther} noValidate>
+      <div className="form">
         <label>
           Item not in the list
-          <input value={otherName} onChange={(event) => setOtherName(event.target.value)} />
-          {error && <span className="error" role="alert">{error}</span>}
+          <input className={otherChosen ? "chosen" : undefined} value={otherName} onChange={(event) => typeOther(event.target.value)} />
         </label>
-        <button type="submit" className="secondary">
-          Use this Item
-        </button>
-      </form>
+      </div>
     </>
   );
 }
