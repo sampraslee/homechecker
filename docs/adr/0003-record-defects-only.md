@@ -10,3 +10,7 @@ Even though Home Check serves move-in and move-out tenancy records, an Inspectio
 ## Amendment: a Completed Area says "looked at", not "no Defects"
 
 An Inspector may mark an Area Completed, including one with no Items. That records that the Area was inspected, so a Defect missing from a Completed Area is stronger evidence than one missing from an Area never marked. It still does not claim the Area is defect-free, and Items are still not marked "no defects". The mark clears when anything in the Area changes, and a Move-out never inherits it from its Move-in.
+
+## Amendment: Evidence only enters through Record a Defect
+
+The Item screen no longer has stand-alone Photo, Video and Note buttons. Evidence is captured only inside the Record a Defect flow, so nothing is captured on an Item outside it. The flow still lets the Inspector save a piece of Evidence without a Defect Type, so an overview photo is still possible, but it is no longer one tap from the Item. The Item screen lists Defects, not Evidence.

@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from "react";
-import type { AiSuggestionView, DefectView, Severity } from "../core";
+import type { AiSuggestionView, DefectView, Evidence, Severity } from "../core";
 import { DefectTypePicker, SeverityPicker } from "./DefectPanels";
-import { aiOutcomeLabel, refusalMessage } from "./format";
+import { aiOutcomeLabel, formatTime, refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
 import { MediaImage } from "./MediaImage";
+import { groupByEvidence } from "./suggestionsToReview";
 
 /** The Defect Type a suggestion becomes: the AI's own when confirming, or the Inspector's when correcting. */
 type Accepted = { code: string; name: string; noteRequired: boolean };
@@ -14,26 +15,32 @@ type ReviewPanel =
   | { mode: "details"; suggestion: AiSuggestionView; accepted: Accepted };
 
 /**
- * An Item's AI Suggestions, each confirmed, corrected or rejected by the Inspector.
- * Review stays open on a Completed Inspection, so late suggestions aren't wasted.
+ * An Item's AI Suggestions still to act on, grouped by the photo they came from: unreviewed ones are confirmed,
+ * corrected or rejected, and rejected ones can be reviewed again. The caller passes only those two kinds.
  */
 export function AiSuggestionList({
   itemId,
   itemName,
   suggestions,
+  evidence,
   arrived,
   defects,
   onReviewed,
+  onReviewAgain,
 }: {
   itemId: string;
   itemName: string;
   suggestions: AiSuggestionView[];
+  /** The Item's Evidence, for each group's header. */
+  evidence: Evidence[];
   /** Suggestions that came in while the Item was open, which arrive with a pulse. */
   arrived: Set<string>;
   /** The Item's Defects, so the picker can mark Defect Types already recorded. */
   defects: DefectView[];
   /** Called with what happened and which suggestion, once a suggestion is reviewed, so the review can be undone. */
   onReviewed: (message: string, suggestionId: string) => void;
+  /** Takes a rejection back, so the suggestion is unreviewed again. */
+  onReviewAgain: (suggestionId: string) => void;
 }) {
   const homeCheck = useHomeCheck();
   const [panel, setPanel] = useState<ReviewPanel | null>(null);
@@ -82,49 +89,57 @@ export function AiSuggestionList({
     if (panel?.mode === "details" && severity) accept(panel.suggestion, panel.accepted, { note, severity });
   }
 
-  /** Suggestions grouped by the photo they came from, in order: the photo is shown once, wide, above its suggestions (UX-030). */
-  const byPhoto: { evidenceId: string; list: AiSuggestionView[] }[] = [];
-  for (const suggestion of suggestions) {
-    const group = byPhoto.find((each) => each.evidenceId === suggestion.evidenceId);
-    if (group) group.list.push(suggestion);
-    else byPhoto.push({ evidenceId: suggestion.evidenceId, list: [suggestion] });
-  }
-
   return (
     <>
-      <ul className="cards ai-groups">
-        {byPhoto.map(({ evidenceId, list }) => (
-          <li key={evidenceId} className="card ai-group">
-            <span className="ai-group-photo">
-              <MediaImage evidenceId={evidenceId} version="thumbnail" alt="Photo" />
-            </span>
-            <ul className="ai-rows">
-              {list.map((suggestion) => (
-                <li key={suggestion.id} className={`ai-row${arrived.has(suggestion.id) ? " arrived" : ""}`}>
-                  <span className="ai-row-head">
-                    <strong>{suggestion.defectTypeName}</strong>
-                    {suggestion.outcome !== "unreviewed" && <span className={`badge ${suggestion.outcome}`}>{aiOutcomeLabel(suggestion)}</span>}
-                  </span>
-                  <span className="ai-why">AI suggestion, {suggestion.confidence.toLowerCase()} confidence</span>
-                  {suggestion.outcome === "unreviewed" && panel?.suggestion.id !== suggestion.id && (
-                    <span className="button-row review-actions">
-                      <button type="button" className="primary" onClick={() => accept(suggestion, { code: suggestion.defectTypeCode, name: suggestion.defectTypeName, noteRequired: suggestion.noteRequired })}>
-                        Confirm
-                      </button>
-                      <button type="button" className="secondary" onClick={() => setPanel({ mode: "correct", suggestion })}>
-                        Correct
-                      </button>
-                      <button type="button" className="quiet" onClick={() => reject(suggestion)}>
-                        Reject
-                      </button>
+      <ul className="ai-groups">
+        {groupByEvidence(suggestions).map(({ evidenceId, list }) => {
+          const captured = evidence.find((each) => each.id === evidenceId)?.capturedAt;
+          return (
+            <li key={evidenceId} className="ai-group">
+              <span className="ai-group-head">
+                <span className="ai-group-photo">
+                  <MediaImage evidenceId={evidenceId} version="thumbnail" alt="" />
+                </span>
+                <span className="ai-group-label">
+                  <strong>Photo</strong>
+                  {captured && <span className="muted">{formatTime(captured)}</span>}
+                </span>
+              </span>
+              <ul className="ai-rows">
+                {list.map((suggestion) => (
+                  <li key={suggestion.id} className={`ai-row${arrived.has(suggestion.id) ? " arrived" : ""}`}>
+                    <span className="ai-row-head">
+                      <strong>{suggestion.defectTypeName}</strong>
+                      {suggestion.outcome !== "unreviewed" && <span className={`badge ${suggestion.outcome}`}>{aiOutcomeLabel(suggestion)}</span>}
                     </span>
-                  )}
-                  {error?.suggestionId === suggestion.id && panel === null && <p className="error review-actions">{error.message}</p>}
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
+                    <span className="ai-why">AI suggestion, {suggestion.confidence.toLowerCase()} confidence</span>
+                    {suggestion.outcome === "unreviewed" && panel?.suggestion.id !== suggestion.id && (
+                      <span className="button-row review-actions">
+                        <button type="button" className="primary" onClick={() => accept(suggestion, { code: suggestion.defectTypeCode, name: suggestion.defectTypeName, noteRequired: suggestion.noteRequired })}>
+                          Confirm
+                        </button>
+                        <button type="button" className="secondary" onClick={() => setPanel({ mode: "correct", suggestion })}>
+                          Correct
+                        </button>
+                        <button type="button" className="quiet" onClick={() => reject(suggestion)}>
+                          Reject
+                        </button>
+                      </span>
+                    )}
+                    {suggestion.outcome === "rejected" && (
+                      <span className="button-row review-actions">
+                        <button type="button" className="secondary" onClick={() => onReviewAgain(suggestion.id)}>
+                          Review again
+                        </button>
+                      </span>
+                    )}
+                    {error?.suggestionId === suggestion.id && panel === null && <p className="error review-actions">{error.message}</p>}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          );
+        })}
       </ul>
 
       {panel?.mode === "correct" && (

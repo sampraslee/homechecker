@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
-import { Camera, ChevronLeft, NotebookPen, Plus, Video } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { ChevronLeft, Plus } from "lucide-react";
 import {
   isMedia,
-  isNote,
   type AiSuggestionView,
   type DefectView,
   type Evidence,
@@ -13,11 +12,13 @@ import {
 } from "../core";
 import type { Navigate } from "./App";
 import { AiSuggestionList } from "./AiSuggestionList";
+import { suggestionsToReview } from "./suggestionsToReview";
 import { Band } from "./Band";
 import { LockedNotice } from "./LockedNotice";
 import { Dock } from "./Dock";
-import { DefectEditor, DefectTypePicker, type PickedDefectType } from "./DefectPanels";
-import { assignDefectType } from "./assignDefectType";
+import { DefectCard } from "./DefectCard";
+import { DefectEditor } from "./DefectPanels";
+import { Sheet } from "./Sheet";
 import { countEvidence, refusalMessage, unitAndType } from "./format";
 import { useBackCloses } from "./backCloses";
 import { useHomeCheck } from "./homeCheckContext";
@@ -25,28 +26,13 @@ import { MediaImage, MediaThumbnail, useMediaUrl } from "./MediaImage";
 import { useAiChanges } from "./useAiChanges";
 import { useArrivals } from "./useArrivals";
 import { RecordDefectFlow } from "./RecordDefectFlow";
-import { SwipeToDelete } from "./SwipeToDelete";
 import { useLocked } from "./useLocked";
-import { VideoRecorder } from "./VideoRecorder";
 
 /** Every Defect is made from a piece of Evidence, so the panels that make one carry that Evidence. */
-type DefectPanel =
-  | { mode: "pick"; evidenceId: string }
-  | { mode: "add"; defectType: PickedDefectType; evidenceId: string }
-  | { mode: "edit"; defectId: string; notice?: string };
+type DefectPanel = { mode: "edit"; defectId: string; notice?: string };
 
 /** A new note, or one of the Item's notes being edited. */
 type NotePanel = { mode: "add" } | { mode: "edit"; note: NoteEvidence };
-
-/** An Item has at most one Defect per Defect Type, so picking one it already has opens that Defect. */
-function alreadyRecorded(defectId: string, defectType: PickedDefectType): DefectPanel {
-  return { mode: "edit", defectId, notice: `This Item already has ${defectType.name}. Add to this Defect instead.` };
-}
-
-/** The Severity after a Defect's name, or a reminder when it has none (ADR 0007). */
-export function severityMark(defect: DefectView) {
-  return <span className={`chip-severity${defect.severity ? "" : " needed"}`}> · {defect.severity ?? "Severity needed"}</span>;
-}
 
 /** A passing message in the Dock, with Undo when the last action can be taken back. */
 type Flash = { text: string; undo?: () => void };
@@ -69,10 +55,8 @@ export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navi
   const [showMoveInMedia, setShowMoveInMedia] = useState(false);
   const [defectPanel, setDefectPanel] = useState<DefectPanel | null>(null);
   const [notePanel, setNotePanel] = useState<NotePanel | null>(null);
-  const [recording, setRecording] = useState(false);
   /** The guided Record a Defect flow, open straight after an Item is added. */
   const [recordingFlow, setRecordingFlow] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState<Flash | null>(saved ? { text: saved } : null);
   /** The message is sliding out. */
   const [flashLeaving, setFlashLeaving] = useState(false);
@@ -80,10 +64,7 @@ export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navi
   /** Undo stays while the Inspector is touching or focused on it, however long that takes. */
   const [flashHeld, setFlashHeld] = useState(false);
   const [viewing, setViewing] = useState<MediaEvidence | null>(null);
-  /** The piece of Evidence the Inspector swiped Delete on, shown with what else would go. */
-  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const cameraInput = useRef<HTMLInputElement>(null);
   const locked = useLocked(item?.inspectionId);
   // Editing controls wait until the lock is known, so they never flash up on a Completed Inspection.
   const editable = locked === false;
@@ -130,75 +111,6 @@ export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navi
     return () => clearTimeout(timer);
   }, [flashLeaving]);
 
-  async function capture(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = "";
-    if (files.length === 0) return;
-    setSaving(true);
-    setFlash(null);
-    setError(null);
-    let savedCount = 0;
-    try {
-      for (const file of files) {
-        const result = await homeCheck.addPhoto(id, file);
-        if (result.ok) savedCount++;
-        else setError(refusalMessage[result.reason]);
-      }
-    } finally {
-      // Free the button even if a save throws, so the Inspector can try again.
-      setSaving(false);
-      if (savedCount > 0) {
-        showFlash({ text: savedCount === 1 ? "Photo saved." : `${savedCount} photos saved.` });
-        // A short buzz where the phone allows it (Android; iPhone browsers don't).
-        navigator.vibrate?.(10);
-      }
-      load();
-    }
-  }
-
-  /**
-   * Assigning a Defect Type to a piece of Evidence records the Defect straight away, unless it needs a note first. If the
-   * Item already has that Defect Type, the Evidence is added to that Defect instead, since an Item has one Defect per type.
-   */
-  async function pickDefectType(defectType: PickedDefectType, evidenceId: string) {
-    setError(null);
-    const assigned = await assignDefectType(homeCheck, id, defectType, evidenceId);
-    switch (assigned.kind) {
-      case "already-linked":
-        return setDefectPanel(alreadyRecorded(assigned.defectId, defectType));
-      case "needs-note":
-        return setDefectPanel({ mode: "add", defectType, evidenceId });
-      case "refused":
-        return setError(refusalMessage[assigned.reason]);
-      case "linked":
-        showFlash({ text: `Linked to ${defectType.name}.` });
-        break;
-      case "added":
-        showFlash({ text: `Added ${defectType.name}.`, undo: () => undoDefect(assigned.defect.id, defectType.name) });
-        break;
-    }
-    setDefectPanel(null);
-    load();
-  }
-
-  async function undoDefect(defectId: string, name: string) {
-    const result = await homeCheck.removeDefect(defectId);
-    if (result.ok) showFlash({ text: `Removed ${name}.` });
-    else {
-      setFlash(null);
-      setError(refusalMessage[result.reason]);
-    }
-    load();
-  }
-
-  async function deleteEvidence(evidenceId: string) {
-    const result = await homeCheck.deleteEvidence(evidenceId);
-    setConfirmingDelete(null);
-    if (result.ok) showFlash({ text: "Deleted." });
-    else setError(refusalMessage[result.reason]);
-    load();
-  }
-
   async function undoAiReview(suggestionId: string) {
     const result = await homeCheck.undoAiReview(suggestionId);
     if (result.ok) showFlash({ text: "Undone. The AI Suggestion is back to review." });
@@ -208,6 +120,17 @@ export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navi
     }
     load();
   }
+
+  /** From the Defect editor: a photo or video opens in the viewer (where it can be deleted), a note opens for editing. */
+  function openEvidence(each: Evidence) {
+    if (isMedia(each)) setViewing(each);
+    else setNotePanel({ mode: "edit", note: each });
+  }
+
+  // A Defect whose only Evidence was just deleted goes with it, so its editor has nothing left to edit.
+  useEffect(() => {
+    if (loaded && defectPanel?.mode === "edit" && !defects.some((defect) => defect.id === defectPanel.defectId)) setDefectPanel(null);
+  }, [loaded, defects, defectPanel]);
 
   function closeNotePanel() {
     setNotePanel(null);
@@ -248,63 +171,9 @@ export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navi
   }
 
   const photos = evidence.filter((e) => e.kind === "photo");
-  /** A rejected suggestion is out of the Inspector's way, but stays on record and in the export. */
-  const shownSuggestions = aiSuggestions.filter((suggestion) => suggestion.outcome !== "rejected");
-  /** Evidence that no Defect uses yet: each waits for a Defect Type to be assigned to it. */
-  const assignedIds = new Set(defects.flatMap((defect) => defect.evidenceIds));
-  const unassigned = evidence.filter((each) => !assignedIds.has(each.id));
-  /** Defects whose Evidence is all gone: only from before every Defect needed Evidence (ADR 0006). */
-  const evidenceIds = new Set(evidence.map((each) => each.id));
-  const withoutEvidence = defects.filter((defect) => !defect.evidenceIds.some((evidenceId) => evidenceIds.has(evidenceId)));
-  const counts = [countEvidence(evidence), defects.length > 0 && `${defects.length} ${defects.length === 1 ? "Defect" : "Defects"}`];
-
-  /** The Evidence the picker is assigning a Defect Type to, named at the top of the sheet (UX-025). */
-  const assigning = defectPanel?.mode === "pick" ? evidence.find((each) => each.id === defectPanel.evidenceId) : undefined;
-  const assigningSubject = assigning && (
-    <span className="sheet-subject-row">
-      {isMedia(assigning) ? (
-        <span className="sheet-thumb">
-          <MediaThumbnail evidence={assigning} />
-        </span>
-      ) : (
-        <NotebookPen className="row-icon" aria-hidden="true" />
-      )}
-      <span>For {isNote(assigning) ? <q>{assigning.text}</q> : `this ${assigning.kind}`}</span>
-    </span>
-  );
-
-  function recordVideo() {
-    setFlash(null);
-    setRecording(true);
-  }
-
-  function addNote() {
-    setFlash(null);
-    setNotePanel({ mode: "add" });
-  }
-
-  /** A long name is cut to one line (UX-028); the full name shows on hover and in the Defect it opens. */
-  function defectChip(defect: DefectView) {
-    const className = `chip defect-chip${defect.source === "ai-suggested" ? " ai" : ""}${arrived.has(defect.id) ? " arrived" : ""}`;
-    return editable ? (
-      <button
-        key={defect.id}
-        type="button"
-        className={className}
-        title={defect.defectTypeName}
-        onClick={() => setDefectPanel({ mode: "edit", defectId: defect.id })}
-      >
-        {defect.defectTypeName}
-        {severityMark(defect)}
-      </button>
-    ) : (
-      <span key={defect.id} className={className} title={defect.defectTypeName}>
-        {defect.defectTypeName}
-        {severityMark(defect)}
-      </span>
-    );
-  }
-
+  const editingDefect = defectPanel ? defects.find((defect) => defect.id === defectPanel.defectId) : undefined;
+  /** Confirmed and corrected suggestions are Defects now; what is left is to review, or to review again after a rejection. */
+  const shownSuggestions = suggestionsToReview(aiSuggestions);
   return (
     <main className="screen">
       <Band
@@ -316,33 +185,16 @@ export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navi
         {locked && <LockedNotice />}
       </Band>
 
-      {/* One list: each piece of Evidence with the Defect Types assigned to it (ADR 0006). */}
+      {/* Defects are the list; Evidence comes in only through Record a Defect, and is opened from a Defect (ADR 0006). */}
       <div className="section-head">
         <h2>Evidence and Defects</h2>
-        <span className="count">{counts.filter(Boolean).join(" · ")}</span>
+        <span className="count">{defects.length > 0 && `${defects.length} ${defects.length === 1 ? "Defect" : "Defects"}`}</span>
       </div>
       {editable && (
         <button type="button" className="primary record-defect" onClick={() => setRecordingFlow(true)}>
           <Plus aria-hidden="true" />
           Record a Defect
         </button>
-      )}
-      {/* Evidence that needs no Defect, such as an overview photo, is captured here (ADR 0003, 0006). */}
-      {editable && (
-        <div className="capture-tiles">
-          <button type="button" className="secondary" disabled={saving} onClick={() => cameraInput.current?.click()}>
-            <Camera aria-hidden="true" />
-            {saving ? "Saving…" : "Photo"}
-          </button>
-          <button type="button" className="secondary" disabled={saving} onClick={recordVideo}>
-            <Video aria-hidden="true" />
-            Video
-          </button>
-          <button type="button" className="secondary" disabled={notePanel !== null} onClick={addNote}>
-            <NotebookPen aria-hidden="true" />
-            Note
-          </button>
-        </div>
       )}
       {moveIn && (
         <MoveInLine
@@ -352,104 +204,25 @@ export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navi
           onOpen={setViewing}
         />
       )}
-      {evidence.length === 0 && <p className="muted">{editable ? "Add a photo or a note to start. Defects are added from the Evidence." : "No Evidence recorded."}</p>}
-      {editable && defects.length === 0 && unassigned.length > 0 && (
-        <p className="muted">Assign a Defect Type to your Evidence to record a Defect.</p>
-      )}
-      <ul className="evidence-cards">
-        {evidence.map((each) => {
-          const supports = defects.filter((defect) => defect.evidenceIds.includes(each.id));
-          return (
-            <li key={each.id}>
-              {confirmingDelete === each.id ? (
-                <div className="evidence-card confirm-card" role="group" aria-label={`Delete this ${each.kind}?`}>
-                  <div className="evidence-card-body">
-                    <h2>Delete this {each.kind}?</h2>
-                    {deletionConsequences(each, defects, aiSuggestions).map((line) => (
-                      <p key={line}>{line}</p>
-                    ))}
-                    <p>It can't be undone.</p>
-                    <div className="button-row">
-                      <button type="button" className="secondary" onClick={() => setConfirmingDelete(null)}>
-                        Keep {each.kind}
-                      </button>
-                      <button type="button" className="danger-button" onClick={() => deleteEvidence(each.id)}>
-                        Delete {each.kind}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <EvidenceRow
-                  deletable={editable}
-                  label={`Delete ${isNote(each) ? `note: ${each.text}` : each.kind}`}
-                  onDelete={() => setConfirmingDelete(each.id)}
-                >
-                  <div className={`evidence-card${isNote(each) ? " note" : ""}${arrived.has(each.id) ? " arrived" : ""}`}>
-                  {isMedia(each) ? (
-                    <button type="button" className={`evidence-thumb ${each.kind}`} onClick={() => setViewing(each)} aria-label={`Open ${each.kind}`}>
-                      <MediaThumbnail evidence={each} />
-                    </button>
-                  ) : editable ? (
-                    <button
-                      type="button"
-                      className="evidence-thumb note"
-                      onClick={() => setNotePanel({ mode: "edit", note: each })}
-                      aria-label={`Edit note: ${each.text}`}
-                    >
-                      <NotebookPen aria-hidden="true" />
-                    </button>
-                  ) : (
-                    <span className="evidence-thumb note">
-                      <NotebookPen aria-hidden="true" />
-                    </span>
-                  )}
-                  <div className="evidence-card-body">
-                    {isNote(each) && <p className="evidence-note-text">{each.text}</p>}
-                    <div className="chips">
-                      {supports.map(defectChip)}
-                      {editable && (
-                        <button
-                          type="button"
-                          className="chip assign-chip"
-                          onClick={() => setDefectPanel({ mode: "pick", evidenceId: each.id })}
-                          aria-label={`Assign a Defect Type to ${isNote(each) ? `note: ${each.text}` : each.kind}`}
-                        >
-                          <Plus aria-hidden="true" />
-                          {supports.length === 0 ? "Assign" : "Add"}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  </div>
-                </EvidenceRow>
-              )}
-            </li>
-          );
-        })}
+      {defects.length === 0 && loaded && <p className="muted">{editable ? "No Defects yet. Tap Record a Defect to start." : "No Defects recorded."}</p>}
+      <ul className="cards">
+        {defects.map((defect) => (
+          <li key={defect.id}>
+            <DefectCard
+              defect={defect}
+              evidence={evidence}
+              suggestions={aiSuggestions}
+              locked={!editable}
+              arrived={arrived.has(defect.id)}
+              onOpen={() => setDefectPanel({ mode: "edit", defectId: defect.id })}
+            />
+          </li>
+        ))}
       </ul>
-      {withoutEvidence.length > 0 && (
-        <>
-          <p className="muted spaced">No Evidence linked. Open a Defect to link a photo or note.</p>
-          <div className="chips">{withoutEvidence.map(defectChip)}</div>
-        </>
-      )}
 
-      {editable && <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={capture} />}
       {error && <p className="error" role="alert">{error}</p>}
-      {notePanel && (
-        <NoteEditor
-          key={notePanel.mode === "edit" ? notePanel.note.id : "new"}
-          itemId={id}
-          note={notePanel.mode === "edit" ? notePanel.note : undefined}
-          defects={defects}
-          onSaved={closeNotePanel}
-          onCancel={() => setNotePanel(null)}
-        />
-      )}
-
-      {/* Straight after the photos they came from, so review happens while the Item is in front of the Inspector. */}
-      {(shownSuggestions.length > 0 || photos.length > 0) && (
+      {/* Review is locked once the Inspection is Completed, so the app can't drift from its export (ADR 0008). */}
+      {editable && (shownSuggestions.length > 0 || (aiSuggestions.length === 0 && photos.length > 0)) && (
         <>
           <div className="section-head">
             <h2>AI Suggestions</h2>
@@ -460,6 +233,8 @@ export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navi
             itemId={id}
             itemName={item.name}
             suggestions={shownSuggestions}
+            evidence={evidence}
+            onReviewAgain={undoAiReview}
             arrived={arrived}
             defects={defects}
             onReviewed={(message, suggestionId) => {
@@ -470,39 +245,39 @@ export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navi
         </>
       )}
 
-      {defectPanel?.mode === "pick" && (
-        <DefectTypePicker
-          itemId={id}
-          itemName={item.name}
-          title="Assign Defect Type"
-          subject={assigningSubject}
-          recordedCodes={defects.map((defect) => defect.defectTypeCode)}
-          onPicked={(defectType) => pickDefectType(defectType, defectPanel.evidenceId)}
-          onCancel={() => setDefectPanel(null)}
-        />
+      {/* Both open as bottom sheets; the note's comes second so it stacks over the Defect it was opened from. */}
+      {editingDefect && (
+        <Sheet label={editingDefect.defectTypeName} onClose={closeDefectPanel}>
+          {(leave) => (
+            <DefectEditor
+              key={editingDefect.id}
+              itemId={id}
+              evidence={evidence}
+              defect={editingDefect}
+              notice={defectPanel?.notice}
+              readOnly={!editable}
+              inSheet
+              onOpenEvidence={openEvidence}
+              onSaved={() => leave(closeDefectPanel)}
+              onCancel={() => leave(closeDefectPanel)}
+            />
+          )}
+        </Sheet>
       )}
-      {defectPanel?.mode === "add" && (
-        <DefectEditor
-          key={defectPanel.defectType.code}
-          itemId={id}
-          evidence={evidence}
-          defectType={defectPanel.defectType}
-          initialLinked={[defectPanel.evidenceId]}
-          onSaved={closeDefectPanel}
-          onDuplicate={(existingDefectId) => setDefectPanel(alreadyRecorded(existingDefectId, defectPanel.defectType))}
-          onCancel={() => setDefectPanel(null)}
-        />
-      )}
-      {defectPanel?.mode === "edit" && (
-        <ExistingDefectEditor
-          key={defectPanel.defectId}
-          defectId={defectPanel.defectId}
-          itemId={id}
-          evidence={evidence}
-          notice={defectPanel.notice}
-          onSaved={closeDefectPanel}
-          onCancel={() => setDefectPanel(null)}
-        />
+      {notePanel && (
+        <Sheet label="Note" onClose={() => setNotePanel(null)}>
+          {(leave) => (
+            <NoteEditor
+              key={notePanel.mode === "edit" ? notePanel.note.id : "new"}
+              itemId={id}
+              note={notePanel.mode === "edit" ? notePanel.note : undefined}
+              defects={defects}
+              inSheet
+              onSaved={() => leave(closeNotePanel)}
+              onCancel={() => leave(() => setNotePanel(null))}
+            />
+          )}
+        </Sheet>
       )}
 
       <Dock
@@ -548,29 +323,7 @@ export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navi
           }}
         />
       )}
-      {recording && (
-        <VideoRecorder
-          itemId={id}
-          onSaved={() => {
-            setRecording(false);
-            showFlash({ text: "Video saved." });
-            load();
-          }}
-          onClose={() => setRecording(false)}
-        />
-      )}
     </main>
-  );
-}
-
-/** A piece of Evidence's card, which slides left to show Delete while the Inspection can still change. */
-function EvidenceRow({ deletable, label, onDelete, children }: { deletable: boolean; label: string; onDelete: () => void; children: ReactNode }) {
-  return deletable ? (
-    <SwipeToDelete label={label} onDelete={onDelete}>
-      {children}
-    </SwipeToDelete>
-  ) : (
-    <>{children}</>
   );
 }
 
@@ -753,6 +506,7 @@ export function NoteEditor({
   itemId,
   note,
   defects,
+  inSheet = false,
   onSaved,
   onCancel,
 }: {
@@ -760,6 +514,8 @@ export function NoteEditor({
   itemId: string | (() => Promise<string | null>);
   note?: NoteEvidence;
   defects: DefectView[];
+  /** Shown inside a bottom sheet, which supplies the panel's frame. */
+  inSheet?: boolean;
   onSaved: () => void;
   onCancel: () => void;
 }) {
@@ -788,8 +544,8 @@ export function NoteEditor({
   }
 
   return (
-    <section className="panel">
-      <div className="card-row">
+    <section className={inSheet ? "sheet-body" : "panel"}>
+      <div className={inSheet ? "card-row sheet-head" : "card-row"}>
         <h2>{note ? "Edit note" : "Add note"}</h2>
         <button type="button" className="link" onClick={onCancel}>
           Cancel
@@ -834,18 +590,4 @@ export function NoteEditor({
         ))}
     </section>
   );
-}
-
-function ExistingDefectEditor({
-  defectId,
-  ...props
-}: { defectId: string; itemId: string; evidence: Evidence[]; notice?: string; onSaved: () => void; onCancel: () => void }) {
-  const homeCheck = useHomeCheck();
-  const [defect, setDefect] = useState<DefectView | null>(null);
-
-  useEffect(() => {
-    homeCheck.getDefect(defectId).then((found) => setDefect(found ?? null));
-  }, [homeCheck, defectId]);
-
-  return defect && <DefectEditor {...props} defect={defect} />;
 }

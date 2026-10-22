@@ -67,7 +67,7 @@ The Inspector's observed degree of one Defect: Minor, Moderate or Major. It desc
 _Avoid_: Priority, risk, urgency, grade
 
 **Evidence**:
-A photo, video, audio recording or text note captured for one Item to support one or more of that Item's Defects.
+A photo, video, audio recording or text note captured for one Item to support one or more of that Item's Defects. Captured only in the Record a Defect flow, and opened from the Defects it supports.
 _Avoid_: Media, attachment, proof
 
 **Original**:
@@ -83,5 +83,5 @@ A small preview of a photo or video, shown in the app and embedded in the spread
 _Avoid_: Icon, preview image
 
 **AI Suggestion**:
-A Defect Type proposed by the vision model for a photo. It only becomes a Defect when a person confirms it, and is kept separately from the confirmed result. A rejected one is no longer shown to the Inspector but stays on record as rejected.
+A Defect Type proposed by the vision model for a photo. It only becomes a Defect when a person confirms it, and is kept separately from the confirmed result. The Inspector sees the ones still to review and the rejected ones, which can be reviewed again; a confirmed or corrected one is shown as a Defect instead. Every outcome stays on record.
 _Avoid_: AI label, prediction, classification

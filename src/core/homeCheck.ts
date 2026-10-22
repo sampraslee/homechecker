@@ -270,10 +270,11 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
     };
   }
 
-  /** The AI Suggestion, if it's still waiting for the Inspector's review. */
+  /** The AI Suggestion, if it's still waiting for the Inspector's review and its Inspection isn't Completed (ADR 0008). */
   async function findUnreviewed(suggestionId: string) {
     const suggestion = await storage.getAiSuggestion(suggestionId);
     if (!suggestion) return aiSuggestionNotFound;
+    if (await isLocked(suggestion.inspectionId)) return inspectionCompleted;
     if (suggestion.outcome !== "unreviewed") return aiSuggestionAlreadyReviewed;
     return { ok: true as const, suggestion };
   }
@@ -283,7 +284,7 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
    * or the photo added to the Defect of that type the Item already has. `note` and `severity` are only for a new Defect,
    * which needs a Severity.
    * The suggestion counts as confirmed if `defectTypeCode` is its own, and as corrected otherwise.
-   * Skips the Completed lock: late AI Suggestions may still add Defects.
+   * Its caller has refused a Completed Inspection (ADR 0008).
    */
   async function acceptAiSuggestion(
     suggestion: AiSuggestion,
@@ -1060,12 +1061,13 @@ export function createHomeCheck({ storage, environment, referenceData, imageProc
 
     /**
      * Takes back a confirm, correct or reject: the suggestion is unreviewed again, and its photo comes off the Defect
-     * the review linked it to. A Defect the review made, holding only that photo, is removed. Works on a Completed
-     * Inspection, as reviewing does.
+     * the review linked it to. A Defect the review made, holding only that photo, is removed. Refused on a Completed
+     * Inspection, like reviewing (ADR 0008).
      */
     async undoAiReview(suggestionId: string) {
       const suggestion = await storage.getAiSuggestion(suggestionId);
       if (!suggestion) return aiSuggestionNotFound;
+      if (await isLocked(suggestion.inspectionId)) return inspectionCompleted;
       if (suggestion.outcome === "unreviewed") return { ok: false as const, reason: "ai-suggestion-not-reviewed" as const };
       const { correctedCode: _corrected, reviewedAt: _reviewed, linkedDefectId, ...rest } = suggestion;
       const unreviewed: AiSuggestion = { ...rest, outcome: "unreviewed" };

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE - Item screen: Defect cards and AI Suggestions</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  /* THROWAWAY PROTOTYPE for .scratch/evidence-defects-cards. Sample data, not wired into the app. */
+  :root { --teal-deep:#0e6f7d; --teal-tint:#e6f6f8; --blue:#2563eb; --blue-tint:#e8effd; --ink:#0f172a; --muted:#475569; --line:#8090a6; --soft:#e2e8f0; --night:#0a101a; --danger:#b91c1c; --done:#166534;
+    --minor:#a16207; --minor-t:#fef9c3; --moderate:#c2410c; --moderate-t:#ffedd5; --major:#b91c1c; --major-t:#fee2e2;
+    --fh:"Manrope",system-ui,sans-serif; --fb:"Inter",system-ui,sans-serif; }
+  *{box-sizing:border-box} body{margin:0;background:#ddd;font-family:var(--fb);color:var(--ink)}
+  .phone{max-width:390px;min-height:100vh;margin:0 auto;background:#FEFEFE;padding-bottom:110px;position:relative}
+  .band{background:var(--night);color:#fff;padding:18px 16px 16px}
+  .back{font-size:.8235rem;color:#cbd5e1;margin:0 0 6px}
+  .band h1{margin:0;font:800 1.4118rem var(--fh);letter-spacing:-.025em}
+  .band p{margin:2px 0 0;font-size:.8235rem;color:#cbd5e1}
+  .toggle{display:flex;gap:8px;padding:12px 16px 0;align-items:center;font-size:.75rem;color:var(--muted)}
+  .toggle button{font:600 .75rem var(--fb);padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted)}
+  .toggle button.on{background:var(--teal-deep);border-color:var(--teal-deep);color:#fff}
+  .lock{margin:12px 16px 0;padding:10px 12px;border-radius:10px;background:var(--teal-tint);font-size:.8235rem}
+  .section-head{display:flex;justify-content:space-between;align-items:baseline;padding:20px 16px 0}
+  h2{margin:0;font:700 1.1765rem var(--fh);letter-spacing:-.025em}
+  .count{font-size:.8235rem;color:var(--muted)}
+  .record{display:flex;align-items:center;justify-content:center;gap:8px;width:calc(100% - 32px);margin:12px 16px 0;padding:13px;border:0;border-radius:12px;background:var(--teal-deep);color:#fff;font:600 1rem var(--fb)}
+  .cards{list-style:none;margin:16px 0 0;padding:0 16px;display:grid;gap:16px}
+  .card{display:block;width:100%;text-align:left;padding:8px;border:1px solid var(--soft);border-radius:16px;background:#FEFEFE;color:inherit;font:inherit;box-shadow:0 2px 10px rgba(15,23,42,.06);cursor:pointer}
+  .photo{position:relative;aspect-ratio:4/3;border-radius:10px;display:grid;place-items:center;color:#fff;font-size:.8235rem}
+  .p1{background:linear-gradient(135deg,#9ca3af,#6b7280)} .p2{background:linear-gradient(135deg,#a8a29e,#78716c)} .p3{background:linear-gradient(135deg,#94a3b8,#64748b)} .ph{background:#d1d5db;color:#6b7280}
+  .sev{position:absolute;top:10px;left:10px;font-size:.8235rem;font-weight:600;padding:3px 10px;border-radius:8px;background:#fff}
+  .sev.Minor{color:var(--minor)} .sev.Moderate{color:var(--moderate)} .sev.Major{color:var(--major)}
+  .body{padding:12px 6px 6px;display:grid;gap:4px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .title{margin:0;font:700 1.1765rem var(--fh);letter-spacing:-.025em}
+  .edit{font-size:.8235rem;font-weight:600;color:var(--teal-deep);text-decoration:underline;white-space:nowrap}
+  .meta{display:flex;align-items:center;gap:8px;font-size:.8235rem;color:var(--muted)}
+  .dot{width:3px;height:3px;border-radius:50%;background:var(--muted)}
+  .ai{color:var(--blue);font-weight:600} 
+  .sec-sub{padding:0 16px;margin:4px 0 0;font-size:.8235rem;color:var(--muted)}
+  /* AI list: flat, grouped by Evidence */
+  .ai-list{list-style:none;margin:12px 0 0;padding:0 16px;display:grid;gap:18px}
+  .group-head{display:flex;align-items:center;gap:10px;font-size:.8235rem;color:var(--muted)}
+  .thumb{width:44px;height:44px;border-radius:8px;flex:none}
+  .group-head strong{color:var(--ink);font-weight:600}
+  .rows{list-style:none;margin:8px 0 0;padding:0 0 0 54px;display:grid;gap:12px}
+  .rows li{padding-bottom:12px;border-bottom:1px solid var(--soft)} .rows li:last-child{border:0;padding-bottom:0}
+  .name{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .name strong{font-size:.9412rem}
+  .why{font-size:.8235rem;color:var(--blue)}
+  .badge{font-size:.75rem;font-weight:600;padding:2px 8px;border-radius:8px;background:var(--major-t);color:var(--major)}
+  .btns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .btns button{font:600 .8235rem var(--fb);padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+  .btns .pri{background:var(--teal-deep);border-color:var(--teal-deep);color:#fff} .btns .quiet{border-color:transparent;color:var(--muted);text-decoration:underline}
+  .empty{padding:0 16px;margin:12px 0 0;font-size:.8235rem;color:var(--muted)}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;background:var(--night);color:#fff;padding:10px 14px;border-radius:10px;font-size:.8235rem;display:none;max-width:358px}
+  .toast.on{display:block}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="band">
+    <p class="back">‹ Master Bedroom</p>
+    <h1>Wardrobe</h1>
+    <p>Unit 4B · Maple House</p>
+  </div>
+  <div class="toggle">PROTOTYPE view:
+    <button id="vDraft" class="on">Draft</button><button id="vDone">Completed</button>
+  </div>
+  <div id="lock" class="lock" hidden>This Inspection is Completed. It can be viewed but not changed.</div>
+
+  <div class="section-head"><h2>Evidence and Defects</h2><span class="count" id="count"></span></div>
+  <button class="record" id="record">＋ Record a Defect</button>
+  <ul class="cards" id="cards"></ul>
+  <p class="empty" id="emptyDefects" hidden>No Defects yet. Tap Record a Defect to start.</p>
+
+  <div id="aiWrap">
+    <div class="section-head"><h2>AI Suggestions</h2><span class="count" id="aiCount"></span></div>
+    <p class="empty" id="aiEmpty" hidden>Nothing to review.</p>
+    <ul class="ai-list" id="ai"></ul>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+  let completed=false;
+  const defects=[
+    {t:'Scratched',sev:'Moderate',ph:'p1',ai:'High'},
+    {t:'Door will not close',sev:'Major',ph:'p2',ai:null},
+    {t:'Loose handle',sev:'Minor',ph:'ph',ai:'Medium',noPhoto:true}
+  ];
+  const groups=[
+    {kind:'Photo',time:'10:42',ph:'p3',s:[{n:'Dented',c:'Medium',st:'unreviewed'},{n:'Stained',c:'Low',st:'unreviewed'}]},
+    {kind:'Photo',time:'10:44',ph:'p1',s:[{n:'Cracked',c:'High',st:'rejected'}]}
+  ];
+  const $=id=>document.getElementById(id);
+  function toast(m){const t=$('toast');t.textContent=m;t.className='toast on';setTimeout(()=>t.className='toast',2200)}
+  function render(){
+    $('lock').hidden=!completed; $('record').style.display=completed?'none':'flex';
+    $('count').textContent=defects.length+(defects.length===1?' Defect':' Defects');
+    $('emptyDefects').hidden=defects.length>0;
+    $('cards').innerHTML=defects.map(d=>`<li><button class="card" type="button">
+      <div class="photo ${d.ph}">${d.noPhoto?'Video only · placeholder':'Photo'}<span class="sev ${d.sev}">${d.sev}</span></div>
+      <div class="body"><div class="row"><h3 class="title">${d.t}</h3><span class="edit">${completed?'View':'Edit'}</span></div>
+      <div class="meta">${d.ai?`<span class="ai">AI suggested</span><span class="dot"></span><span>${d.ai} confidence</span>`:'<span>Added manually</span>'}</div></div>
+    </button></li>`).join('');
+    $('aiWrap').hidden=completed; if(completed)return;
+    const open=groups.filter(g=>g.s.length);
+    const n=groups.flatMap(g=>g.s).filter(s=>s.st==='unreviewed').length;
+    $('aiCount').textContent=n?n+' to review':'';
+    $('aiEmpty').hidden=open.length>0;
+    $('ai').innerHTML=open.map((g,gi)=>`<li><div class="group-head"><span class="thumb ${g.ph}"></span><span><strong>${g.kind}</strong> · ${g.time}</span></div>
+      <ul class="rows">${g.s.map((s,si)=>`<li><div class="name"><strong>${s.n}</strong>${s.st==='rejected'?'<span class="badge">Rejected</span>':''}</div>
+        <div class="why">AI suggestion, ${s.c.toLowerCase()} confidence</div>
+        <div class="btns">${s.st==='unreviewed'?`<button class="pri" data-a="confirm" data-g="${gi}" data-s="${si}">Confirm</button><button data-a="correct" data-g="${gi}" data-s="${si}">Correct</button><button class="quiet" data-a="reject" data-g="${gi}" data-s="${si}">Reject</button>`:`<button data-a="again" data-g="${gi}" data-s="${si}">Review again</button>`}</div></li>`).join('')}</ul></li>`).join('');
+  }
+  $('ai').addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b)return;
+    const open=groups.filter(g=>g.s.length),s=open[b.dataset.g].s[b.dataset.s],a=b.dataset.a;
+    if(a==='reject'){s.st='rejected';toast('Rejected '+s.n+'.')}
+    else if(a==='again'){s.st='unreviewed';toast(s.n+' is back to review.')}
+    else{open[b.dataset.g].s.splice(b.dataset.s,1);
+      if(a==='confirm'){defects.push({t:s.n,sev:'Minor',ph:open[b.dataset.g].ph,ai:s.c});toast('Added '+s.n+' (severity step skipped in prototype).')}
+      else toast('Correct opens the Defect Type picker (not in prototype).')}
+    render();
+  });
+  $('vDraft').onclick=()=>{completed=false;$('vDraft').className='on';$('vDone').className='';render()};
+  $('vDone').onclick=()=>{completed=true;$('vDone').className='on';$('vDraft').className='';render()};
+  render();
+</script>
+</body>
+</html>

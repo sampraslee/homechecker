@@ -109,7 +109,7 @@ export function CompleteInspectionScreen({ id, navigate }: { id: string; navigat
             )}
             <p className="muted">
               Completing locks this Inspection: nothing in it can be added, changed or removed, and it can't be reopened. AI
-              Suggestions can still be reviewed.
+              Suggestions can no longer be reviewed, so review them first; any left stay unreviewed.
             </p>
           </>
         )}

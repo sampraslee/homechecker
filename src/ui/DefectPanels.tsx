@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Check, ChevronRight, Search } from "lucide-react";
+import { Check, ChevronRight, Maximize2, Search } from "lucide-react";
 import { isMedia, isNote, SEVERITIES, type DefectCategory, type DefectChoices, type DefectType, type DefectView, type Evidence, type Severity } from "../core";
 import { refusalMessage } from "./format";
 import { useBackCloses } from "./backCloses";
@@ -12,11 +12,19 @@ const SHEET_OUT_MS = 200;
 export type PickedDefectType = DefectType & { noteRequired: boolean };
 
 /** Minor, Moderate or Major for one Defect; nothing is preselected (ADR 0007). */
-export function SeverityPicker({ value, onChange }: { value: Severity | undefined; onChange: (severity: Severity) => void }) {
+export function SeverityPicker({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: Severity | undefined;
+  onChange: (severity: Severity) => void;
+  disabled?: boolean;
+}) {
   return (
     <div role="group" aria-label="Severity" className="segmented severity-picker">
       {SEVERITIES.map((each) => (
-        <button key={each} type="button" aria-pressed={value === each} onClick={() => onChange(each)}>
+        <button key={each} type="button" aria-pressed={value === each} disabled={disabled} onClick={() => onChange(each)}>
           {each}
         </button>
       ))}
@@ -216,6 +224,9 @@ export function DefectEditor({
   defect,
   initialLinked,
   notice,
+  onOpenEvidence,
+  readOnly = false,
+  inSheet = false,
   onSaved,
   onDuplicate,
   onCancel,
@@ -228,6 +239,12 @@ export function DefectEditor({
   /** The Evidence a new Defect starts with: the piece it is being assigned to. */
   initialLinked?: string[];
   notice?: string;
+  /** Opens a piece of Evidence to view or delete it, or a note to edit it. Without it the Evidence can only be linked. */
+  onOpenEvidence?: (evidence: Evidence) => void;
+  /** On a Completed Inspection the Defect can be read and its Evidence opened, but nothing changes. */
+  readOnly?: boolean;
+  /** Shown inside a bottom sheet, which supplies the panel's frame. */
+  inSheet?: boolean;
   onSaved: () => void;
   /** The core refused a new Defect because the Item already has this Defect Type. */
   onDuplicate?: (existingDefectId: string) => void;
@@ -242,8 +259,11 @@ export function DefectEditor({
   const [error, setError] = useState<string | null>(null);
 
   const title = defect?.defectTypeName ?? defectType?.name;
+  // Evidence deleted while the editor is open can't stay linked.
+  const linkedNow = linked.filter((id) => evidence.some((each) => each.id === id));
 
   function toggle(evidenceId: string) {
+    if (readOnly) return;
     setLinked((current) =>
       current.includes(evidenceId) ? current.filter((id) => id !== evidenceId) : [...current, evidenceId],
     );
@@ -252,13 +272,13 @@ export function DefectEditor({
   async function save(event: FormEvent) {
     event.preventDefault();
     if (defect) {
-      const result = await homeCheck.editDefect(defect.id, { note, evidenceIds: linked, severity });
+      const result = await homeCheck.editDefect(defect.id, { note, evidenceIds: linkedNow, severity });
       if (result.ok) onSaved();
       else setError(refusalMessage[result.reason]);
       return;
     }
     if (!defectType) return;
-    const result = await homeCheck.addDefect(itemId, { defectTypeCode: defectType.code, note, evidenceIds: linked, severity });
+    const result = await homeCheck.addDefect(itemId, { defectTypeCode: defectType.code, note, evidenceIds: linkedNow, severity });
     if (result.ok) onSaved();
     else if (result.reason === "defect-type-already-recorded" && onDuplicate) onDuplicate(result.existingDefectId);
     else setError(refusalMessage[result.reason]);
@@ -271,15 +291,19 @@ export function DefectEditor({
     else setError(refusalMessage[result.reason]);
   }
 
+  const heading = (
+    <div className="card-row">
+      <h2>{title}</h2>
+      <button type="button" className="link" onClick={onCancel}>
+        {readOnly ? "Close" : "Cancel"}
+      </button>
+    </div>
+  );
+  const category = defect && <p className="muted defect-meta">{defect.categoryName}</p>;
+
   return (
-    <section className="panel">
-      <div className="card-row">
-        <h2>{title}</h2>
-        <button type="button" className="link" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-      {defect && <p className="muted defect-meta">{defect.categoryName}</p>}
+    <section className={inSheet ? "sheet-body" : "panel"}>
+      {inSheet ? <div className="sheet-head">{heading}{category}</div> : <>{heading}{category}</>}
       {notice && (
         <p className="notice" role="status">
           {notice}
@@ -293,13 +317,14 @@ export function DefectEditor({
             className="note-input"
             value={note}
             onChange={(event) => setNote(event.target.value)}
+            readOnly={readOnly}
             placeholder="e.g. three scratches, lower left"
           />
         </label>
 
         <div>
           <h3>Severity</h3>
-          <SeverityPicker value={severity} onChange={setSeverity} />
+          <SeverityPicker value={severity} onChange={setSeverity} disabled={readOnly} />
         </div>
 
         <div>
@@ -310,7 +335,7 @@ export function DefectEditor({
             <>
               <ul className="thumbnails">
                 {evidence.filter(isMedia).map((media) => (
-                  <li key={media.id}>
+                  <li key={media.id} className="evidence-tile">
                     <button
                       type="button"
                       className={`thumbnail selectable ${media.kind}`}
@@ -320,12 +345,17 @@ export function DefectEditor({
                     >
                       <MediaThumbnail evidence={media} />
                     </button>
+                    {onOpenEvidence && (
+                      <button type="button" className="tile-open" aria-label={`Open ${media.kind}`} onClick={() => onOpenEvidence(media)}>
+                        <Maximize2 aria-hidden="true" />
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
               <ul className="cards">
                 {evidence.filter(isNote).map((note) => (
-                  <li key={note.id}>
+                  <li key={note.id} className="evidence-tile note-tile">
                     <button
                       type="button"
                       className="card note-card selectable"
@@ -335,6 +365,11 @@ export function DefectEditor({
                     >
                       {note.text}
                     </button>
+                    {onOpenEvidence && !readOnly && (
+                      <button type="button" className="link" aria-label={`Open note: ${note.text}`} onClick={() => onOpenEvidence(note)}>
+                        Open
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -343,12 +378,14 @@ export function DefectEditor({
         </div>
 
         {error && <p className="error" role="alert">{error}</p>}
-        <button type="submit" className="primary">
-          {defect ? "Save Defect" : "Add Defect"}
-        </button>
+        {!readOnly && (
+          <button type="submit" className="primary">
+            {defect ? "Save Defect" : "Add Defect"}
+          </button>
+        )}
       </form>
 
-      {defect &&
+      {defect && !readOnly &&
         (confirmingRemove ? (
           <>
             <p>Remove this Defect? Its linked Evidence stays on the Item.</p>

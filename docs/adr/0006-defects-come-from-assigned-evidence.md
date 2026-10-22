@@ -28,3 +28,7 @@ A Defect is created by assigning a Defect Type to Evidence the Inspector has alr
 ## Why this record matters
 
 This is hard to reverse, since it changes the data model and the order of the workflow. A future reader would ask why a Defect can't exist without Evidence when the Dictionary allows it. The trade-off is real: a few seconds per Inspection in exchange for a record every Defect can be checked against.
+
+## Amendment: Evidence is captured only in Record a Defect
+
+The Item screen's Photo, Video and Note buttons and its list of Evidence are gone; the Item screen lists Defect cards. Evidence is captured in Record a Defect, where a Defect Type is assigned to each piece (or the piece is saved with none). Evidence is opened and deleted from the Defect it supports. Evidence that no Defect links to is no longer listed on the Item screen and cannot be deleted from the app; it stays on record and in the export, and shows under AI Suggestions when it has any.

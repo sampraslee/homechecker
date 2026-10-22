@@ -211,51 +211,33 @@ describe("Other / Unknown AI Suggestions", () => {
 });
 
 describe("on a Completed Inspection", () => {
-  test("refuses a new Defect by hand but accepts confirming a late AI Suggestion", async () => {
+  test("refuses reviewing an AI Suggestion, whichever way", async () => {
     const { homeCheck, inspectionId, itemId, photoId, suggestions } = await photoWithSuggestions();
     await homeCheck.completeInspection(inspectionId);
 
     const byHand = await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE", evidenceIds: [photoId] });
     const confirmed = await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" });
+    const corrected = await homeCheck.correctAiSuggestion(suggestions[0].id, { severity: "Minor", defectTypeCode: "CF-HINGE" });
+    const rejected = await homeCheck.rejectAiSuggestion(suggestions[0].id);
 
-    expect(byHand).toEqual({ ok: false, reason: "inspection-completed" });
-    expect(confirmed.ok).toBe(true);
-    expect(await homeCheck.listDefects(itemId)).toMatchObject([{ defectTypeCode: "SF-SCRATCH", source: "ai-suggested" }]);
+    const locked = { ok: false, reason: "inspection-completed" };
+    expect({ byHand, confirmed, corrected, rejected }).toEqual({ byHand: locked, confirmed: locked, corrected: locked, rejected: locked });
+    expect(await homeCheck.listDefects(itemId)).toEqual([]);
+    const after = await homeCheck.listAiSuggestions(itemId);
+    expect(after.every((suggestion) => suggestion.outcome === "unreviewed")).toBe(true);
   });
 
-  test("a photo still waiting for AI when completed gets suggestions that can be corrected onto an existing Defect", async () => {
+  test("a photo still waiting for AI when completed still gets its suggestions, stored unreviewed", async () => {
     const { homeCheck, inspectionId, itemId } = await createTestHomeCheckWithItem();
-    const photo = expectOk(await homeCheck.addPhoto(itemId, new Blob(["door"], { type: "image/jpeg" }))).evidence;
-    const proof = await noteOf(homeCheck, itemId);
-    const existing = expectOk(await homeCheck.addDefect(itemId, { defectTypeCode: "CF-HINGE", evidenceIds: [proof] })).defect;
+    expectOk(await homeCheck.addPhoto(itemId, new Blob(["door"], { type: "image/jpeg" })));
     await homeCheck.completeInspection(inspectionId);
+
     await homeCheck.processAiQueue();
-    const [late] = await homeCheck.listAiSuggestions(itemId);
 
-    const corrected = await homeCheck.correctAiSuggestion(late.id, { severity: "Minor", defectTypeCode: "CF-HINGE" });
-
-    expect(corrected.ok).toBe(true);
-    expect(await homeCheck.listDefects(itemId)).toEqual([{ ...existing, evidenceIds: [proof, photo.id] }]);
-  });
-
-  test("accepts rejecting, and every other edit stays locked", async () => {
-    const { homeCheck, inspectionId, itemId, suggestions } = await photoWithSuggestions([
-      { code: "CF-HINGE", confidence: "High" },
-      { code: "SF-SCRATCH", confidence: "Low" },
-    ]);
-    await homeCheck.completeInspection(inspectionId);
-
-    const rejected = await homeCheck.rejectAiSuggestion(suggestions[1].id);
-    const defect = expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" })).defect;
-    const edit = await homeCheck.editDefect(defect.id, { note: "changed later" });
-    const removal = await homeCheck.removeDefect(defect.id);
-
-    expect(rejected.ok).toBe(true);
-    expect({ edit, removal }).toEqual({
-      edit: { ok: false, reason: "inspection-completed" },
-      removal: { ok: false, reason: "inspection-completed" },
-    });
-    expect(await homeCheck.listDefects(itemId)).toEqual([defect]);
+    const late = await homeCheck.listAiSuggestions(itemId);
+    expect(late.length).toBeGreaterThan(0);
+    expect(late.every((suggestion) => suggestion.outcome === "unreviewed")).toBe(true);
+    expect(await homeCheck.confirmAiSuggestion(late[0].id, { severity: "Minor" })).toEqual({ ok: false, reason: "inspection-completed" });
   });
 });
 
@@ -429,13 +411,11 @@ describe("undoing an AI review", () => {
     expect(await homeCheck.undoAiReview(suggestions[0].id)).toEqual({ ok: false, reason: "ai-suggestion-not-reviewed" });
   });
 
-  test("works on a Completed Inspection, as reviewing does", async () => {
-    const { homeCheck, itemId, inspectionId, suggestions } = await photoWithSuggestions();
-    expectOk(await homeCheck.completeInspection(inspectionId));
+  test("is refused on a Completed Inspection, as reviewing is", async () => {
+    const { homeCheck, inspectionId, suggestions } = await photoWithSuggestions();
     expectOk(await homeCheck.confirmAiSuggestion(suggestions[0].id, { severity: "Minor" }));
+    expectOk(await homeCheck.completeInspection(inspectionId));
 
-    expectOk(await homeCheck.undoAiReview(suggestions[0].id));
-
-    expect(await homeCheck.listDefects(itemId)).toEqual([]);
+    expect(await homeCheck.undoAiReview(suggestions[0].id)).toEqual({ ok: false, reason: "inspection-completed" });
   });
 });

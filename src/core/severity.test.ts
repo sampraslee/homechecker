@@ -116,15 +116,6 @@ describe("confirming or correcting an AI Suggestion", () => {
 
     expect(confirmed.defect).toMatchObject({ id: existing.id, severity: "Minor" });
   });
-
-  test("still asks for a Severity on a Completed Inspection, where late suggestions may add Defects", async () => {
-    const { homeCheck, itemId, inspectionId, suggestion } = await withSuggestion();
-    expectOk(await homeCheck.completeInspection(inspectionId));
-
-    expect(await homeCheck.confirmAiSuggestion(suggestion.id)).toEqual({ ok: false, reason: "severity-required" });
-    expectOk(await homeCheck.confirmAiSuggestion(suggestion.id, { severity: "Minor" }));
-    expect(await homeCheck.listDefects(itemId)).toMatchObject([{ severity: "Minor" }]);
-  });
 });
 
 describe("a Defect made before Severity existed", () => {

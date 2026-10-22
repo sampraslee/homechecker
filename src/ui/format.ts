@@ -41,6 +41,10 @@ export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("en-MY", { dateStyle: "medium", timeStyle: "short" });
 }
 
+export function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-MY", { hour: "numeric", minute: "2-digit" });
+}
+
 /** A video's length as m:ss, e.g. 0:09. */
 export function formatDuration(seconds: number): string {
   const whole = Math.round(seconds);
