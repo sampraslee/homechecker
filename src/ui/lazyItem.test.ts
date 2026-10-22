@@ -28,6 +28,18 @@ describe("an Item chosen in Record a Defect", () => {
     expect(await homeCheck.listItems(areaId)).toHaveLength(1);
   });
 
+  test("a catalog Item chosen with no short name is created under its catalog name, and can be told apart later", async () => {
+    const { homeCheck, areaId } = await bedroom();
+    const first = expectOk(await createLazyItem(homeCheck, areaId, { catalogItemId: "window" }).ensure()).item;
+    const second = expectOk(await createLazyItem(homeCheck, areaId, { catalogItemId: "window" }).ensure()).item;
+
+    expect(first).toMatchObject({ name: "Window", displayName: "Window" });
+    expect(first.shortName).toBeUndefined();
+
+    expectOk(await homeCheck.renameItem(second.id, "right"));
+    expect((await homeCheck.listItems(areaId)).map((item) => item.displayName)).toEqual(["Window", "Window – right"]);
+  });
+
   test("is created once, however many captures need it, even at the same time", async () => {
     const { homeCheck, areaId } = await bedroom();
     const lazy = createLazyItem(homeCheck, areaId, { catalogItemId: "wardrobe" });
