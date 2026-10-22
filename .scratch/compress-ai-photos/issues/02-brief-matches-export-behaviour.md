@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The brief's §11 no longer says the Evidence copy is used in the export
-- [ ] The brief's §11 says the export carries each photo's and video's original, unchanged
-- [ ] The three versions (original, Evidence copy, thumbnail) are described consistently with GLOSSARY.md
-- [ ] No other part of the brief is changed
+- [x] The brief's §11 no longer says the Evidence copy is used in the export
+- [x] The brief's §11 says the export carries each photo's and video's original, unchanged
+- [x] The three versions (original, Evidence copy, thumbnail) are described consistently with GLOSSARY.md
+- [x] No other part of the brief is changed
