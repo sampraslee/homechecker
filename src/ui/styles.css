@@ -886,6 +886,24 @@ body:has(:is(input, textarea, select):focus) .dock {
   font-size: var(--text-lg);
 }
 
+/* The Area's Complete button, once marked: the same green as a Completed Inspection. */
+.complete-area[aria-pressed="true"] {
+  border-color: var(--done);
+  background: var(--done-tint);
+  color: var(--done);
+}
+
+.status-line {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+}
+
+.dock .primary {
+  min-height: 3.3rem;
+  font-size: var(--text-lg);
+}
+
 /* The main button, with a smaller one beside it. */
 .dock-actions {
   display: flex;

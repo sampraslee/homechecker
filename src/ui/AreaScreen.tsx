@@ -249,7 +249,7 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
 
       {/* Marks the Area as fully inspected; pressing it again takes the mark off. */}
       {editable && !editing && (
-        <button type="button" className="secondary spaced" aria-pressed={Boolean(area.completedAt)} onClick={toggleCompleted}>
+        <button type="button" className="secondary complete-area spaced" aria-pressed={Boolean(area.completedAt)} onClick={toggleCompleted}>
           <Check aria-hidden="true" />
           {area.completedAt ? "Completed" : "Complete"}
         </button>
