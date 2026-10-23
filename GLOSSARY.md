@@ -25,7 +25,7 @@ _Avoid_: Check-out, outgoing inspection
 ## Places and things
 
 **Unit**:
-One rentable home that an Inspection covers, identified by its address.
+One rentable home that an Inspection covers, identified by its unit number and building name.
 _Avoid_: Apartment, flat, premises
 
 **Area**:

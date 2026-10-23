@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronRight, DoorOpen, Lock, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, DoorOpen, Lock, Trash2 } from "lucide-react";
 import { formatAddress, type AreaView, type Inspection, type InspectionTotals } from "../core";
 import type { Navigate } from "./App";
 import { AddAreaFlow } from "./AddAreaFlow";
@@ -7,6 +7,7 @@ import { Band } from "./Band";
 import { unitHeading } from "./unitHeading";
 import { LockedNotice } from "./LockedNotice";
 import { Dock } from "./Dock";
+import { StepFooter } from "./StepFooter";
 import { ExportPanel } from "./ExportPanel";
 import { formatDate, formatDateTime, inspectionStatusLabel, inspectionTypeLabel, refusalMessage } from "./format";
 import { useBackCloses } from "./backCloses";
@@ -169,14 +170,11 @@ export function InspectionScreen({ id, navigate }: { id: string; navigate: Navig
 
       <Dock
         action={
-          !locked &&
-          !adding &&
-          !confirmingDelete && (
-            <button type="button" className="primary" onClick={() => setAdding(true)}>
-              <Plus aria-hidden="true" />
-              Add Area
-            </button>
-          )
+          <StepFooter
+            onBack={() => navigate({ name: "list" }, { up: true })}
+            onNext={!locked && !confirmingDelete ? () => setAdding(true) : undefined}
+            nextLabel="Add Area"
+          />
         }
       />
     </main>

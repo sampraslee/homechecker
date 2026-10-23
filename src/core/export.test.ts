@@ -53,7 +53,7 @@ describe("exporting an Inspection", () => {
 
     expect(rowsOf(workbook, "Inspection")).toEqual([
       ["Inspection type", "Move-in"],
-      ["Unit address", "7, Jalan Kenari 3, 47100 Puchong, Selangor"],
+      ["Unit address", "7, Vista Sutera"],
       ["Inspector", "Aisyah"],
       ["Started at", "5 Jan 2026, 17:00"],
       ["Completed at", "5 Jan 2026, 19:45"],
@@ -71,13 +71,13 @@ describe("exporting an Inspection", () => {
 
     expect(rowsOf(workbook, "Inspection")).toEqual([
       ["Inspection type", "Move-out"],
-      ["Unit address", "7, Jalan Kenari 3, 47100 Puchong, Selangor"],
+      ["Unit address", "7, Vista Sutera"],
       ["Inspector", "Aisyah"],
       ["Started at", "4 Jan 2027, 10:00"],
       ["Completed at", "4 Jan 2027, 10:00"],
       ["Duration", "0 min"],
       ["Defect Dictionary version", "test-dictionary-1"],
-      ["Linked Move-in address", "7, Jalan Kenari 3, 47100 Puchong, Selangor"],
+      ["Linked Move-in address", "7, Vista Sutera"],
       ["Linked Move-in date", "5 Jan 2026"],
     ]);
   });
@@ -99,7 +99,7 @@ describe("exporting an Inspection", () => {
     const { homeCheck } = await createTestHomeCheckWithInspection();
     const moveOut = expectOk(
       await homeCheck.startMoveOut({
-        address: { unitNumber: "9", street: "Jalan Kenari 5", postcode: "47100", city: "Puchong", state: "Selangor" },
+        address: { unitNumber: "9", buildingName: "Vista Sutera" },
       }),
     ).inspection;
 
@@ -116,7 +116,7 @@ describe("exporting an Inspection", () => {
 
     const exported = await exportOf(homeCheck, inspectionId);
 
-    expect(exported.fileName).toBe("home-check-move-in-7-jalan-kenari-3-2026-01-05.zip");
+    expect(exported.fileName).toBe("home-check-move-in-7-vista-sutera-2026-01-05.zip");
   });
 
   test("puts every original photo and video in media/, named by Area, Item and sequence", async () => {
@@ -162,7 +162,7 @@ describe("exporting an Inspection", () => {
 
     const { workbook } = await unzipExport((await exportOf(homeCheck, inspectionId)).zip);
 
-    const leading = ["7, Jalan Kenari 3, 47100 Puchong, Selangor", "Move-in", "5 Jan 2026", "Aisyah", "Bedroom", "Wardrobe – Left"];
+    const leading = ["7, Vista Sutera", "Move-in", "5 Jan 2026", "Aisyah", "Bedroom", "Wardrobe – Left"];
     expect(rowsOf(workbook, "Defects")).toEqual([
       [
         "Unit address",
@@ -368,11 +368,11 @@ describe("the look of an export's workbook", () => {
       return found;
     };
 
-    // "Inspection type" (15 characters) is its longest text; the address (42) is the Unit address column's.
+    // "Inspection type" (15 characters) is its longest text; the address ("7, Vista Sutera", 14) is shorter, so the column fits the header (12) or the address.
     expect(width("Inspection type")).toBeGreaterThanOrEqual(15);
     expect(width("Inspection type")).toBeLessThan(21);
-    expect(width("Unit address")).toBeGreaterThanOrEqual(42);
-    expect(width("Unit address")).toBeLessThan(52);
+    expect(width("Unit address")).toBeGreaterThanOrEqual(14);
+    expect(width("Unit address")).toBeLessThan(21);
     // The 100-character note is capped, and wraps instead.
     expect(width("Note")).toBe(60);
   });

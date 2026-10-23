@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ChevronLeft, Plus } from "lucide-react";
 import {
   isMedia,
   type AiSuggestionView,
@@ -26,6 +25,7 @@ import { MediaImage, MediaThumbnail, useMediaUrl } from "./MediaImage";
 import { useAiChanges } from "./useAiChanges";
 import { useArrivals } from "./useArrivals";
 import { RecordDefectFlow } from "./RecordDefectFlow";
+import { StepFooter } from "./StepFooter";
 import { useLocked } from "./useLocked";
 
 /** Every Defect is made from a piece of Evidence, so the panels that make one carry that Evidence. */
@@ -190,12 +190,6 @@ export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navi
         <h2>Evidence and Defects</h2>
         <span className="count">{defects.length > 0 && `${defects.length} ${defects.length === 1 ? "Defect" : "Defects"}`}</span>
       </div>
-      {editable && (
-        <button type="button" className="primary record-defect" onClick={() => setRecordingFlow(true)}>
-          <Plus aria-hidden="true" />
-          Record a Defect
-        </button>
-      )}
       {moveIn && (
         <MoveInLine
           record={moveIn}
@@ -301,11 +295,11 @@ export function ItemScreen({ id, navigate, saved }: { id: string; navigate: Navi
           )
         }
         action={
-          // Capturing is in the Evidence section, so the bar only goes back to the Area's Items.
-          <button type="button" className="secondary" onClick={() => navigate({ name: "area", id: item.areaId }, { up: true })}>
-            <ChevronLeft aria-hidden="true" />
-            Back
-          </button>
+          <StepFooter
+            onBack={() => navigate({ name: "area", id: item.areaId }, { up: true })}
+            onNext={editable ? () => setRecordingFlow(true) : undefined}
+            nextLabel="Record a Defect"
+          />
         }
       />
 

@@ -1,4 +1,5 @@
 import {
+  formatAddress,
   inspectionTypeLabel,
   VIDEO_TIME_LIMIT_SECONDS,
   type AiSuggestionView,
@@ -87,11 +88,6 @@ export const refusalMessage: Record<RefusalReason, string> = {
   "ai-suggestion-not-reviewed": "This AI Suggestion isn't reviewed yet, so there's nothing to undo.",
 };
 
-/** The part of a Unit's address an Inspector says out loud, e.g. "A-12-3, Residensi Harmoni". */
-export function shortAddress(address: UnitAddress): string {
-  return `${address.unitNumber}, ${address.buildingName || address.street}`;
-}
-
 /** What some Evidence is made of, e.g. "4 photos, 1 video"; empty when there is none. */
 export function countEvidence(evidence: Evidence[]): string {
   const plural = (count: number, one: string) => (count === 1 ? `1 ${one}` : `${count} ${one}s`);
@@ -108,5 +104,5 @@ export function countEvidence(evidence: Evidence[]): string {
 
 /** The band's line above an Area or Item: the Unit and which Inspection, so a Move-out never passes for its Move-in. */
 export function unitAndType(inspection: { address: UnitAddress; type: InspectionType }): string {
-  return `${shortAddress(inspection.address)} · ${inspectionTypeLabel[inspection.type]}`;
+  return `${formatAddress(inspection.address)} · ${inspectionTypeLabel[inspection.type]}`;
 }

@@ -1,39 +1,13 @@
 import type { CatalogItem, DefectCategory } from "./referenceData";
 
-export const MALAYSIAN_STATES = [
-  "Johor",
-  "Kedah",
-  "Kelantan",
-  "Melaka",
-  "Negeri Sembilan",
-  "Pahang",
-  "Perak",
-  "Perlis",
-  "Pulau Pinang",
-  "Sabah",
-  "Sarawak",
-  "Selangor",
-  "Terengganu",
-  "W.P. Kuala Lumpur",
-  "W.P. Labuan",
-  "W.P. Putrajaya",
-] as const;
-
-export type MalaysianState = (typeof MALAYSIAN_STATES)[number];
-
+/** A Unit is known by its unit number and its building, which is all an Inspector of Units under management needs. */
 export type UnitAddress = {
   unitNumber: string;
-  buildingName?: string;
-  street: string;
-  /** The address's area / Taman. Not an Area of the Unit. */
-  locality?: string;
-  postcode: string;
-  city: string;
-  state: MalaysianState;
+  buildingName: string;
 };
 
 /** What the Inspector typed, before validation. */
-export type UnitAddressInput = Omit<UnitAddress, "state"> & { state: string };
+export type UnitAddressInput = UnitAddress;
 
 export type AddressField = keyof UnitAddressInput;
 

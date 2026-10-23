@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Check, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import type { Area, Evidence, Inspection, ItemView } from "../core";
 import type { Navigate } from "./App";
 import { Band } from "./Band";
@@ -8,6 +8,7 @@ import { Dock } from "./Dock";
 import { countEvidence, inspectionTypeLabel, refusalMessage, unitAndType } from "./format";
 import { BackCloses } from "./backCloses";
 import { RecordDefectFlow } from "./RecordDefectFlow";
+import { StepFooter } from "./StepFooter";
 import { useHomeCheck } from "./homeCheckContext";
 import { NameEditor } from "./NameEditor";
 import { useAiChanges } from "./useAiChanges";
@@ -246,22 +247,21 @@ export function AreaScreen({ id, addingItem = false, navigate }: { id: string; a
         ))}
       </ul>
 
+      {/* Marks the Area as fully inspected; pressing it again takes the mark off. */}
+      {editable && !editing && (
+        <button type="button" className="secondary spaced" aria-pressed={Boolean(area.completedAt)} onClick={toggleCompleted}>
+          <Check aria-hidden="true" />
+          {area.completedAt ? "Completed" : "Complete"}
+        </button>
+      )}
+
       <Dock
         action={
-          editable &&
-          !editing && (
-            <div className="dock-actions">
-              <button type="button" className="primary" onClick={() => setPicking(true)}>
-                <Plus aria-hidden="true" />
-                Add Item
-              </button>
-              {/* Marks the Area as fully inspected; pressing it again takes the mark off. */}
-              <button type="button" className="secondary" aria-pressed={Boolean(area.completedAt)} onClick={toggleCompleted}>
-                <Check aria-hidden="true" />
-                {area.completedAt ? "Completed" : "Complete"}
-              </button>
-            </div>
-          )
+          <StepFooter
+            onBack={() => navigate(backToInspection, { up: true })}
+            onNext={editable && !editing ? () => setPicking(true) : undefined}
+            nextLabel="Add Item"
+          />
         }
       />
     </main>

@@ -217,10 +217,7 @@ async function startDraftInspection(homeCheck: HomeCheck): Promise<string> {
   await homeCheck.setInspectorName("Aisyah");
   const started = await homeCheck.startMoveIn({
     unitNumber: "7",
-    street: "Jalan Kenari 3",
-    postcode: "47100",
-    city: "Puchong",
-    state: "Selangor",
+    buildingName: "Vista Sutera",
   });
   if (!started.ok) throw new Error(`could not start Inspection: ${started.reason}`);
   return started.inspection.id;

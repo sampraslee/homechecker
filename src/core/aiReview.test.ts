@@ -7,10 +7,7 @@ import { createTestHomeCheckWithItem, expectOk, noteOf } from "../testing/homeCh
 async function anotherInspection(homeCheck: HomeCheck) {
   const started = await homeCheck.startMoveIn({
     unitNumber: "9",
-    street: "Jalan Kenari 3",
-    postcode: "47100",
-    city: "Puchong",
-    state: "Selangor",
+    buildingName: "Vista Sutera",
   });
   return expectOk(started).inspection;
 }

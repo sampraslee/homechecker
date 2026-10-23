@@ -1,7 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type Dispatch, type FormEvent, type KeyboardEvent, type SetStateAction } from "react";
 import {
   formatAddress,
-  MALAYSIAN_STATES,
   SUGGESTING_ADDRESS_FIELDS,
   type AddressErrors,
   type AddressField,
@@ -19,23 +18,11 @@ import { useHomeCheck } from "./homeCheckContext";
 import { InspectorNameForm } from "./InspectorNameForm";
 import { scrollIntoViewGently } from "./scroll";
 
-const emptyAddress: UnitAddressInput = {
-  unitNumber: "",
-  buildingName: "",
-  street: "",
-  locality: "",
-  postcode: "",
-  city: "",
-  state: "",
-};
+const emptyAddress: UnitAddressInput = { unitNumber: "", buildingName: "" };
 
-const textFields: { field: Exclude<AddressField, "state">; label: string; inputMode?: "numeric" }[] = [
+const textFields: { field: AddressField; label: string }[] = [
   { field: "unitNumber", label: "Unit number" },
-  { field: "buildingName", label: "Building name (optional)" },
-  { field: "street", label: "Street" },
-  { field: "locality", label: "Taman / neighbourhood (optional)" },
-  { field: "postcode", label: "Postcode", inputMode: "numeric" },
-  { field: "city", label: "City" },
+  { field: "buildingName", label: "Building name" },
 ];
 
 /** Lets the Dock's button, outside the form, submit it. */
@@ -127,7 +114,7 @@ export function StartInspectionScreen({ type, navigate }: { type: InspectionType
                 ))}
               </ul>
               <button type="button" className="link spaced" onClick={() => setTypingMoveOutAddress(true)}>
-                Move-in not on this phone? Type the address
+                Move-in not on this phone? Type the unit instead
               </button>
             </>
           )}
@@ -155,8 +142,8 @@ export function StartInspectionScreen({ type, navigate }: { type: InspectionType
   );
 }
 
-/** The seven address fields, in the order they sit in the form. */
-const ADDRESS_FIELDS: AddressField[] = ["unitNumber", "buildingName", "street", "locality", "postcode", "city", "state"];
+/** The address fields, in the order they sit in the form. */
+const ADDRESS_FIELDS: AddressField[] = textFields.map(({ field }) => field);
 
 /**
  * The Unit's address on one page, in one bordered block, with earlier addresses on this phone suggested as it's typed.
@@ -235,26 +222,8 @@ function AddressForm({
     setSuggesting(null);
   }
 
-  /** One row of the block: a text input with its suggestions, or the State picker. */
+  /** One row of the block: a text input with its suggestions. */
   function renderField(field: AddressField) {
-    if (field === "state") {
-      return (
-        <div key={field} className="address-row">
-          <label>
-            State
-            <select value={address.state} onChange={(event) => setField("state", event.target.value)} aria-invalid={Boolean(errors.state)}>
-              <option value="">Choose a state</option>
-              {MALAYSIAN_STATES.map((state) => (
-                <option key={state} value={state}>
-                  {state}
-                </option>
-              ))}
-            </select>
-            {errors.state && <span className="error">{errors.state}</span>}
-          </label>
-        </div>
-      );
-    }
     const spec = textFields.find((each) => each.field === field);
     if (!spec) return null;
     return (
@@ -263,11 +232,9 @@ function AddressForm({
           <label>
             {spec.label}
             <input
-              value={address[field] ?? ""}
+              value={address[field]}
               onChange={(event) => typeInto(field, event.target.value)}
-              inputMode={spec.inputMode}
               enterKeyHint="next"
-              maxLength={field === "postcode" ? 5 : undefined}
               aria-invalid={Boolean(errors[field])}
             />
             {errors[field] && <span className="error">{errors[field]}</span>}

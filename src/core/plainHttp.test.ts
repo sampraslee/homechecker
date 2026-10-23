@@ -19,10 +19,7 @@ describe("on a page that isn't a secure context", () => {
 
     const started = await homeCheck.startMoveIn({
       unitNumber: "7",
-      street: "Jalan Kenari 3",
-      postcode: "47100",
-      city: "Puchong",
-      state: "Selangor",
+      buildingName: "Vista Sutera",
     });
     if (!started.ok) throw new Error(`could not start Inspection: ${started.reason}`);
     const area = await homeCheck.addArea(started.inspection.id, { standardAreaId: "bedroom" });
@@ -41,7 +38,7 @@ describe("on a page that isn't a secure context", () => {
     withoutRandomUUID();
     const { homeCheck } = createTestHomeCheck();
     await homeCheck.setInspectorName("Aisyah");
-    const address = { unitNumber: "7", street: "Jalan Kenari 3", postcode: "47100", city: "Puchong", state: "Selangor" };
+    const address = { unitNumber: "7", buildingName: "Vista Sutera" };
 
     for (let i = 0; i < 20; i++) await homeCheck.startMoveIn(address);
 

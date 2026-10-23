@@ -1,5 +1,4 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import type { AreaSource } from "../core";
 import type { Navigate } from "./App";
 import { BackCloses } from "./backCloses";
@@ -7,7 +6,8 @@ import { Band } from "./Band";
 import { Dock } from "./Dock";
 import { refusalMessage } from "./format";
 import { useHomeCheck } from "./homeCheckContext";
-import { StepHeader } from "./StepHeader";
+import { StepFooter } from "./StepFooter";
+import { StepBar, StepHeader } from "./StepHeader";
 
 /** A standard Area is added with its default name; only "Not in the list" goes on to name it. */
 const STEPS = ["Which Area?", "Name it"];
@@ -78,8 +78,8 @@ export function AddAreaFlow({
     setStep(0);
   }
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
+  async function submit(event?: FormEvent) {
+    event?.preventDefault();
     if (!choice) return;
     if (step === 0 && needsName) return next();
     const source: AreaSource =
@@ -97,33 +97,11 @@ export function AddAreaFlow({
   }
   const picked = (id: string) => choice?.kind === "standard" && choice.id === id;
 
-  const nav =
-    step === 0 ? (
-      <div className="dock-actions">
-        {choice && !needsName ? (
-          <button type="submit" form={ADD_AREA_FORM_ID} className="primary" disabled={choice.kind === "standard" && suggested?.id !== choice.id}>
-            <Check aria-hidden="true" />
-            Add Area
-          </button>
-        ) : (
-          <button type="submit" form={ADD_AREA_FORM_ID} className="primary" disabled={!choice}>
-            Next
-            <ChevronRight aria-hidden="true" />
-          </button>
-        )}
-      </div>
-    ) : (
-      <div className="dock-actions">
-        <button type="button" className="secondary" onClick={back}>
-          <ChevronLeft aria-hidden="true" />
-          Back
-        </button>
-        <button type="submit" form={ADD_AREA_FORM_ID} className="primary">
-          <Check aria-hidden="true" />
-          Add Area
-        </button>
-      </div>
-    );
+  const titles = needsName ? STEPS : STEPS.slice(0, 1);
+  /** The right button saves unless a second step still has to name the Area. */
+  const saves = step > 0 || !needsName;
+  /** A standard Area waits for its name to be worked out (it may be taken) before it can be added. */
+  const waiting = !choice || (step === 0 && choice.kind === "standard" && suggested?.id !== choice.id);
 
   return (
     <main className="screen">
@@ -138,7 +116,7 @@ export function AddAreaFlow({
       {step > 0 && <BackCloses key={step} onBack={back} />}
 
       <form id={ADD_AREA_FORM_ID} className="form spaced" onSubmit={submit} noValidate>
-        <StepHeader titles={needsName ? STEPS : STEPS.slice(0, 1)} step={step} />
+        <StepHeader titles={titles} step={step} bar={false} />
         {step === 0 ? (
           <>
             <div className="plan" role="group" aria-label="Floor plan">
@@ -189,7 +167,17 @@ export function AddAreaFlow({
           </label>
         )}
       </form>
-      <Dock action={nav} />
+      <Dock
+        message={titles.length > 1 ? <StepBar titles={titles} step={step} /> : undefined}
+        action={
+          <StepFooter
+            onBack={step === 0 ? onCancel : back}
+            onNext={() => submit()}
+            nextLabel={saves ? "Add Area" : "Next"}
+            nextDisabled={waiting}
+          />
+        }
+      />
     </main>
   );
 }

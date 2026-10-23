@@ -38,10 +38,6 @@ export async function loadSampleInspections(homeCheck: HomeCheck): Promise<void>
     await homeCheck.startMoveIn({
       unitNumber: "A-12-3",
       buildingName: "Residensi Harmoni",
-      street: "Jalan Ampang",
-      postcode: "50450",
-      city: "Kuala Lumpur",
-      state: "W.P. Kuala Lumpur",
     }),
   ).inspection;
   await recordArea(homeCheck, draftMoveIn.id, {
@@ -64,10 +60,6 @@ export async function loadSampleInspections(homeCheck: HomeCheck): Promise<void>
     await homeCheck.startMoveIn({
       unitNumber: "B-07-1",
       buildingName: "Vista Sutera",
-      street: "Jalan Kenari 3",
-      postcode: "47100",
-      city: "Puchong",
-      state: "Selangor",
     }),
   ).inspection;
   await recordArea(homeCheck, completedMoveIn.id, {

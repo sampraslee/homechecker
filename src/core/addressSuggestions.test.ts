@@ -4,19 +4,11 @@ import { createTestHomeCheck } from "../testing/homeCheck";
 const harmoni = {
   unitNumber: "A-12-3",
   buildingName: "Residensi Harmoni",
-  street: "Jalan Ampang",
-  locality: "Taman U-Thant",
-  postcode: "50450",
-  city: "Kuala Lumpur",
-  state: "W.P. Kuala Lumpur",
 };
 
 const kenari = {
   unitNumber: "7",
-  street: "Jalan Kenari 3",
-  postcode: "47100",
-  city: "Puchong",
-  state: "Selangor",
+  buildingName: "Vista Sutera",
 };
 
 async function withInspectionsAt(...addresses: (typeof harmoni | typeof kenari)[]) {
@@ -36,18 +28,17 @@ describe("suggesting earlier addresses as the Inspector types", () => {
   test.each([
     ["building name", "Residensi Harm"],
     ["building name, past the first word", "harmoni"],
-    ["street, however spaced", "jalan  amp"],
-    ["postcode", "504"],
+    ["building name, however spaced", "residensi   harm"],
   ])("matches the start of a word in the %s", async (_field, typed) => {
     const { homeCheck } = await withInspectionsAt(harmoni, kenari);
 
     expect(await homeCheck.suggestAddresses(typed)).toEqual([harmoni]);
   });
 
-  test("doesn't match from the middle of a word, or on the locality, city or state", async () => {
+  test("doesn't match from the middle of a word", async () => {
     const { homeCheck } = await withInspectionsAt(harmoni, kenari);
 
-    for (const typed of ["mpang", "Kuala", "Taman", "W.P."]) {
+    for (const typed of ["armoni", "esidensi"]) {
       expect(await homeCheck.suggestAddresses(typed)).toEqual([]);
     }
   });
@@ -55,10 +46,10 @@ describe("suggesting earlier addresses as the Inspector types", () => {
   test("lists each address once, however many Inspections it has, as most recently entered", async () => {
     const { homeCheck, environment } = await withInspectionsAt(harmoni);
     environment.setNow(new Date("2026-01-06T09:00:00.000Z"));
-    const respaced = { ...harmoni, buildingName: "residensi  HARMONI", street: " Jalan Ampang" };
+    const respaced = { ...harmoni, buildingName: "residensi  HARMONI" };
     await homeCheck.startMoveIn(respaced);
 
-    expect(await homeCheck.suggestAddresses("A-12")).toEqual([{ ...respaced, street: "Jalan Ampang" }]);
+    expect(await homeCheck.suggestAddresses("A-12")).toEqual([respaced]);
   });
 
   test("lists the most recently entered addresses first", async () => {

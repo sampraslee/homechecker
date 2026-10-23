@@ -135,10 +135,6 @@ describe("starting an unlinked Move-out", () => {
   const address = {
     unitNumber: "A-12-3",
     buildingName: "Residensi Harmoni",
-    street: "Jalan Ampang",
-    postcode: "50450",
-    city: "Kuala Lumpur",
-    state: "W.P. Kuala Lumpur",
   };
 
   test("records a Draft Move-out at the typed address, with no Areas and no linked Move-in", async () => {
@@ -162,12 +158,12 @@ describe("starting an unlinked Move-out", () => {
     const { homeCheck } = createTestHomeCheck();
     await homeCheck.setInspectorName("Aisyah");
 
-    const result = await homeCheck.startMoveOut({ address: { ...address, unitNumber: " ", postcode: "5045" } });
+    const result = await homeCheck.startMoveOut({ address: { ...address, unitNumber: " ", buildingName: "" } });
 
     expect(result).toEqual({
       ok: false,
       reason: "invalid-address",
-      errors: { unitNumber: "Unit number is required", postcode: "Postcode must be 5 digits" },
+      errors: { unitNumber: "Unit number is required", buildingName: "Building name is required" },
     });
     expect(await homeCheck.listInspections()).toEqual([]);
   });
@@ -180,7 +176,7 @@ describe("a Move-out of either kind", () => {
     expect(await homeCheck.startMoveOut({ moveInId: "any" })).toEqual({ ok: false, reason: "inspector-name-required" });
     expect(
       await homeCheck.startMoveOut({
-        address: { unitNumber: "7", street: "Jalan Kenari 3", postcode: "47100", city: "Puchong", state: "Selangor" },
+        address: { unitNumber: "7", buildingName: "Vista Sutera" },
       }),
     ).toEqual({ ok: false, reason: "inspector-name-required" });
   });
@@ -192,7 +188,7 @@ describe("the Move-in picker", () => {
     expectOk(await homeCheck.completeInspection(firstMoveInId));
     environment.setNow(new Date("2026-02-10T03:00:00.000Z"));
     const secondMoveIn = expectOk(
-      await homeCheck.startMoveIn({ unitNumber: "9", street: "Jalan Kenari 5", postcode: "47100", city: "Puchong", state: "Selangor" }),
+      await homeCheck.startMoveIn({ unitNumber: "9", buildingName: "Vista Sutera" }),
     ).inspection;
     environment.setNow(new Date("2026-03-01T03:00:00.000Z"));
     expectOk(await homeCheck.startMoveOut({ moveInId: firstMoveInId }));
@@ -202,8 +198,8 @@ describe("the Move-in picker", () => {
         id: secondMoveIn.id,
         type: "move-in",
         status: "draft",
-        address: { unitNumber: "9", street: "Jalan Kenari 5", postcode: "47100", city: "Puchong", state: "Selangor" },
-        addressLine: "9, Jalan Kenari 5, 47100 Puchong, Selangor",
+        address: { unitNumber: "9", buildingName: "Vista Sutera" },
+        addressLine: "9, Vista Sutera",
         defectCount: 0,
         startedAt: "2026-02-10T03:00:00.000Z",
       },
@@ -211,8 +207,8 @@ describe("the Move-in picker", () => {
         id: firstMoveInId,
         type: "move-in",
         status: "completed",
-        address: expect.objectContaining({ unitNumber: "7", city: "Puchong" }),
-        addressLine: "7, Jalan Kenari 3, 47100 Puchong, Selangor",
+        address: { unitNumber: "7", buildingName: "Vista Sutera" },
+        addressLine: "7, Vista Sutera",
         defectCount: 0,
         startedAt: "2026-01-05T09:00:00.000Z",
       },

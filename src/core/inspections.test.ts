@@ -4,11 +4,6 @@ import { createTestHomeCheck, createTestHomeCheckWithInspection, createTestHomeC
 const address = {
   unitNumber: "A-12-3",
   buildingName: "Residensi Harmoni",
-  street: "Jalan Ampang",
-  locality: "Taman U-Thant",
-  postcode: "50450",
-  city: "Kuala Lumpur",
-  state: "W.P. Kuala Lumpur",
 };
 
 describe("starting a Move-in Inspection", () => {
@@ -62,10 +57,7 @@ describe("the Inspection list", () => {
     environment.setNow(new Date("2026-01-06T14:30:00.000Z"));
     const second = await homeCheck.startMoveIn({
       unitNumber: "7",
-      street: "Jalan Kenari 3",
-      postcode: "47100",
-      city: "Puchong",
-      state: "Selangor",
+      buildingName: "Vista Sutera",
     });
 
     const list = await homeCheck.listInspections();
@@ -74,16 +66,16 @@ describe("the Inspection list", () => {
       {
         type: "move-in",
         status: "draft",
-        address: { unitNumber: "7", street: "Jalan Kenari 3", postcode: "47100", city: "Puchong", state: "Selangor" },
-        addressLine: "7, Jalan Kenari 3, 47100 Puchong, Selangor",
+        address: { unitNumber: "7", buildingName: "Vista Sutera" },
+        addressLine: "7, Vista Sutera",
         startedAt: "2026-01-06T14:30:00.000Z",
         defectCount: 0,
       },
       {
         type: "move-in",
         status: "draft",
-        address: expect.objectContaining({ unitNumber: "A-12-3", city: "Kuala Lumpur" }),
-        addressLine: "A-12-3, Residensi Harmoni, Jalan Ampang, Taman U-Thant, 50450 Kuala Lumpur, W.P. Kuala Lumpur",
+        address: { unitNumber: "A-12-3", buildingName: "Residensi Harmoni" },
+        addressLine: "A-12-3, Residensi Harmoni",
         startedAt: "2026-01-05T09:00:00.000Z",
         defectCount: 0,
       },
@@ -100,74 +92,24 @@ describe("Unit address validation", () => {
     return { result, inspections: await homeCheck.listInspections() };
   }
 
-  test.each(["5045", "504501", "5O450", "50 45"])("refuses postcode %j, which is not 5 digits", async (postcode) => {
-    const { result, inspections } = await startWith({ postcode });
-
-    expect(result).toEqual({
-      ok: false,
-      reason: "invalid-address",
-      errors: { postcode: "Postcode must be 5 digits" },
-    });
-    expect(inspections).toEqual([]);
-  });
-
-  test("refuses a state that is not one of the 13 states or 3 Federal Territories", async () => {
-    const { result } = await startWith({ state: "Kuala Lumpur City" });
-
-    expect(result).toEqual({
-      ok: false,
-      reason: "invalid-address",
-      errors: { state: "Choose a state or Federal Territory" },
-    });
-  });
-
-  test("accepts each of the 13 states and 3 Federal Territories", async () => {
-    const accepted = [
-      "Johor", "Kedah", "Kelantan", "Melaka", "Negeri Sembilan", "Pahang", "Perak", "Perlis",
-      "Pulau Pinang", "Sabah", "Sarawak", "Selangor", "Terengganu",
-      "W.P. Kuala Lumpur", "W.P. Labuan", "W.P. Putrajaya",
-    ];
-
-    for (const state of accepted) {
-      const { result } = await startWith({ state });
-      expect(result.ok, state).toBe(true);
-    }
-  });
-
-  test("requires unit number, street, postcode, city and state", async () => {
-    const { result } = await startWith({ unitNumber: "  ", street: "", postcode: "", city: " ", state: "" });
+  test("requires unit number and building name", async () => {
+    const { result, inspections } = await startWith({ unitNumber: "  ", buildingName: "" });
 
     expect(result).toEqual({
       ok: false,
       reason: "invalid-address",
       errors: {
         unitNumber: "Unit number is required",
-        street: "Street is required",
-        postcode: "Postcode is required",
-        city: "City is required",
-        state: "Choose a state or Federal Territory",
+        buildingName: "Building name is required",
       },
     });
+    expect(inspections).toEqual([]);
   });
 
-  test("building name and locality (area / Taman) are optional, and every field is trimmed", async () => {
-    const { result } = await startWith({
-      unitNumber: " 7 ",
-      buildingName: "  ",
-      street: " Jalan Kenari 3 ",
-      locality: undefined,
-      postcode: " 47100 ",
-      city: " Puchong ",
-      state: "Selangor",
-    });
+  test("every field is trimmed", async () => {
+    const { result } = await startWith({ unitNumber: " 7 ", buildingName: "  Vista Sutera " });
 
-    expect(result.ok && result.inspection.address).toEqual({
-      unitNumber: "7",
-      street: "Jalan Kenari 3",
-      postcode: "47100",
-      city: "Puchong",
-      state: "Selangor",
-    });
+    expect(result.ok && result.inspection.address).toEqual({ unitNumber: "7", buildingName: "Vista Sutera" });
   });
 });
 

@@ -191,11 +191,11 @@ export async function buildExportZip(content: ExportContent): Promise<Uint8Array
 
 const isoDateFormat = new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" });
 
-/** e.g. `home-check-move-in-7-jalan-kenari-3-2026-01-05.zip`: type, unit number and street, and start date. */
+/** e.g. `home-check-move-in-7-residensi-harmoni-2026-01-05.zip`: type, unit number and building, and start date. */
 export function exportFileName(inspection: Inspection): string {
-  const { unitNumber, street } = inspection.address;
+  const { unitNumber, buildingName } = inspection.address;
   const date = isoDateFormat.format(new Date(inspection.startedAt));
-  return `${["home-check", inspection.type, slug(unitNumber), slug(street), date].filter(Boolean).join("-")}.zip`;
+  return `${["home-check", inspection.type, slug(unitNumber), slug(buildingName), date].filter(Boolean).join("-")}.zip`;
 }
 
 const FONT_NAME = "Inter";
