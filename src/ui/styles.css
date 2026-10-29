@@ -555,6 +555,12 @@ button:disabled {
   font-weight: 600;
 }
 
+.error-notice .secondary {
+  width: auto;
+  min-height: 2.5rem;
+  padding: 0 var(--space-4);
+}
+
 .error-notice details {
   margin-top: var(--space-2);
   max-height: 30vh;
