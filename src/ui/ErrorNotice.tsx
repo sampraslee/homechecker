@@ -34,14 +34,16 @@ export function ErrorNotice() {
 
   return (
     <div className="error-notice" role="alert">
-      <p>That may not have saved. Try again. If it keeps happening, send the details below to the Home Check team.</p>
+      <div className="error-notice-row">
+        <p>That may not have saved. Try again.</p>
+        <button type="button" className="secondary" onClick={() => setShown(null)}>
+          Close
+        </button>
+      </div>
       <details>
-        <summary>Details</summary>
+        <summary>Details to send to the Home Check team</summary>
         <code>{details}</code>
       </details>
-      <button type="button" className="secondary" onClick={() => setShown(null)}>
-        Close
-      </button>
     </div>
   );
 }

@@ -535,20 +535,30 @@ button:disabled {
   left: 0;
   max-width: 40rem;
   margin: 0 auto;
-  padding: var(--space-4) var(--space-4) calc(env(safe-area-inset-bottom) + var(--space-4));
+  z-index: 40; /* Above the step footer and a bottom sheet, so Close is always reachable */
+  padding: var(--space-3) var(--space-4) calc(env(safe-area-inset-bottom) + var(--space-3));
   border-top: 3px solid var(--danger);
   background: var(--surface);
   box-shadow: 0 -2px 12px rgb(0 0 0 / 0.15);
 }
 
+.error-notice-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .error-notice p {
-  margin-top: 0;
+  flex: 1;
+  margin: 0;
   color: var(--danger);
   font-weight: 600;
 }
 
 .error-notice details {
-  margin-bottom: var(--space-3);
+  margin-top: var(--space-2);
+  max-height: 30vh;
+  overflow-y: auto;
   color: var(--ink-muted);
   font-size: var(--text-sm);
   overflow-wrap: anywhere;
