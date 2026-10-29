@@ -17,10 +17,21 @@ function describe(error: unknown): string {
   return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
 }
 
+/**
+ * Browsers report a layout change that landed mid-measurement as an `error` event. Nothing failed, so it isn't
+ * shown (the same notice is worded "loop limit exceeded" in older Chrome).
+ */
+function isResizeObserverNotice(message: string): boolean {
+  return message.startsWith("ResizeObserver loop");
+}
+
 /** Call once, before the first core call, so nothing thrown at start-up is missed. */
 export function listenForUnexpectedErrors() {
   window.addEventListener("unhandledrejection", (event) => setShown(describe(event.reason)));
-  window.addEventListener("error", (event) => setShown(describe(event.error ?? event.message)));
+  window.addEventListener("error", (event) => {
+    if (isResizeObserverNotice(event.message)) return;
+    setShown(describe(event.error ?? event.message));
+  });
 }
 
 function subscribe(notify: () => void) {
